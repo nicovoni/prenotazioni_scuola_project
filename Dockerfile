@@ -1,21 +1,26 @@
-# base image
+# Usa un'immagine Python leggera
 FROM python:3.11-slim
 
-# environment
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+# Imposta variabile di ambiente
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8000
 
+# Crea cartella app
 WORKDIR /app
 
-# dependencies
-COPY requirements.txt .
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+# Installa dipendenze
+COPY requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
 
-# copy backend
+# Copia il backend
 COPY backend/ /app/backend/
 
+# Copia entrypoint
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Imposta directory di lavoro
 WORKDIR /app/backend
 
-# start server
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:$PORT"]
+# Comando di avvio
+CMD ["/app/entrypoint.sh"]
