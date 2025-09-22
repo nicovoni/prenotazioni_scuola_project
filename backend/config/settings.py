@@ -68,3 +68,7 @@ USE_I18N = True
 USE_TZ = True
 STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Custom branding per il sito admin
+SCHOOL_NAME = os.getenv("SCHOOL_NAME", "Scuola Demo")
+AUTHOR = os.getenv("AUTHOR", "Tuo Nome")
