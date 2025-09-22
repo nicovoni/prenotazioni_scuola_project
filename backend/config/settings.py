@@ -72,3 +72,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Custom branding per il sito admin
 SCHOOL_NAME = os.getenv("SCHOOL_NAME", "Scuola Demo")
 AUTHOR = os.getenv("AUTHOR", "Tuo Nome")
+AUTH_USER_MODEL = 'prenotazioni.Utente'
