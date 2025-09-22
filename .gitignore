@@ -1,0 +1,69 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.egg
+*.egg-info/
+dist/
+build/
+*.manifest
+*.spec
+
+# =========================
+# Django
+# =========================
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+*.log
+*.pot
+*.pyc
+__pycache__/
+
+# =========================
+# Environment / Secrets
+# =========================
+.env
+*.env
+.env.*
+secrets.json
+
+# =========================
+# VS Code
+# =========================
+.vscode/
+.history/
+
+# =========================
+# Docker
+# =========================
+*.log
+docker-compose.override.yml
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# =========================
+# macOS
+# =========================
+.DS_Store
+
+# =========================
+# Windows
+# =========================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# =========================
+# IDE / Editors
+# =========================
+.idea/
+*.sublime-project
+*.sublime-workspace
