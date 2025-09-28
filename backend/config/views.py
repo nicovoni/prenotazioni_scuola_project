@@ -1,4 +1,4 @@
-from django.http import HttpResponse
+from django.shortcuts import render
 
 def home(request):
-    return HttpResponse("<h1>Benvenuto nel sistema di prenotazioni della scuola!</h1>")
+    return render(request, 'home.html')
