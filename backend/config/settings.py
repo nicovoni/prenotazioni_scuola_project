@@ -69,7 +69,19 @@ USE_TZ = True
 STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+
 # Custom branding per il sito admin
-SCHOOL_NAME = os.getenv("SCHOOL_NAME", "Scuola Demo")
-AUTHOR = os.getenv("AUTHOR", "Tuo Nome")
+SCHOOL_NAME = os.getenv("SCHOOL_NAME", "Istituto Comprensivo Roma Nord")
+AUTHOR = os.getenv("AUTHOR", "Sistema sviluppato da TUO NOME")
 AUTH_USER_MODEL = 'prenotazioni.Utente'
+
+# Configurazione carrelli
+CART_IPAD_TOTAL = int(os.getenv("CART_IPAD_TOTAL", 25))
+CART_NOTEBOOK_TOTAL = int(os.getenv("CART_NOTEBOOK_TOTAL", 30))
+
+# Orari prenotazioni
+BOOKING_START_HOUR = int(os.getenv("BOOKING_START_HOUR", 8))
+BOOKING_END_HOUR = int(os.getenv("BOOKING_END_HOUR", 17))
+
+# Preavviso minimo (in giorni)
+MIN_NOTICE_DAYS = int(os.getenv("MIN_NOTICE_DAYS", 1))
