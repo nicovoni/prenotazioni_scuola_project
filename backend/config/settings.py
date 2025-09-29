@@ -71,18 +71,39 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# Custom branding per il sito admin
-SCHOOL_NAME = os.getenv("SCHOOL_NAME", "Istituto Comprensivo Roma Nord")
-AUTHOR = os.getenv("AUTHOR", "Sistema sviluppato da TUO NOME")
-AUTH_USER_MODEL = 'prenotazioni.Utente'
 
+# =========================
+# Branding e scuola
+# =========================
+SCHOOL_NAME = os.environ.get("SCHOOL_NAME", "Istituto Comprensivo Roma Nord")
+AUTHOR = os.environ.get("AUTHOR", "Sistema sviluppato da TUO NOME")
+SCHOOL_EMAIL_DOMAIN = os.environ.get("SCHOOL_EMAIL_DOMAIN", "isufol.it")
+
+# =========================
+# Risorse disponibili
+# =========================
+NUM_LABORATORI = int(os.environ.get("NUM_LABORATORI", 5))
+NUM_NOTEBOOK = int(os.environ.get("NUM_NOTEBOOK", 20))
+NUM_IPAD = int(os.environ.get("NUM_IPAD", 15))
+
+# =========================
 # Configurazione carrelli
-CART_IPAD_TOTAL = int(os.getenv("CART_IPAD_TOTAL", 25))
-CART_NOTEBOOK_TOTAL = int(os.getenv("CART_NOTEBOOK_TOTAL", 30))
+# =========================
+CART_IPAD_TOTAL = int(os.environ.get("CART_IPAD_TOTAL", 25))
+CART_NOTEBOOK_TOTAL = int(os.environ.get("CART_NOTEBOOK_TOTAL", 30))
 
-# Orari prenotazioni
-BOOKING_START_HOUR = int(os.getenv("BOOKING_START_HOUR", 8))
-BOOKING_END_HOUR = int(os.getenv("BOOKING_END_HOUR", 17))
+# =========================
+# Regole prenotazione
+# =========================
+BOOKING_START_HOUR = os.environ.get("BOOKING_START_HOUR", "08:00")
+BOOKING_END_HOUR = os.environ.get("BOOKING_END_HOUR", "18:00")
+GIORNI_ANTICIPO_PRENOTAZIONE = int(os.environ.get("GIORNI_ANTICIPO_PRENOTAZIONE", 2))
+DURATA_MINIMA_PRENOTAZIONE_MINUTI = int(os.environ.get("DURATA_MINIMA_PRENOTAZIONE_MINUTI", 30))
+DURATA_MASSIMA_PRENOTAZIONE_MINUTI = int(os.environ.get("DURATA_MASSIMA_PRENOTAZIONE_MINUTI", 180))
 
-# Preavviso minimo (in giorni)
-MIN_NOTICE_DAYS = int(os.getenv("MIN_NOTICE_DAYS", 1))
+# =========================
+# Altre personalizzazioni
+# =========================
+# (aggiungi qui altre variabili se necessario)
+
+AUTH_USER_MODEL = 'prenotazioni.Utente'

@@ -17,8 +17,10 @@
 <body>
     <div class="container">
         <h2>Accedi al sistema</h2>
-        {% if form.errors %}
-            <div class="error">Credenziali non valide. Riprova.</div>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="error">{{ message }}</div>
+            {% endfor %}
         {% endif %}
         <form method="post">
             {% csrf_token %}

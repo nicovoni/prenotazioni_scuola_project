@@ -5,6 +5,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.contrib import messages
+from django.conf import settings
 
 class PrenotazioneViewSet(viewsets.ModelViewSet):
     queryset = Prenotazione.objects.all()
@@ -32,8 +33,27 @@ def prenota_laboratorio(request):
                 fine = timezone.datetime.strptime(f"{data} {ora_fine}", "%Y-%m-%d %H:%M")
                 inizio = timezone.make_aware(inizio)
                 fine = timezone.make_aware(fine)
-                if inizio < timezone.now():
+                now = timezone.now()
+                # Regole: data futura
+                if inizio < now:
                     errori.append("La data e ora di inizio devono essere nel futuro.")
+                # Regole: giorni di anticipo
+                giorni_anticipo = settings.GIORNI_ANTICIPO_PRENOTAZIONE
+                if (inizio.date() - now.date()).days < giorni_anticipo:
+                    errori.append(f"La prenotazione deve essere fatta almeno {giorni_anticipo} giorni prima.")
+                # Regole: orari consentiti
+                orario_inizio = inizio.strftime('%H:%M')
+                orario_fine = fine.strftime('%H:%M')
+                if orario_inizio < settings.BOOKING_START_HOUR or orario_fine > settings.BOOKING_END_HOUR:
+                    errori.append(f"Le prenotazioni sono consentite solo tra le {settings.BOOKING_START_HOUR} e le {settings.BOOKING_END_HOUR}.")
+                # Regole: durata minima/massima
+                durata_min = settings.DURATA_MINIMA_PRENOTAZIONE_MINUTI
+                durata_max = settings.DURATA_MASSIMA_PRENOTAZIONE_MINUTI
+                durata = int((fine-inizio).total_seconds() // 60)
+                if durata < durata_min:
+                    errori.append(f"La durata minima della prenotazione è di {durata_min} minuti.")
+                if durata > durata_max:
+                    errori.append(f"La durata massima della prenotazione è di {durata_max} minuti.")
                 if fine <= inizio:
                     errori.append("L'orario di fine deve essere successivo a quello di inizio.")
             except Exception:
