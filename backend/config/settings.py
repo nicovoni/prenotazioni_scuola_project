@@ -1,6 +1,53 @@
+
+# =========================
+# Email amministratore unico
+# =========================
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'noreply@isufol.it')
+ADMINS = [
+    ("Admin", ADMIN_EMAIL),
+]
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = ADMIN_EMAIL
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = ADMIN_EMAIL
+
+
 import os
 from pathlib import Path
 import dj_database_url
+
+# =========================
+# Email amministratore unico
+# =========================
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'noreply@isufol.it')
+ADMINS = [
+    ("Admin", ADMIN_EMAIL),
+]
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = ADMIN_EMAIL
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = ADMIN_EMAIL
+
+# =========================
+# Email amministratore unico
+# =========================
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'noreply@isufol.it')
+ADMINS = [
+    ("Admin", ADMIN_EMAIL),
+]
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = ADMIN_EMAIL
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = ADMIN_EMAIL
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -46,8 +93,6 @@ TEMPLATES = [
         },
     },
 ]
-
-WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
