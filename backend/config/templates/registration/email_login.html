@@ -5,14 +5,44 @@
     <title>Login con Email</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f7f7f7; }
-        .container { max-width: 400px; margin: 60px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 32px 24px; }
+        .container { max-width: 480px; margin: 60px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 32px 24px; }
         h2 { text-align: center; color: #2c3e50; }
-        label { display: block; margin-top: 16px; margin-bottom: 4px; color: #34495e; }
+        label { display: block; margin-top: 12px; margin-bottom: 6px; color: #34495e; }
         input[type="email"] { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 12px; box-sizing: border-box; }
+        .hint { font-size: 13px; color: #586e75; margin-bottom: 8px; }
         button { width: 100%; padding: 10px; background: #2980b9; color: #fff; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; margin-top: 12px; }
         button:hover { background: #3498db; }
         .error { color: #c0392b; text-align: center; margin-bottom: 12px; }
     </style>
+    <script>
+        function validateEmailForm(event) {
+            var email = document.getElementById('email').value.trim();
+            var domain = 'isufol.it';
+            // iniziale del primo nome, punto, cognome (apostrofo consentito), opzionale suffisso numerico
+            var localRegex = /^[A-Za-z]\.[A-Za-zÀ-ÖØ-öø-ÿ']+[0-9]*$/i;
+            if (!email) {
+                alert('Inserisci la tua email dell\'istituto.');
+                event.preventDefault();
+                return false;
+            }
+            var parts = email.split('@');
+            if (parts.length !== 2 || parts[1].toLowerCase() !== domain) {
+                alert('Sono accettate solo email del dominio ' + domain + '.');
+                event.preventDefault();
+                return false;
+            }
+            if (!localRegex.test(parts[0])) {
+                alert("Formato email non valido. Usa l'iniziale del nome (se hai più nomi, usa la prima iniziale), punto e cognome; puoi aggiungere un numero alla fine se necessario (es. i.nizzo@isufol.it o i.nizzo1@isufol.it). ");
+                event.preventDefault();
+                return false;
+            }
+            return true;
+        }
+        window.addEventListener('DOMContentLoaded', function(){
+            var form = document.querySelector('form');
+            if (form) form.addEventListener('submit', validateEmailForm);
+        });
+    </script>
 </head>
 <body>
     <div class="container">
@@ -24,8 +54,9 @@
         {% endif %}
         <form method="post">
             {% csrf_token %}
-            <label for="email">Email:</label>
-            <input type="email" name="email" id="email" required autofocus>
+            <label for="email">Email istituzionale:</label>
+            <input type="email" name="email" id="email" placeholder="i.cognome@isufol.it" required autofocus>
+            <div class="hint">Formato: iniziale del nome (se più nomi, usa la prima iniziale) + punto + cognome. Apostrofo consentito. Esempio: i.nizzo@isufol.it o i.nizzo1@isufol.it</div>
             <button type="submit">Invia PIN</button>
         </form>
     </div>

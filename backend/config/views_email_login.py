@@ -57,22 +57,44 @@ def email_login(request):
     if request.method == 'POST':
         email = request.POST.get('email')
         domain = settings.SCHOOL_EMAIL_DOMAIN.lower()
-        email_regex = r"^[A-Za-z0-9._%+-]+@" + re.escape(domain) + "$"
         logger.info(f"Tentativo login email: {email} IP: {ip}")
-        if not email or not re.match(email_regex, email):
+        if not email:
             messages.error(request, f"Inserisci una email valida del dominio {domain}")
             request.session['pin_send_attempts'] = attempts + 1
-            if request.session['pin_send_attempts'] >= max_attempts:
+            logger.warning(f"Tentativo login email fallito: {email} IP: {ip}")
+            return render(request, 'registration/email_login.html')
+        # Split local and domain parts
+        try:
+            local_part, domain_part = email.split('@')
+        except ValueError:
+            local_part = ''
+            domain_part = ''
+
+        if domain_part.lower() != domain:
+            messages.error(request, f"Sono accettate solo email del dominio {domain}")
+            request.session['pin_send_attempts'] = attempts + 1
+            logger.warning(f"Tentativo login email con dominio non valido: {email} IP: {ip}")
+            return render(request, 'registration/email_login.html')
+
+        # Validate local-part: single initial (letter), dot, full surname (letters, apostrophe allowed)
+        # allow an optional numeric suffix after the surname (e.g. n.cantalupo1)
+        # Note: hyphen is NOT allowed per updated requirement; apostrophe (') is allowed
+        local_regex = r"^[A-Za-z]\.[A-Za-zÀ-ÖØ-öø-ÿ']+[0-9]*$"
+        if not re.match(local_regex, local_part):
+            messages.error(request, "Formato email non valido. Usa l'iniziale del primo nome, punto e cognome (es. i.nizzo@isufol.it). Se ci sono omonimie, è possibile aggiungere una cifra alla fine (es. i.nizzo1@isufol.it).")
+            request.session['pin_send_attempts'] = attempts + 1
+            logger.warning(f"Tentativo login email con formato local-part non valido: {email} IP: {ip}")
+            # Optionally block after many attempts
+            if request.session.get('pin_send_attempts', 0) >= max_attempts:
                 block_time = now + timezone.timedelta(minutes=block_minutes)
                 request.session['pin_send_block_until'] = block_time.isoformat()
-                # Notifica admin
                 from django.core.mail import mail_admins
                 mail_admins(
                     subject="Blocco tentativi invio PIN",
                     message=f"Blocco per troppi tentativi di invio PIN per l'email: {email} IP: {ip}",
                 )
-            logger.warning(f"Tentativo login email fallito: {email} IP: {ip}")
             return render(request, 'registration/email_login.html')
+
         # Genera PIN monouso
         pin = ''.join(random.choices(string.digits, k=6))
         # Salva PIN e timestamp in sessione
