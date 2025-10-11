@@ -3,65 +3,43 @@ import os
 from pathlib import Path
 import dj_database_url
 
+# BASE_DIR e variabili di progetto
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 # =========================
-# Email amministratore unico
+# Email amministratore unico e configurazione SMTP
 # =========================
+# Valori predefiniti e lettura sicura da environment variables.
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'noreply@isufol.it')
-ADMINS = [
-    ("Admin", ADMIN_EMAIL),
-]
-# Email backend settings (production defaults)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+ADMINS = [("Admin", ADMIN_EMAIL)]
+
+# Backend di default: SMTP. Se in ambiente di sviluppo (DJANGO_DEBUG=True)
+# usiamo il console backend per evitare errori quando non è configurato l'SMTP.
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
-# EMAIL_HOST_USER: account usato per autenticazione SMTP (spesso lo stesso di DEFAULT_FROM_EMAIL)
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('1', 'true', 'yes')
+
+# Impostazioni di autenticazione: utilizzare una App Password (consigliato) o un
+# secret manager. NON inserire mai la password nel repository.
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', ADMIN_EMAIL)
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-# DEFAULT_FROM_EMAIL: indirizzo mittente usato nelle email inviate dall'app
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', ADMIN_EMAIL)
 
-# Fallback per lo sviluppo: se DEBUG=True, useremo il console backend per evitare errori SMTP
-# in ambiente di sviluppo locale. In produzione mantenere il backend SMTP impostando DEBUG=False
-if os.environ.get('DJANGO_DEBUG', 'False') == 'True':
+# Development fallback (mostra email in console quando DEBUG=True)
+if os.environ.get('DJANGO_DEBUG', 'False').lower() in ('1', 'true'):
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-
-import os
-from pathlib import Path
-import dj_database_url
-
-# =========================
-# Email amministratore unico
-# =========================
-ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'noreply@isufol.it')
-ADMINS = [
-    ("Admin", ADMIN_EMAIL),
-]
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_HOST_USER = ADMIN_EMAIL
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = ADMIN_EMAIL
-
-# =========================
-# Email amministratore unico
-# =========================
-ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'noreply@isufol.it')
-ADMINS = [
-    ("Admin", ADMIN_EMAIL),
-]
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_HOST_USER = ADMIN_EMAIL
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = ADMIN_EMAIL
-
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Support reading SMTP password from a secret file (e.g. Docker secret)
+if not EMAIL_HOST_PASSWORD:
+    secret_path = os.environ.get('EMAIL_HOST_PASSWORD_FILE')
+    if secret_path and os.path.exists(secret_path):
+        try:
+            with open(secret_path, 'r', encoding='utf-8') as f:
+                EMAIL_HOST_PASSWORD = f.read().strip()
+        except Exception:
+            # if reading fails, leave EMAIL_HOST_PASSWORD as empty string
+            EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'supersegreto123')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
