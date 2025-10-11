@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Modifica Prenotazione</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f7f7f7; }
+        .container { max-width: 480px; margin: 40px auto; background: #fff; padding: 24px; border-radius: 8px; }
+        label { display:block; margin-top:12px; }
+        input, select { width:100%; padding:8px; }
+        button { margin-top:12px; padding:10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Modifica prenotazione</h1>
+        <form method="post">
+            {% csrf_token %}
+            <label for="laboratorio">Laboratorio:</label>
+            <select name="laboratorio" id="laboratorio" disabled>
+                {% for risorsa in risorse %}
+                    <option value="{{ risorsa.id }}" {% if preserved.laboratorio == risorsa.id %}selected{% endif %}>{{ risorsa.nome }}</option>
+                {% endfor %}
+            </select>
+            <label for="data">Data:</label>
+            <input type="date" name="data" id="data" value="{{ preserved.data }}" required>
+            <label for="ora_inizio">Ora inizio:</label>
+            <input type="time" name="ora_inizio" id="ora_inizio" value="{{ preserved.ora_inizio }}" required>
+            <label for="ora_fine">Ora fine:</label>
+            <input type="time" name="ora_fine" id="ora_fine" value="{{ preserved.ora_fine }}" required>
+            <label for="quantita">Quantità:</label>
+            <input type="number" name="quantita" id="quantita" min="1" value="{{ preserved.quantita }}">
+            <button type="submit">Salva modifiche</button>
+        </form>
+    </div>
+</body>
+</html>

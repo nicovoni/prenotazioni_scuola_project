@@ -73,19 +73,29 @@
             <select name="laboratorio" id="laboratorio" required>
                 <option value="">-- Seleziona --</option>
                 {% for risorsa in risorse %}
-                    <option value="{{ risorsa.id }}">{{ risorsa.nome }}</option>
+                    <option value="{{ risorsa.id }}" {% if preserved.laboratorio == risorsa.id|stringformat:"s" %}selected{% endif %}>{{ risorsa.nome }}</option>
                 {% endfor %}
             </select>
             <label for="data">Data:</label>
-            <input type="date" name="data" id="data" required>
+            <input type="date" name="data" id="data" value="{{ preserved.data }}" required>
             <label for="ora_inizio">Ora inizio:</label>
-            <input type="time" name="ora_inizio" id="ora_inizio" required>
+            <input type="time" name="ora_inizio" id="ora_inizio" value="{{ preserved.ora_inizio }}" required>
             <label for="ora_fine">Ora fine:</label>
-            <input type="time" name="ora_fine" id="ora_fine" required>
+            <input type="time" name="ora_fine" id="ora_fine" value="{{ preserved.ora_fine }}" required>
+            <label for="quantita">Quantità (se applicabile):</label>
+            <input type="number" name="quantita" id="quantita" min="1" value="{{ preserved.quantita|default:'1' }}">
             <button type="submit">Prenota</button>
         </form>
         {% if messaggio %}
-            <div class="message{% if 'successo' in messaggio %} success{% endif %}">{{ messaggio|safe }}</div>
+            <div class="message{% if success %} success{% endif %}">
+                {% if success %}
+                    <h3>Ciao {{ request.user.first_name or request.user.username }} 🎉</h3>
+                    <p>{{ messaggio|safe }}</p>
+                    <p>Vuoi prenotare qualcos'altro? <a href="{% url 'prenota_laboratorio' %}">Fai una nuova prenotazione</a></p>
+                {% else %}
+                    <p>{{ messaggio|safe }}</p>
+                {% endif %}
+            </div>
         {% endif %}
     </div>
 </body>

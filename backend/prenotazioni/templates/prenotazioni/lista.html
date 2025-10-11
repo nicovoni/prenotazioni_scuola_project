@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Le mie prenotazioni</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f7f7f7; }
+        .container { max-width: 800px; margin: 40px auto; background: #fff; padding: 24px; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px 12px; border-bottom: 1px solid #eee; }
+        th { text-align: left; }
+        .actions a { margin-right: 8px; color: #2980b9; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Le mie prenotazioni</h1>
+        {% if prenotazioni %}
+            <table>
+                <thead>
+                    <tr><th>Risorsa</th><th>Data</th><th>Orario</th><th>Quantità</th><th>Azioni</th></tr>
+                </thead>
+                <tbody>
+                    {% for p in prenotazioni %}
+                        <tr>
+                            <td>{{ p.risorsa.nome }}</td>
+                            <td>{{ p.inizio.date }}</td>
+                            <td>{{ p.inizio.time }} - {{ p.fine.time }}</td>
+                            <td>{{ p.quantita }}</td>
+                            <td class="actions">
+                                <a href="{% url 'edit_prenotazione' p.id %}">Modifica</a>
+                                <a href="{% url 'delete_prenotazione' p.id %}">Elimina</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>Non hai ancora prenotazioni.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
