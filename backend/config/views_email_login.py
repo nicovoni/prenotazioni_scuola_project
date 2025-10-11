@@ -104,13 +104,21 @@ def email_login(request):
         request.session['pin_send_attempts'] = 0
         request.session['pin_send_block_until'] = None
         # Invia email
-        send_mail(
-            subject="Il tuo PIN di accesso",
-            message=f"Il tuo PIN di accesso è: {pin}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
-        )
+        try:
+            send_mail(
+                subject="Il tuo PIN di accesso",
+                message=f"Il tuo PIN di accesso è: {pin}",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            # Log dell'errore e messaggio amichevole all'utente, evitare 500
+            logger.error(f"Errore invio PIN a {email} IP: {ip} - {e}")
+            messages.error(request, "Errore nell'invio della email. Contatta l'amministratore del sistema.")
+            # Manteniamo il PIN e la sessione ma non facciamo redirect; mostriamo la pagina con errore
+            return render(request, 'registration/email_login.html')
+
         logger.info(f"PIN inviato a {email} IP: {ip}")
         return redirect('verify_pin')
     return render(request, 'registration/email_login.html')

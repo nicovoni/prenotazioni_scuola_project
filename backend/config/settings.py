@@ -10,13 +10,21 @@ ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'noreply@isufol.it')
 ADMINS = [
     ("Admin", ADMIN_EMAIL),
 ]
+# Email backend settings (production defaults)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_HOST_USER = ADMIN_EMAIL
+# EMAIL_HOST_USER: account usato per autenticazione SMTP (spesso lo stesso di DEFAULT_FROM_EMAIL)
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', ADMIN_EMAIL)
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = ADMIN_EMAIL
+# DEFAULT_FROM_EMAIL: indirizzo mittente usato nelle email inviate dall'app
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', ADMIN_EMAIL)
+
+# Fallback per lo sviluppo: se DEBUG=True, useremo il console backend per evitare errori SMTP
+# in ambiente di sviluppo locale. In produzione mantenere il backend SMTP impostando DEBUG=False
+if os.environ.get('DJANGO_DEBUG', 'False') == 'True':
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
 import os
