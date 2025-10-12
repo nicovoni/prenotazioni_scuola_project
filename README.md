@@ -8,6 +8,46 @@
 	- `DATABASE_URL` (usa la stringa Supabase: `postgresql://<SUPABASE_USER>:<SUPABASE_PASSWORD>@<SUPABASE_HOST>:5432/<SUPABASE_DB>`)
 3. Avvia il servizio: Render eseguirà le migrazioni e avvierà Gunicorn tramite `entrypoint.sh`.
 
+### Configurazione Email con Google Workspace
+
+Per inviare email tramite Google Workspace (es. account n.cantalupo@isufol.it):
+
+1. **Genera una password per le app** su Google:
+   - Accedi all'account Google Workspace (es. n.cantalupo@isufol.it)
+   - Vai su Account Google > Sicurezza > Verifica in due passaggi (deve essere attiva)
+   - Vai su "Password per le app" e genera una nuova password per "Mail" / "Altro dispositivo"
+   - Copia la password generata (16 caratteri senza spazi)
+
+2. **Configura il Secret File su Render**:
+   - Vai su Dashboard Render > Il tuo servizio > Settings
+   - Scorri fino a "Secret Files"
+   - Clicca su "Add Secret File"
+   - Filename: `email_password.txt` (Render aggiunge automaticamente il percorso /etc/secrets/)
+   - Contents: Incolla la password per le app (solo la password, niente altro)
+   - Salva (il file sarà disponibile in `/etc/secrets/email_password.txt`)
+
+3. **Imposta le variabili d'ambiente su Render**:
+   ```
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_USE_TLS=True
+   EMAIL_HOST_USER=n.cantalupo@isufol.it
+   EMAIL_HOST_PASSWORD_FILE=/etc/secrets/email_password.txt
+   DEFAULT_FROM_EMAIL=n.cantalupo@isufol.it
+   ADMIN_EMAIL=n.cantalupo@isufol.it
+   ```
+
+4. **Verifica la configurazione**:
+   Dopo il deploy, usa la shell di Render o esegui il comando di test:
+   ```bash
+   python manage.py send_test_pin destinatario@isufol.it
+   ```
+
+**Nota importante**: Con Google Workspace, assicurati che:
+- L'account mittente (EMAIL_HOST_USER) abbia la verifica in due passaggi attiva
+- La password utilizzata sia quella generata dalle "Password per le app", NON la password normale dell'account
+- Il dominio del mittente corrisponda al dominio configurato in SCHOOL_EMAIL_DOMAIN (isufol.it)
+
 ## Database Supabase
 
 Configura Supabase come database PostgreSQL e copia la stringa di connessione in `DATABASE_URL`.
@@ -16,20 +56,46 @@ Configura Supabase come database PostgreSQL e copia la stringa di connessione in
 
 Vedi `.env.example` per branding, orari, carrelli, preavviso.
 
-Snippet per incollare in Render > Environment (chiavi = valori d'esempio):
+### Snippet per Render > Environment
+
+**Opzione 1: Con Google Workspace (usando Secret Files)**
 
 ```
 DJANGO_SECRET_KEY=supersegreto
 DJANGO_DEBUG=False
 DJANGO_ALLOWED_HOSTS=.onrender.com,yourdomain.com
 DATABASE_URL=postgresql://<USER>:<PASS>@<HOST>:5432/<DB>
-DEFAULT_FROM_EMAIL=noreply@isufol.it
-ADMIN_EMAIL=admin@isufol.it
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=n.cantalupo@isufol.it
+EMAIL_HOST_PASSWORD_FILE=/etc/secrets/email_password.txt
+DEFAULT_FROM_EMAIL=n.cantalupo@isufol.it
+ADMIN_EMAIL=n.cantalupo@isufol.it
+SCHOOL_EMAIL_DOMAIN=isufol.it
+```
+
+**IMPORTANTE**: Quando usi Google Workspace, devi anche configurare il Secret File su Render:
+- Settings > Secret Files > Add Secret File
+- Filename: `email_password.txt` (inserisci solo il nome, non il percorso completo)
+- Contents: La password per le app generata da Google (16 caratteri)
+- Render lo posizionerà automaticamente in `/etc/secrets/email_password.txt`
+
+**Opzione 2: Con SendGrid**
+
+```
+DJANGO_SECRET_KEY=supersegreto
+DJANGO_DEBUG=False
+DJANGO_ALLOWED_HOSTS=.onrender.com,yourdomain.com
+DATABASE_URL=postgresql://<USER>:<PASS>@<HOST>:5432/<DB>
 EMAIL_HOST=smtp.sendgrid.net
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
-EMAIL_HOST_USER=apikey   # per SendGrid usare 'apikey' come username
+EMAIL_HOST_USER=apikey
 EMAIL_HOST_PASSWORD=<SENDGRID_API_KEY>
+DEFAULT_FROM_EMAIL=noreply@isufol.it
+ADMIN_EMAIL=admin@isufol.it
+SCHOOL_EMAIL_DOMAIN=isufol.it
 ```
 
 Se usi Docker Compose localmente, puoi usare lo script `scripts/run-in-docker.sh` per eseguire il comando di test all'interno del container web.
