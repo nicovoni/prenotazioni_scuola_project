@@ -103,8 +103,12 @@ def email_login(request):
         request.session['login_pin_time'] = now.isoformat()
         request.session['pin_send_attempts'] = 0
         request.session['pin_send_block_until'] = None
-        # Invia email
+        # Invia email con debug avanzato
         try:
+            logger.info(f"DEBUG SMTP: Tentativo invio email da {settings.DEFAULT_FROM_EMAIL} a {email}")
+            logger.info(f"DEBUG SMTP: EMAIL_HOST={settings.EMAIL_HOST}, PORT={settings.EMAIL_PORT}, USER={settings.EMAIL_HOST_USER}")
+            logger.info(f"DEBUG SMTP: Password length: {len(settings.EMAIL_HOST_PASSWORD)}")
+
             send_mail(
                 subject="Il tuo PIN di accesso",
                 message=f"Il tuo PIN di accesso è: {pin}",
@@ -112,14 +116,26 @@ def email_login(request):
                 recipient_list=[email],
                 fail_silently=False,
             )
+
+            logger.info(f"DEBUG SMTP: Email inviata con SUCCESSO a {email}")
+
         except Exception as e:
-            # Log dell'errore e messaggio amichevole all'utente, evitare 500
-            logger.error(f"Errore invio PIN a {email} IP: {ip} - {e}")
+            # Log dettagliato dell'errore SMTP per diagnosticare
+            import traceback
+            logger.error(f"ERRORE SMTP DETTAGLIATO: Errore invio PIN a {email} IP: {ip}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            logger.error(f"Exception message: {str(e)}")
+            logger.error(f"Full traceback:\n{traceback.format_exc()}")
+
+            # Log specifiche configurazioni SMTP
+            logger.error(f"SMTP Config: HOST={settings.EMAIL_HOST}, PORT={settings.EMAIL_PORT}, TLS={settings.EMAIL_USE_TLS}")
+            logger.error(f"SMTP Auth: USER={settings.EMAIL_HOST_USER}, PASSWORD_LEN={len(settings.EMAIL_HOST_PASSWORD) if settings.EMAIL_HOST_PASSWORD else 0}")
+
             messages.error(request, "Errore nell'invio della email. Contatta l'amministratore del sistema.")
             # Manteniamo il PIN e la sessione ma non facciamo redirect; mostriamo la pagina con errore
             return render(request, 'registration/email_login.html')
 
-        logger.info(f"PIN inviato a {email} IP: {ip}")
+        logger.info(f"PIN inviato con SUCCESSO a {email} IP: {ip}")
         return redirect('verify_pin')
     return render(request, 'registration/email_login.html')
 
