@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Email amministratore unico e configurazione SMTP
 # =========================
 # Valori predefiniti e lettura sicura da environment variables.
-ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'noreply@isufol.it')
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'n.cantalupo@isufol.it')
 ADMINS = [("Admin", ADMIN_EMAIL)]
 
 # Backend di default: SMTP. Se in ambiente di sviluppo (DJANGO_DEBUG=True)
