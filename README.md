@@ -8,45 +8,42 @@
 	- `DATABASE_URL` (usa la stringa Supabase: `postgresql://<SUPABASE_USER>:<SUPABASE_PASSWORD>@<SUPABASE_HOST>:5432/<SUPABASE_DB>`)
 3. Avvia il servizio: Render eseguirà le migrazioni e avvierà Gunicorn tramite `entrypoint.sh`.
 
-### Configurazione Email con Google Workspace
+### Configurazione Email con Google/Gmail
 
-Per inviare email tramite Google Workspace (es. account n.cantalupo@isufol.it):
+Per inviare email tramite Gmail (account nicolacantalup@gmail.com):
 
-1. **Genera una password per le app** su Google:
-   - Accedi all'account Google Workspace (es. n.cantalupo@isufol.it)
-   - Vai su Account Google > Sicurezza > Verifica in due passaggi (deve essere attiva)
-   - Vai su "Password per le app" e genera una nuova password per "Mail" / "Altro dispositivo"
+1. **Genera una password per le app** su Gmail:
+   - Accedi all'account Gmail nicolacantalup@gmail.com
+   - Vai su [myaccount.google.com](https://myaccount.google.com) > Sicurezza
+   - Attiva la "Verifica in due passaggi" se non già attiva
+   - Vai su "Password per le app" > Seleziona app "Mail" e dispositivo "Altro"
    - Copia la password generata (16 caratteri senza spazi)
 
 2. **Configura il Secret File su Render**:
-   - Vai su Dashboard Render > Il tuo servizio > Settings
-   - Scorri fino a "Secret Files"
-   - Clicca su "Add Secret File"
-   - Filename: `email_password.txt` (Render aggiunge automaticamente il percorso /etc/secrets/)
-   - Contents: Incolla la password per le app (solo la password, niente altro)
-   - Salva (il file sarà disponibile in `/etc/secrets/email_password.txt`)
+   - Dashboard Render > Il tuo servizio > Settings > Secret Files
+   - Clicca "Add Secret File"
+   - Filename: `email_password.txt` (Render aggiunge automaticamente `/etc/secrets/`)
+   - Contents: Incolla solo la password per le app
+   - Salva (disponibile come `/etc/secrets/email_password.txt`)
 
 3. **Imposta le variabili d'ambiente su Render**:
    ```
    EMAIL_HOST=smtp.gmail.com
    EMAIL_PORT=587
    EMAIL_USE_TLS=True
-   EMAIL_HOST_USER=n.cantalupo@isufol.it
+   EMAIL_HOST_USER=nicolacantalup@gmail.com
    EMAIL_HOST_PASSWORD_FILE=/etc/secrets/email_password.txt
-   DEFAULT_FROM_EMAIL=n.cantalupo@isufol.it
-   ADMIN_EMAIL=n.cantalupo@isufol.it
+   DEFAULT_FROM_EMAIL=nicolacantalup@gmail.com
+   ADMIN_EMAIL=nicolacantalup@gmail.com
    ```
 
 4. **Verifica la configurazione**:
-   Dopo il deploy, usa la shell di Render o esegui il comando di test:
+   Dopo deploy, testa con:
    ```bash
-   python manage.py send_test_pin destinatario@isufol.it
+   python manage.py send_test_pin i.nizzo@isufol.it
    ```
 
-**Nota importante**: Con Google Workspace, assicurati che:
-- L'account mittente (EMAIL_HOST_USER) abbia la verifica in due passaggi attiva
-- La password utilizzata sia quella generata dalle "Password per le app", NON la password normale dell'account
-- Il dominio del mittente corrisponda al dominio configurato in SCHOOL_EMAIL_DOMAIN (isufol.it)
+**Importante**: Assicurati che l'account abbia la verifica in due passaggi attiva e usa una "Password per le app", NON la password normale.
 
 ## Database Supabase
 
@@ -58,7 +55,7 @@ Vedi `.env.example` per branding, orari, carrelli, preavviso.
 
 ### Snippet per Render > Environment
 
-**Opzione 1: Con Google Workspace (usando Secret Files)**
+**Opzione 1: Con Gmail personale (consigliato)**
 
 ```
 DJANGO_SECRET_KEY=supersegreto
@@ -68,18 +65,16 @@ DATABASE_URL=postgresql://<USER>:<PASS>@<HOST>:5432/<DB>
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
-EMAIL_HOST_USER=n.cantalupo@isufol.it
+EMAIL_HOST_USER=nicolacantalup@gmail.com
 EMAIL_HOST_PASSWORD_FILE=/etc/secrets/email_password.txt
-DEFAULT_FROM_EMAIL=n.cantalupo@isufol.it
-ADMIN_EMAIL=n.cantalupo@isufol.it
+DEFAULT_FROM_EMAIL=nicolacantalup@gmail.com
+ADMIN_EMAIL=nicolacantalup@gmail.com
 SCHOOL_EMAIL_DOMAIN=isufol.it
 ```
 
-**IMPORTANTE**: Quando usi Google Workspace, devi anche configurare il Secret File su Render:
-- Settings > Secret Files > Add Secret File
-- Filename: `email_password.txt` (inserisci solo il nome, non il percorso completo)
-- Contents: La password per le app generata da Google (16 caratteri)
-- Render lo posizionerà automaticamente in `/etc/secrets/email_password.txt`
+**IMPORTANTE**: Con Gmail, devi configurare il Secret File:
+- Dashboard Render > Servizio > Settings > Secret Files
+- Add Secret File: Filename `email_password.txt` → Contents: password per le app Gmail (16 caratteri)
 
 **Opzione 2: Con SendGrid**
 
