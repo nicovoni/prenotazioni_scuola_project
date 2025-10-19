@@ -254,13 +254,29 @@ class EmailService:
         try:
             logger.info(f"Tentativo invio email conferma a {prenotazione.utente.email} per prenotazione {prenotazione.id}")
 
-            send_mail(
-                subject=subject,
-                message=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[prenotazione.utente.email],
-                fail_silently=False
+            # Utilizza lo stesso approccio migliorato con timeout lungo
+            from django.core.mail.backends.smtp import EmailBackend
+            from django.core.mail import EmailMessage
+
+            backend = EmailBackend(
+                host=settings.EMAIL_HOST,
+                port=settings.EMAIL_PORT,
+                username=settings.EMAIL_HOST_USER,
+                password=settings.EMAIL_HOST_PASSWORD,
+                use_tls=settings.EMAIL_USE_TLS,
+                timeout=60  # Timeout più lungo
             )
+
+            # Crea e invia email
+            email_message = EmailMessage(
+                subject=subject,
+                body=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[prenotazione.utente.email]
+            )
+
+            backend.send_messages([email_message])
+            backend.close()
 
             logger.info(f"Email conferma inviata con successo a {prenotazione.utente.email} per prenotazione {prenotazione.id}")
             return True, None

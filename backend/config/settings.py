@@ -23,7 +23,13 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', ADMIN_EMAIL)
 
 # Configurazioni aggiuntive per Gmail
 EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() in ('1', 'true', 'yes')
-EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 30))
+EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 60))  # Aumentato timeout per connessioni lente
+
+# Configurazioni SMTP avanzate per migliorare affidabilità
+EMAIL_BACKEND_CONFIG = {
+    'timeout': EMAIL_TIMEOUT,
+    'fail_silently': False,
+}
 
 # Configurazioni SMTP aggiuntive per migliorare la robustezza
 if EMAIL_HOST == 'smtp.gmail.com':
