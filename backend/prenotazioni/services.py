@@ -144,10 +144,9 @@ class BookingService:
             logger.info(f"Prenotazione creata: {prenotazione}")
 
             # Invia email di conferma
-            try:
-                EmailService.send_booking_confirmation(prenotazione)
-            except Exception as e:
-                logger.warning(f"Errore invio email conferma: {e}")
+            success, error = EmailService.send_booking_confirmation(prenotazione)
+            if not success:
+                logger.warning(f"Errore invio email conferma: {error}")
 
             return True, prenotazione
 
@@ -238,6 +237,9 @@ class EmailService:
 
         Args:
             prenotazione: Oggetto prenotazione
+
+        Returns:
+            tuple: (success, error_message)
         """
         subject = f"Conferma prenotazione: {prenotazione.risorsa.nome}"
         message = (
@@ -249,12 +251,51 @@ class EmailService:
             "Grazie per aver utilizzato il sistema di prenotazioni. Buona giornata!"
         )
 
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[prenotazione.utente.email],
-            fail_silently=True
-        )
+        try:
+            logger.info(f"Tentativo invio email conferma a {prenotazione.utente.email} per prenotazione {prenotazione.id}")
 
-        logger.info(f"Email conferma inviata per prenotazione {prenotazione.id}")
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[prenotazione.utente.email],
+                fail_silently=False
+            )
+
+            logger.info(f"Email conferma inviata con successo a {prenotazione.utente.email} per prenotazione {prenotazione.id}")
+            return True, None
+
+        except Exception as e:
+            error_msg = f"Errore invio email conferma a {prenotazione.utente.email}: {str(e)}"
+            logger.error(error_msg)
+            logger.error(f"Configurazione SMTP: HOST={settings.EMAIL_HOST}, PORT={settings.EMAIL_PORT}, TLS={settings.EMAIL_USE_TLS}")
+            logger.error(f"Credenziali: USER={settings.EMAIL_HOST_USER}, PASSWORD_PRESENTE={bool(settings.EMAIL_HOST_PASSWORD)}")
+            return False, error_msg
+
+    @staticmethod
+    def test_email_configuration():
+        """
+        Testa la configurazione email inviando un'email di test.
+
+        Returns:
+            tuple: (success, message)
+        """
+        try:
+            logger.info("Test configurazione email...")
+
+            # Invia email di test all'admin
+            send_mail(
+                subject="Test configurazione email",
+                message="Questa è un'email di test per verificare la configurazione SMTP.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[settings.ADMIN_EMAIL],
+                fail_silently=False
+            )
+
+            logger.info("Email di test inviata con successo")
+            return True, "Email di test inviata con successo"
+
+        except Exception as e:
+            error_msg = f"Errore configurazione email: {str(e)}"
+            logger.error(error_msg)
+            return False, error_msg

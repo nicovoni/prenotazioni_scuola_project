@@ -12,6 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'nicolacantalup@gmail.com')
 ADMINS = [("Admin", ADMIN_EMAIL)]
 
+# Configurazione email Gmail migliorata
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
@@ -20,12 +21,22 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', ADMIN_EMAIL)
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', ADMIN_EMAIL)
 
+# Configurazioni aggiuntive per Gmail
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() in ('1', 'true', 'yes')
+EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 30))
+
+# Configurazioni SMTP aggiuntive per migliorare la robustezza
+if EMAIL_HOST == 'smtp.gmail.com':
+    # Gmail richiede spesso configurazioni specifiche
+    EMAIL_USE_TLS = True
+    EMAIL_USE_SSL = False
+    EMAIL_PORT = 587
+
 # Development fallback (mostra email in console quando DEBUG=True)
 if os.environ.get('DJANGO_DEBUG', 'False').lower() in ('1', 'true'):
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Support reading SMTP password from a secret file (e.g. Docker secret)
-# DEBUG: Check if EMAIL_HOST_PASSWORD_FILE is set and file exists
 secret_path = os.environ.get('EMAIL_HOST_PASSWORD_FILE')
 if secret_path:
     if os.path.exists(secret_path):
@@ -33,15 +44,25 @@ if secret_path:
             # Read password from file
             with open(secret_path, 'r', encoding='utf-8') as f:
                 EMAIL_HOST_PASSWORD = f.read().strip()
+            print(f"DEBUG: Password letta dal file {secret_path}, lunghezza: {len(EMAIL_HOST_PASSWORD)}")
         except Exception as e:
+            print(f"DEBUG: Errore lettura file password: {e}")
             # If reading fails, try environment variable as fallback
             EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
     else:
+        print(f"DEBUG: File password non trovato: {secret_path}")
         # File doesn't exist, try environment variable
         EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 else:
     # No file path set, use environment variable directly
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+
+# Debug logging for email configuration
+print(f"DEBUG EMAIL: Configurazione finale:")
+print(f"DEBUG EMAIL: HOST={EMAIL_HOST}, PORT={EMAIL_PORT}, TLS={EMAIL_USE_TLS}")
+print(f"DEBUG EMAIL: USER={EMAIL_HOST_USER}")
+print(f"DEBUG EMAIL: DEFAULT_FROM={DEFAULT_FROM_EMAIL}")
+print(f"DEBUG EMAIL: Password length: {len(EMAIL_HOST_PASSWORD) if EMAIL_HOST_PASSWORD else 0}")
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'supersegreto123')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
