@@ -38,9 +38,7 @@ if EMAIL_HOST == 'smtp.gmail.com':
     EMAIL_USE_SSL = False
     EMAIL_PORT = 587
 
-# Development fallback (mostra email in console quando DEBUG=True)
-if os.environ.get('DJANGO_DEBUG', 'False').lower() in ('1', 'true'):
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
 
 # Support reading SMTP password from a secret file (e.g. Docker secret)
 secret_path = os.environ.get('EMAIL_HOST_PASSWORD_FILE')

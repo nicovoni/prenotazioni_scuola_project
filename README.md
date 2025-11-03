@@ -93,21 +93,25 @@ ADMIN_EMAIL=admin@isufol.it
 SCHOOL_EMAIL_DOMAIN=isufol.it
 ```
 
-Se usi Docker Compose localmente, puoi usare lo script `scripts/run-in-docker.sh` per eseguire il comando di test all'interno del container web.
-## Sviluppo e testing
+**Opzione 3: Con Amazon SES (Consigliato - Generoso piano gratuito)**
 
-Per evitare errori SMTP in ambiente di sviluppo (che possono causare 500 Internal Server Error quando il server email non è configurato), il progetto usa un fallback: quando `DJANGO_DEBUG` è impostato a `True`, Django utilizzerà il `console.EmailBackend` e mostrerà le email (incluso il PIN) direttamente sulla console del server.
-
-Come attivare il fallback (solo per sviluppo locale):
-
-```bash
-# dalla cartella backend
-export DJANGO_DEBUG=True
-# poi avviare il server Django (es. con manage.py)
-python manage.py runserver
+```
+DJANGO_SECRET_KEY=supersegreto
+DJANGO_DEBUG=False
+DJANGO_ALLOWED_HOSTS=.onrender.com,yourdomain.com
+DATABASE_URL=postgresql://<USER>:<PASS>@<HOST>:5432/<DB>
+EMAIL_HOST=email-smtp.us-east-1.amazonaws.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=<SES_SMTP_USERNAME>
+EMAIL_HOST_PASSWORD=<SES_SMTP_PASSWORD>
+DEFAULT_FROM_EMAIL=noreply@isufol.it
+ADMIN_EMAIL=admin@isufol.it
+SCHOOL_EMAIL_DOMAIN=isufol.it
 ```
 
-Questo permette di vedere il contenuto dell'email (il PIN) nella console anziché inviarlo via SMTP.
+Se usi Docker Compose localmente, puoi usare lo script `scripts/run-in-docker.sh` per eseguire il comando di test all'interno del container web.
+## Sviluppo e testing
 
 Eseguire i test locali
 
