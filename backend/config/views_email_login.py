@@ -105,11 +105,7 @@ def email_login(request):
         request.session['pin_send_block_until'] = None
         # Invia email con gestione errori migliorata
         try:
-            logger.info(f"DEBUG SMTP: Tentativo invio email da {settings.DEFAULT_FROM_EMAIL} a {email}")
-            logger.info(f"DEBUG SMTP: EMAIL_HOST={settings.EMAIL_HOST}, PORT={settings.EMAIL_PORT}, USER={settings.EMAIL_HOST_USER}")
-            logger.info(f"DEBUG SMTP: Password length: {len(settings.EMAIL_HOST_PASSWORD)}")
-
-            # Crea connessione SMTP con timeout più lungo
+            # Crea connessione SMTP con timeout ragionevole
             from django.core.mail.backends.smtp import EmailBackend
             from django.core.mail import EmailMessage
 
@@ -119,7 +115,7 @@ def email_login(request):
                 username=settings.EMAIL_HOST_USER,
                 password=settings.EMAIL_HOST_PASSWORD,
                 use_tls=settings.EMAIL_USE_TLS,
-                timeout=60  # Timeout più lungo
+                timeout=30  # Timeout ragionevole per Brevo
             )
 
             # Crea e invia email
@@ -133,39 +129,13 @@ def email_login(request):
             backend.send_messages([email_message])
             backend.close()
 
-            logger.info(f"DEBUG SMTP: Email inviata con SUCCESSO a {email}")
-
         except Exception as e:
-            # Log dettagliato dell'errore SMTP per diagnosticare
-            import traceback
-            logger.error(f"ERRORE SMTP DETTAGLIATO: Errore invio PIN a {email} IP: {ip}")
-            logger.error(f"Exception type: {type(e).__name__}")
-            logger.error(f"Exception message: {str(e)}")
-            logger.error(f"Full traceback:\n{traceback.format_exc()}")
+            logger.error(f"Errore invio PIN a {email}: {str(e)}")
 
-            # Log specifiche configurazioni SMTP
-            logger.error(f"SMTP Config: HOST={settings.EMAIL_HOST}, PORT={settings.EMAIL_PORT}, TLS={settings.EMAIL_USE_TLS}")
-            logger.error(f"SMTP Auth: USER={settings.EMAIL_HOST_USER}, PASSWORD_LEN={len(settings.EMAIL_HOST_PASSWORD) if settings.EMAIL_HOST_PASSWORD else 0}")
+            # Messaggio errore generico per l'utente
+            messages.error(request, "Errore temporaneo nell'invio della email. Riprova tra qualche minuto.")
 
-            # Messaggio errore più specifico per l'utente
-            error_msg = "Errore nell'invio della email. Questo potrebbe essere dovuto a:"
-            error_msg += "\n• Problemi temporanei del server email"
-            error_msg += "\n• L'account Gmail potrebbe richiedere di permettere l'accesso da app meno sicure"
-            error_msg += "\n• L'IP del server potrebbe essere bloccato da Gmail"
-
-            messages.error(request, error_msg)
-
-            # Invia notifica all'admin
-            try:
-                from django.core.mail import mail_admins
-                mail_admins(
-                    subject="Errore invio PIN - Sistema Prenotazioni",
-                    message=f"Errore invio PIN a {email} da IP {ip}:\n\n{str(e)}\n\nConfigurazione SMTP:\nHOST={settings.EMAIL_HOST}\nPORT={settings.EMAIL_PORT}\nTLS={settings.EMAIL_USE_TLS}\nUSER={settings.EMAIL_HOST_USER}",
-                )
-            except:
-                pass  # Se anche l'email admin fallisce, continua
-
-            # Manteniamo il PIN e la sessione ma non facciamo redirect; mostriamo la pagina con errore
+            # Manteniamo il PIN e la sessione ma non facciamo redirect
             return render(request, 'registration/email_login.html')
 
         logger.info(f"PIN inviato con SUCCESSO a {email} IP: {ip}")

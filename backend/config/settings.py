@@ -23,7 +23,7 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', ADMIN_EMAIL)
 
 # Configurazioni aggiuntive per Brevo
 EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() in ('1', 'true', 'yes')
-EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 60))  # Timeout per connessioni
+EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 30))  # Timeout per connessioni
 
 # Configurazioni SMTP avanzate per migliorare affidabilità
 EMAIL_BACKEND_CONFIG = {
@@ -48,25 +48,17 @@ if secret_path:
             # Read password from file
             with open(secret_path, 'r', encoding='utf-8') as f:
                 EMAIL_HOST_PASSWORD = f.read().strip()
-            print(f"DEBUG: Password letta dal file {secret_path}, lunghezza: {len(EMAIL_HOST_PASSWORD)}")
         except Exception as e:
-            print(f"DEBUG: Errore lettura file password: {e}")
             # If reading fails, try environment variable as fallback
             EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
     else:
-        print(f"DEBUG: File password non trovato: {secret_path}")
         # File doesn't exist, try environment variable
         EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 else:
     # No file path set, use environment variable directly
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
-# Debug logging for email configuration
-print(f"DEBUG EMAIL: Configurazione finale:")
-print(f"DEBUG EMAIL: HOST={EMAIL_HOST}, PORT={EMAIL_PORT}, TLS={EMAIL_USE_TLS}")
-print(f"DEBUG EMAIL: USER={EMAIL_HOST_USER}")
-print(f"DEBUG EMAIL: DEFAULT_FROM={DEFAULT_FROM_EMAIL}")
-print(f"DEBUG EMAIL: Password length: {len(EMAIL_HOST_PASSWORD) if EMAIL_HOST_PASSWORD else 0}")
+# Email configuration loaded
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'supersegreto123')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
@@ -114,7 +106,7 @@ TEMPLATES = [
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL')
+        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3')
     )
 }
 
