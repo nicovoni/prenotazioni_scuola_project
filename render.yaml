@@ -4,10 +4,10 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT
+    startCommand: gunicorn backend.config.wsgi:application --bind 0.0.0.0:$PORT
     envVars:
       - key: DJANGO_SETTINGS_MODULE
-        value: backend.settings
+        value: backend.config.settings
       - key: DJANGO_SECRET_KEY
         sync: false
       - key: DJANGO_DEBUG
