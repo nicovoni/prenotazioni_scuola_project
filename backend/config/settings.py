@@ -7,23 +7,23 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ===================
-# Email configurazione Gmail
+# Email configurazione Brevo (ex Sendinblue)
 # ===================
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'nicolacantalup@gmail.com')
 ADMINS = [("Admin", ADMIN_EMAIL)]
 
-# Configurazione email Gmail migliorata
+# Configurazione email Brevo migliorata
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp-relay.brevo.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('1', 'true', 'yes')
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', ADMIN_EMAIL)
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'nicolacantalup@gmail.com')  # Il tuo indirizzo email Brevo
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')  # La tua chiave API Brevo
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', ADMIN_EMAIL)
 
-# Configurazioni aggiuntive per Gmail
+# Configurazioni aggiuntive per Brevo
 EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() in ('1', 'true', 'yes')
-EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 60))  # Aumentato timeout per connessioni lente
+EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 60))  # Timeout per connessioni
 
 # Configurazioni SMTP avanzate per migliorare affidabilità
 EMAIL_BACKEND_CONFIG = {
@@ -31,9 +31,9 @@ EMAIL_BACKEND_CONFIG = {
     'fail_silently': False,
 }
 
-# Configurazioni SMTP aggiuntive per migliorare la robustezza
-if EMAIL_HOST == 'smtp.gmail.com':
-    # Gmail richiede spesso configurazioni specifiche
+# Configurazioni SMTP aggiuntive per Brevo
+if EMAIL_HOST == 'smtp-relay.brevo.com':
+    # Brevo richiede configurazioni specifiche
     EMAIL_USE_TLS = True
     EMAIL_USE_SSL = False
     EMAIL_PORT = 587

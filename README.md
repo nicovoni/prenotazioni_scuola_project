@@ -8,27 +8,26 @@
 	- `DATABASE_URL` (usa la stringa Supabase: `postgresql://<SUPABASE_USER>:<SUPABASE_PASSWORD>@<SUPABASE_HOST>:5432/<SUPABASE_DB>`)
 3. Avvia il servizio: Render eseguirà le migrazioni e avvierà Gunicorn tramite `entrypoint.sh`.
 
-### Configurazione Email con Google/Gmail
+### Configurazione Email con Brevo (ex Sendinblue)
 
-Per inviare email tramite Gmail (account nicolacantalup@gmail.com):
+Per inviare email tramite Brevo (alternativa europea a SES, GDPR-compliant):
 
-1. **Genera una password per le app** su Gmail:
-   - Accedi all'account Gmail nicolacantalup@gmail.com
-   - Vai su [myaccount.google.com](https://myaccount.google.com) > Sicurezza
-   - Attiva la "Verifica in due passaggi" se non già attiva
-   - Vai su "Password per le app" > Seleziona app "Mail" e dispositivo "Altro"
-   - Copia la password generata (16 caratteri senza spazi)
+1. **Crea un account Brevo**:
+   - Vai su [brevo.com](https://www.brevo.com/) e registrati
+   - Verifica il tuo indirizzo email
+   - Vai su SMTP & API > Chiavi API SMTP
+   - Crea una nuova chiave API (Master password)
 
 2. **Configura il Secret File su Render**:
    - Dashboard Render > Il tuo servizio > Settings > Secret Files
    - Clicca "Add Secret File"
    - Filename: `email_password.txt` (Render aggiunge automaticamente `/etc/secrets/`)
-   - Contents: Incolla solo la password per le app
+   - Contents: Incolla la chiave API Brevo
    - Salva (disponibile come `/etc/secrets/email_password.txt`)
 
 3. **Imposta le variabili d'ambiente su Render**:
    ```
-   EMAIL_HOST=smtp.gmail.com
+   EMAIL_HOST=smtp-relay.brevo.com
    EMAIL_PORT=587
    EMAIL_USE_TLS=True
    EMAIL_HOST_USER=nicolacantalup@gmail.com
@@ -43,7 +42,12 @@ Per inviare email tramite Gmail (account nicolacantalup@gmail.com):
    python manage.py send_test_pin i.nizzo@isufol.it
    ```
 
-**Importante**: Assicurati che l'account abbia la verifica in due passaggi attiva e usa una "Password per le app", NON la password normale.
+**Vantaggi di Brevo**:
+- Piano gratuito: 300 email/giorno
+- Server europei (Francia)
+- GDPR-compliant
+- Eccellente deliverability
+- Dashboard di monitoraggio completo
 
 ## Database Supabase
 
@@ -55,7 +59,28 @@ Vedi `.env.example` per branding, orari, carrelli, preavviso.
 
 ### Snippet per Render > Environment
 
-**Opzione 1: Con Gmail personale (consigliato)**
+**Opzione 1: Con Brevo (Raccomandato - Europeo, GDPR-compliant)**
+
+```
+DJANGO_SECRET_KEY=supersegreto
+DJANGO_DEBUG=False
+DJANGO_ALLOWED_HOSTS=.onrender.com,yourdomain.com
+DATABASE_URL=postgresql://<USER>:<PASS>@<HOST>:5432/<DB>
+EMAIL_HOST=smtp-relay.brevo.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=nicolacantalup@gmail.com
+EMAIL_HOST_PASSWORD_FILE=/etc/secrets/email_password.txt
+DEFAULT_FROM_EMAIL=nicolacantalup@gmail.com
+ADMIN_EMAIL=nicolacantalup@gmail.com
+SCHOOL_EMAIL_DOMAIN=isufol.it
+```
+
+**IMPORTANTE**: Con Brevo, devi configurare il Secret File:
+- Dashboard Render > Servizio > Settings > Secret Files
+- Add Secret File: Filename `email_password.txt` → Contents: chiave API Brevo (Master password)
+
+**Opzione 2: Con Gmail personale**
 
 ```
 DJANGO_SECRET_KEY=supersegreto
@@ -76,7 +101,7 @@ SCHOOL_EMAIL_DOMAIN=isufol.it
 - Dashboard Render > Servizio > Settings > Secret Files
 - Add Secret File: Filename `email_password.txt` → Contents: password per le app Gmail (16 caratteri)
 
-**Opzione 2: Con SendGrid**
+**Opzione 3: Con SendGrid**
 
 ```
 DJANGO_SECRET_KEY=supersegreto
@@ -93,7 +118,7 @@ ADMIN_EMAIL=admin@isufol.it
 SCHOOL_EMAIL_DOMAIN=isufol.it
 ```
 
-**Opzione 3: Con Amazon SES (Consigliato - Generoso piano gratuito)**
+**Opzione 4: Con Amazon SES**
 
 ```
 DJANGO_SECRET_KEY=supersegreto
