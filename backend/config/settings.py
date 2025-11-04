@@ -23,7 +23,7 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', ADMIN_EMAIL)
 
 # Configurazioni aggiuntive per Brevo
 EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() in ('1', 'true', 'yes')
-EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 30))  # Timeout per connessioni
+EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 10))  # Timeout breve per connessioni
 
 # Configurazioni SMTP avanzate per migliorare affidabilità
 EMAIL_BACKEND_CONFIG = {
