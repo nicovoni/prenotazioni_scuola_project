@@ -24,18 +24,21 @@ def send_mail_admins_async(subject, message):
 def send_pin_email_async(email, pin):
     """Send PIN email asynchronously to avoid blocking the request."""
     def _send():
+        logger = logging.getLogger('django.security')
         try:
             from django.core.mail import send_mail
+            logger.info(f"Tentativo invio PIN a {email} via {settings.EMAIL_HOST}:{settings.EMAIL_PORT}")
             send_mail(
                 subject="Il tuo PIN di accesso",
                 message=f"Il tuo PIN di accesso è: {pin}",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],
-                fail_silently=True
+                fail_silently=False  # We want to catch exceptions
             )
-            logging.getLogger('django.security').info(f"PIN inviato via email a {email}")
+            logger.info(f"PIN inviato con SUCCESSO via email a {email}")
         except Exception as e:
-            logging.getLogger('django.security').error(f"Errore invio PIN a {email}: {str(e)}")
+            logger.error(f"Errore invio PIN a {email}: {str(e)}")
+            logger.error(f"Configurazione email - Host: {settings.EMAIL_HOST}, Port: {settings.EMAIL_PORT}, User: {settings.EMAIL_HOST_USER}, From: {settings.DEFAULT_FROM_EMAIL}")
     thread = threading.Thread(target=_send)
     thread.daemon = True
     thread.start()

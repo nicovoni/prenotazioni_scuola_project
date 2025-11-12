@@ -7,23 +7,21 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ===================
-# Email configurazione Brevo (ex Sendinblue)
+# Email configurazione (Brevo/Sendinblue o Gmail)
 # ===================
-ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'nicolacantalup@gmail.com')
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'n.cantalupo@isufol.it')
 ADMINS = [("Admin", ADMIN_EMAIL)]
 
-# Configurazione email Brevo migliorata
+# Configurazione email principale
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp-relay.brevo.com')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp-relay.brevo.com')  # Default Brevo, override with env var
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('1', 'true', 'yes')
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'nicolacantalup@gmail.com')  # Il tuo indirizzo email Brevo
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')  # La tua chiave API Brevo
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', ADMIN_EMAIL)
-
-# Configurazioni aggiuntive per Brevo
 EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() in ('1', 'true', 'yes')
-EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 10))  # Timeout breve per connessioni
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'n.cantalupo@isufol.it')  # Default to school email
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', ADMIN_EMAIL)
+EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 30))  # Increased timeout for reliability
 
 # Configurazioni SMTP avanzate per migliorare affidabilità
 EMAIL_BACKEND_CONFIG = {
@@ -31,12 +29,22 @@ EMAIL_BACKEND_CONFIG = {
     'fail_silently': False,
 }
 
-# Configurazioni SMTP aggiuntive per Brevo
+# Configurazioni specifiche per provider
 if EMAIL_HOST == 'smtp-relay.brevo.com':
-    # Brevo richiede configurazioni specifiche
+    # Brevo (Sendinblue) SMTP settings
     EMAIL_USE_TLS = True
     EMAIL_USE_SSL = False
     EMAIL_PORT = 587
+    # For Brevo, EMAIL_HOST_USER should be your Brevo login (usually your email)
+    # EMAIL_HOST_PASSWORD should be your Brevo SMTP key (not API key)
+
+elif EMAIL_HOST == 'smtp.gmail.com':
+    # Gmail SMTP settings
+    EMAIL_USE_TLS = True
+    EMAIL_USE_SSL = False
+    EMAIL_PORT = 587
+    # EMAIL_HOST_USER should be your Gmail address
+    # EMAIL_HOST_PASSWORD should be an App Password (not regular password)
 
 
 
@@ -59,6 +67,16 @@ else:
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
 # Email configuration loaded
+print("=== CONFIGURAZIONE EMAIL ===")
+print(f"EMAIL_HOST: {EMAIL_HOST}")
+print(f"EMAIL_PORT: {EMAIL_PORT}")
+print(f"EMAIL_USE_TLS: {EMAIL_USE_TLS}")
+print(f"EMAIL_USE_SSL: {EMAIL_USE_SSL}")
+print(f"EMAIL_HOST_USER: {EMAIL_HOST_USER}")
+print(f"EMAIL_HOST_PASSWORD: {'***SET***' if EMAIL_HOST_PASSWORD else 'NOT SET'}")
+print(f"DEFAULT_FROM_EMAIL: {DEFAULT_FROM_EMAIL}")
+print(f"EMAIL_TIMEOUT: {EMAIL_TIMEOUT}")
+print("============================")
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'supersegreto123')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
