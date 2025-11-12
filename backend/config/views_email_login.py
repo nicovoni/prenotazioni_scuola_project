@@ -2,11 +2,24 @@ import random
 import string
 import re
 import logging
+import threading
 from django.core.mail import send_mail
 from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.utils import timezone
+
+def send_mail_admins_async(subject, message):
+    """Send mail_admins asynchronously to avoid blocking the request."""
+    def _send():
+        try:
+            from django.core.mail import mail_admins
+            mail_admins(subject=subject, message=message)
+        except Exception as e:
+            logging.getLogger('django.security').error(f"Errore invio mail_admins: {str(e)}")
+    thread = threading.Thread(target=_send)
+    thread.daemon = True
+    thread.start()
 
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -47,9 +60,8 @@ def email_login(request):
         if now < block_until_dt:
             messages.error(request, f"Troppi tentativi. Riprova dopo {block_minutes} minuti.")
             # Notifica admin
-            from django.core.mail import mail_admins
             email = request.session.get('login_email', 'N/A')
-            mail_admins(
+            send_mail_admins_async(
                 subject="Blocco tentativi invio PIN",
                 message=f"Blocco per troppi tentativi di invio PIN per l'email: {email}",
             )
@@ -88,8 +100,7 @@ def email_login(request):
             if request.session.get('pin_send_attempts', 0) >= max_attempts:
                 block_time = now + timezone.timedelta(minutes=block_minutes)
                 request.session['pin_send_block_until'] = block_time.isoformat()
-                from django.core.mail import mail_admins
-                mail_admins(
+                send_mail_admins_async(
                     subject="Blocco tentativi invio PIN",
                     message=f"Blocco per troppi tentativi di invio PIN per l'email: {email} IP: {ip}",
                 )
@@ -144,9 +155,8 @@ def verify_pin(request):
         if now < block_until_dt:
             messages.error(request, f"Troppi tentativi. Riprova dopo {block_minutes} minuti.")
             # Notifica admin
-            from django.core.mail import mail_admins
             email = request.session.get('login_email', 'N/A')
-            mail_admins(
+            send_mail_admins_async(
                 subject="Blocco tentativi verifica PIN",
                 message=f"Blocco per troppi tentativi di verifica PIN per l'email: {email} IP: {ip}",
             )
@@ -174,8 +184,7 @@ def verify_pin(request):
                 block_time = now + timezone.timedelta(minutes=block_minutes)
                 request.session['pin_verify_block_until'] = block_time.isoformat()
                 # Notifica admin
-                from django.core.mail import mail_admins
-                mail_admins(
+                send_mail_admins_async(
                     subject="Blocco tentativi verifica PIN",
                     message=f"Blocco per troppi tentativi di verifica PIN per l'email: {email} IP: {ip}",
                 )
