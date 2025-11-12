@@ -21,6 +21,25 @@ def send_mail_admins_async(subject, message):
     thread.daemon = True
     thread.start()
 
+def send_pin_email_async(email, pin):
+    """Send PIN email asynchronously to avoid blocking the request."""
+    def _send():
+        try:
+            from django.core.mail import send_mail
+            send_mail(
+                subject="Il tuo PIN di accesso",
+                message=f"Il tuo PIN di accesso è: {pin}",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=True
+            )
+            logging.getLogger('django.security').info(f"PIN inviato via email a {email}")
+        except Exception as e:
+            logging.getLogger('django.security').error(f"Errore invio PIN a {email}: {str(e)}")
+    thread = threading.Thread(target=_send)
+    thread.daemon = True
+    thread.start()
+
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
@@ -114,27 +133,13 @@ def email_login(request):
         request.session['login_pin_time'] = now.isoformat()
         request.session['pin_send_attempts'] = 0
         request.session['pin_send_block_until'] = None
-        # TEMPORANEAMENTE DISABILITATO: Invia email in background per evitare timeout
-        # try:
-        #     from django.core.mail import send_mail
-        #     # Usa send_mail con timeout più breve
-        #     send_mail(
-        #         subject="Il tuo PIN di accesso",
-        #         message=f"Il tuo PIN di accesso è: {pin}",
-        #         from_email=settings.DEFAULT_FROM_EMAIL,
-        #         recipient_list=[email],
-        #         fail_silently=True  # Non bloccare se fallisce
-        #     )
-        # except Exception as e:
-        #     logger.error(f"Errore invio PIN a {email}: {str(e)}")
-        #     # Non mostrare errore all'utente, procedi comunque
-        #     pass
 
-        # Per ora, mostra il PIN direttamente nei log per test
-        logger.info(f"PIN GENERATO per {email}: {pin} (temporaneamente disabilitato invio email)")
+        # Invia PIN via email in background
+        send_pin_email_async(email, pin)
 
-        # Mostra PIN all'utente per test (temporaneo)
-        messages.success(request, f"PIN generato: {pin} (controlla i log del server per il PIN)")
+        logger.info(f"PIN GENERATO per {email}: {pin}")
+
+        messages.success(request, "PIN inviato via email. Controlla la tua casella di posta.")
 
         logger.info(f"PIN inviato con SUCCESSO a {email} IP: {ip}")
         return redirect('verify_pin')
