@@ -35,6 +35,32 @@ def send_pin_email_async(email, pin):
             logger.info(f"From: {settings.DEFAULT_FROM_EMAIL}")
             logger.info(f"TLS: {settings.EMAIL_USE_TLS}, Timeout: 10s")
 
+            # Test DNS resolution
+            logger.info("Test risoluzione DNS...")
+            try:
+                import socket
+                ip_address = socket.gethostbyname(settings.EMAIL_HOST)
+                logger.info(f"DNS risolto: {settings.EMAIL_HOST} -> {ip_address}")
+            except Exception as dns_error:
+                logger.error(f"ERRORE DNS: {dns_error}")
+                raise Exception(f"DNS resolution failed: {dns_error}")
+
+            # Test basic connectivity
+            logger.info("Test connessione socket...")
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(5)
+                result = sock.connect_ex((settings.EMAIL_HOST, settings.EMAIL_PORT))
+                sock.close()
+                if result == 0:
+                    logger.info(f"Connessione socket riuscita a {settings.EMAIL_HOST}:{settings.EMAIL_PORT}")
+                else:
+                    logger.error(f"Connessione socket fallita a {settings.EMAIL_HOST}:{settings.EMAIL_PORT} (codice: {result})")
+                    raise Exception(f"Socket connection failed with code: {result}")
+            except Exception as socket_error:
+                logger.error(f"ERRORE connessione socket: {socket_error}")
+                raise Exception(f"Socket connectivity test failed: {socket_error}")
+
             # Use direct SMTP backend with shorter timeout
             from django.core.mail.backends.smtp import EmailBackend
             from django.core.mail import EmailMessage

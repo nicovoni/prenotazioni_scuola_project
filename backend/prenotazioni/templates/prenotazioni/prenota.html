@@ -89,7 +89,7 @@
         {% if messaggio %}
             <div class="message{% if success %} success{% endif %}">
                 {% if success %}
-                    <h3>Ciao {{ request.user.first_name or request.user.username }} 🎉</h3>
+                    <h3>Ciao {{ request.user.first_name|default:request.user.username }} 🎉</h3>
                     <p>{{ messaggio|safe }}</p>
                     <p>Vuoi prenotare qualcos'altro? <a href="{% url 'prenota_laboratorio' %}">Fai una nuova prenotazione</a></p>
                 {% else %}
