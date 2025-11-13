@@ -70,45 +70,42 @@
         }
     </style>
     <script>
+        // Configurazione semplice per le risorse
+        const risorseConfig = {
+            // Questi valori verranno aggiornati dal backend
+        };
+
+        // Funzione semplificata per aggiornare il campo quantità
         function updateQuantityField() {
             const risorsaSelect = document.getElementById('id_risorsa');
             const quantitaInput = document.getElementById('id_quantita');
             const infoDiv = document.getElementById('resource-info');
-            const selectedValue = risorsaSelect.value;
+            const selectedOption = risorsaSelect.options[risorsaSelect.selectedIndex];
 
-            if (selectedValue) {
-                // Parse data from the select element's data-risorse attribute
-                const dataRisorse = risorsaSelect.getAttribute('data-risorse');
-                const risorse = dataRisorse.split('|');
+            if (selectedOption && selectedOption.value) {
+                const tipo = selectedOption.textContent.toLowerCase();
 
-                for (const risorsaStr of risorse) {
-                    const [id, tipo, totale] = risorsaStr.split(':');
-                    if (id === selectedValue) {
-                        if (tipo === 'lab') {
-                            // Laboratori: prenotazione fissa dell'intero spazio
-                            quantitaInput.value = 1;
-                            quantitaInput.max = 1;
-                            quantitaInput.min = 1;
-                            quantitaInput.readOnly = true;
-                            infoDiv.textContent = 'Prenotazione dell\'intero laboratorio (spazio fisso)';
-                        } else if (tipo === 'carrello') {
-                            // Carrelli: prenotazione parziale possibile
-                            quantitaInput.min = 1;
-                            quantitaInput.max = parseInt(totale);
-                            quantitaInput.readOnly = false;
-                            if (parseInt(quantitaInput.value) > parseInt(totale)) {
-                                quantitaInput.value = totale;
-                            }
-                            infoDiv.textContent = `Prenotazione parziale possibile (max ${totale} unità)`;
+                if (tipo.includes('laboratorio')) {
+                    // Laboratori: prenotazione fissa dell'intero spazio
+                    quantitaInput.value = 1;
+                    quantitaInput.readOnly = true;
+                    infoDiv.textContent = 'Prenotazione dell\'intero laboratorio (spazio fisso)';
+                } else if (tipo.includes('carrello')) {
+                    // Carrelli: prenotazione parziale possibile
+                    quantitaInput.readOnly = false;
+                    // Estrai il numero dal nome (es. "Carrello 25 iPad" -> 25)
+                    const match = selectedOption.textContent.match(/(\d+)/);
+                    if (match) {
+                        const maxQty = parseInt(match[1]);
+                        quantitaInput.max = maxQty;
+                        if (parseInt(quantitaInput.value) > maxQty) {
+                            quantitaInput.value = maxQty;
                         }
-                        break;
+                        infoDiv.textContent = `Prenotazione parziale possibile (max ${maxQty} unità)`;
                     }
                 }
             } else {
                 // Nessuna risorsa selezionata
-                quantitaInput.value = 1;
-                quantitaInput.min = 1;
-                quantitaInput.max = 999;
                 quantitaInput.readOnly = false;
                 infoDiv.textContent = '';
             }
@@ -118,8 +115,8 @@
             const risorsaSelect = document.getElementById('id_risorsa');
             if (risorsaSelect) {
                 risorsaSelect.addEventListener('change', updateQuantityField);
-                // Inizializza al caricamento
-                updateQuantityField();
+                // Piccola pausa per assicurarsi che il DOM sia pronto
+                setTimeout(updateQuantityField, 100);
             }
         });
     </script>

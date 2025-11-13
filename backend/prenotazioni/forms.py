@@ -53,22 +53,8 @@ class PrenotazioneForm(forms.Form):
         self.prenotazione_id = kwargs.pop('prenotazione_id', None)
         super().__init__(*args, **kwargs)
 
-        # Aggiungi attributi data alle opzioni del select
-        choices = [('', 'Seleziona una risorsa')]
-        for risorsa in Risorsa.objects.all().order_by('tipo', 'nome'):
-            choices.append((
-                risorsa.id,
-                risorsa.nome
-            ))
-        self.fields['risorsa'].choices = choices
-
-        # Personalizza il widget per aggiungere data attributes
-        self.fields['risorsa'].widget.attrs.update({
-            'data-risorse': '|'.join([
-                f"{r.id}:{r.tipo}:{r.quantita_totale}"
-                for r in Risorsa.objects.all().order_by('tipo', 'nome')
-            ])
-        })
+        # Imposta il queryset ordinato per tipo e nome
+        self.fields['risorsa'].queryset = Risorsa.objects.all().order_by('tipo', 'nome')
 
     def clean(self):
         """

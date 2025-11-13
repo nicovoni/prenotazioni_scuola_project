@@ -98,22 +98,40 @@ class BookingService:
         """
         try:
             risorsa = Risorsa.objects.get(id=risorsa_id)
-            totale = risorsa.quantita_totale or 1
 
-            # Query prenotazioni sovrapposte
-            overlapping = Prenotazione.objects.filter(risorsa_id=risorsa_id)
+            # Logica diversa per tipo di risorsa
+            if risorsa.tipo == 'lab':
+                # Per i laboratori: controllo se è già prenotato in quel periodo
+                # La quantità deve essere 1 (intero laboratorio)
+                overlapping = Prenotazione.objects.filter(risorsa_id=risorsa_id)
+                if exclude_booking_id:
+                    overlapping = overlapping.exclude(pk=exclude_booking_id)
+                overlapping = overlapping.filter(inizio__lt=fine, fine__gt=inizio)
 
-            if exclude_booking_id:
-                overlapping = overlapping.exclude(pk=exclude_booking_id)
+                if overlapping.exists():
+                    return False, 0, ["Laboratorio già prenotato in questo periodo."]
+                else:
+                    return True, 1, []
 
-            overlapping = overlapping.filter(inizio__lt=fine, fine__gt=inizio)
-            somma_occupata = overlapping.aggregate(Sum('quantita'))['quantita__sum'] or 0
-            disponibile = totale - somma_occupata
+            elif risorsa.tipo == 'carrello':
+                # Per i carrelli: controllo disponibilità parziale
+                totale = risorsa.quantita_totale or 1
 
-            if quantita_richiesta > disponibile:
-                return False, disponibile, [f"Disponibilità insufficiente: richieste {quantita_richiesta}, disponibili {disponibile}."]
+                # Query prenotazioni sovrapposte
+                overlapping = Prenotazione.objects.filter(risorsa_id=risorsa_id)
+                if exclude_booking_id:
+                    overlapping = overlapping.exclude(pk=exclude_booking_id)
+                overlapping = overlapping.filter(inizio__lt=fine, fine__gt=inizio)
 
-            return True, disponibile, []
+                somma_occupata = overlapping.aggregate(Sum('quantita'))['quantita__sum'] or 0
+                disponibile = totale - somma_occupata
+
+                if quantita_richiesta > disponibile:
+                    return False, disponibile, [f"Disponibilità insufficiente: richieste {quantita_richiesta}, disponibili {disponibile}."]
+
+                return True, disponibile, []
+            else:
+                return False, 0, ["Tipo di risorsa non supportato."]
 
         except Risorsa.DoesNotExist:
             return False, 0, ["Risorsa non trovata."]
