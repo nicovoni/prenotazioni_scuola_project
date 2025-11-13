@@ -1,43 +1,90 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <title>Le mie prenotazioni</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f7f7f7; }
-        .container { max-width: 800px; margin: 40px auto; background: #fff; padding: 24px; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 8px 12px; border-bottom: 1px solid #eee; }
-        th { text-align: left; }
-        .actions a { margin-right: 8px; color: #2980b9; text-decoration: none; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Le mie prenotazioni</h1>
-        {% if prenotazioni %}
-            <table>
+{% extends "base.html" %}
+
+{% block title %}Le mie Prenotazioni - Sistema di Prenotazioni{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📋 Le mie Prenotazioni</h1>
+    <p class="page-subtitle">Visualizza e gestisci tutte le tue prenotazioni</p>
+</div>
+
+<div class="content-card">
+    {% if prenotazioni %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                 <thead>
-                    <tr><th>Risorsa</th><th>Data</th><th>Orario</th><th>Quantità</th><th>Azioni</th></tr>
+                    <tr style="background: #f8f9fa;">
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Risorsa</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Data</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Orario</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Quantità</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Stato</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Azioni</th>
+                    </tr>
                 </thead>
                 <tbody>
                     {% for p in prenotazioni %}
-                        <tr>
-                            <td>{{ p.risorsa.nome }}</td>
-                            <td>{{ p.inizio.date }}</td>
-                            <td>{{ p.inizio.time }} - {{ p.fine.time }}</td>
-                            <td>{{ p.quantita }}</td>
-                            <td class="actions">
-                                <a href="{% url 'edit_prenotazione' p.id %}">Modifica</a>
-                                <a href="{% url 'delete_prenotazione' p.id %}">Elimina</a>
+                        <tr style="border-bottom: 1px solid #dee2e6;">
+                            <td style="padding: 12px;">
+                                <strong>{{ p.risorsa.nome }}</strong>
+                                {% if p.risorsa.tipo == 'lab' %}
+                                    <br><small style="color: #6c757d;">🏫 Laboratorio</small>
+                                {% else %}
+                                    <br><small style="color: #6c757d;">📱 Carrello</small>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 12px;">
+                                {{ p.inizio.date|date:"d/m/Y" }}
+                            </td>
+                            <td style="padding: 12px;">
+                                {{ p.inizio.time|time:"H:i" }} - {{ p.fine.time|time:"H:i" }}
+                                <br><small style="color: #6c757d;">({{ p.durata_ore }} ore)</small>
+                            </td>
+                            <td style="padding: 12px;">
+                                {{ p.quantita }}
+                                {% if p.risorsa.tipo == 'carrello' %}
+                                    <small style="color: #6c757d;">unità</small>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 12px;">
+                                {% if p.is_passata %}
+                                    <span style="color: #6c757d;">⌛ Passata</span>
+                                {% elif p.is_in_corso %}
+                                    <span style="color: #28a745; font-weight: 600;">▶️ In corso</span>
+                                {% else %}
+                                    <span style="color: #007bff; font-weight: 600;">📅 Programmata</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 12px;">
+                                {% if not p.is_passata %}
+                                    <a href="{% url 'edit_prenotazione' p.id %}"
+                                       style="color: #007bff; text-decoration: none; margin-right: 10px;">
+                                        ✏️ Modifica
+                                    </a>
+                                    <a href="{% url 'delete_prenotazione' p.id %}"
+                                       style="color: #dc3545; text-decoration: none;"
+                                       onclick="return confirm('Sei sicuro di voler eliminare questa prenotazione?')">
+                                        🗑️ Elimina
+                                    </a>
+                                {% else %}
+                                    <span style="color: #6c757d;">-</span>
+                                {% endif %}
                             </td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
-        {% else %}
-            <p>Non hai ancora prenotazioni.</p>
-        {% endif %}
-    </div>
-</body>
-</html>
+        </div>
+    {% else %}
+        <div style="text-align: center; padding: 3rem; color: #6c757d;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">📅</div>
+            <h3 style="color: #2c3e50; margin-bottom: 1rem;">Nessuna prenotazione</h3>
+            <p>Non hai ancora effettuato nessuna prenotazione.</p>
+            <a href="{% url 'prenota_laboratorio' %}"
+               style="display: inline-block; margin-top: 1rem; padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 6px;">
+                📅 Effettua una prenotazione
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

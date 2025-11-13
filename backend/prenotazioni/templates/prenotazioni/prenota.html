@@ -1,155 +1,97 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <title>Prenotazione Laboratorio</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f7f7f7;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 400px;
-            margin: 40px auto;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            padding: 32px 24px;
-        }
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-        }
-        label {
-            display: block;
-            margin-top: 16px;
-            margin-bottom: 4px;
-            color: #34495e;
-        }
-        select, input[type="date"], input[type="time"] {
-            width: 100%;
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            margin-bottom: 12px;
-            box-sizing: border-box;
-        }
-        button {
-            width: 100%;
-            padding: 10px;
-            background: #2980b9;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-            margin-top: 12px;
-        }
-        button:hover {
-            background: #3498db;
-        }
-        .message {
-            margin-top: 18px;
-            padding: 10px;
-            border-radius: 4px;
-            background: #fbeee6;
-            color: #c0392b;
-            text-align: center;
-        }
-        .message.success {
-            background: #eafaf1;
-            color: #27ae60;
-        }
-        .resource-info {
-            font-size: 12px;
-            color: #666;
-            margin-top: 4px;
-            margin-bottom: 12px;
-        }
-    </style>
-    <script>
-        // Configurazione semplice per le risorse
-        const risorseConfig = {
-            // Questi valori verranno aggiornati dal backend
-        };
+{% extends "base.html" %}
 
-        // Funzione semplificata per aggiornare il campo quantità
-        function updateQuantityField() {
-            const risorsaSelect = document.getElementById('id_risorsa');
-            const quantitaInput = document.getElementById('id_quantita');
-            const infoDiv = document.getElementById('resource-info');
-            const selectedOption = risorsaSelect.options[risorsaSelect.selectedIndex];
+{% block title %}Prenota Risorsa - Sistema di Prenotazioni{% endblock %}
 
-            if (selectedOption && selectedOption.value) {
-                const tipo = selectedOption.textContent.toLowerCase();
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📅 Prenota una Risorsa</h1>
+    <p class="page-subtitle">Seleziona la risorsa, data e ora per la tua prenotazione</p>
+</div>
 
-                if (tipo.includes('laboratorio')) {
-                    // Laboratori: prenotazione fissa dell'intero spazio
-                    quantitaInput.value = 1;
-                    quantitaInput.readOnly = true;
-                    infoDiv.textContent = 'Prenotazione dell\'intero laboratorio (spazio fisso)';
-                } else if (tipo.includes('carrello')) {
-                    // Carrelli: prenotazione parziale possibile
-                    quantitaInput.readOnly = false;
-                    // Estrai il numero dal nome (es. "Carrello 25 iPad" -> 25)
-                    const match = selectedOption.textContent.match(/(\d+)/);
-                    if (match) {
-                        const maxQty = parseInt(match[1]);
-                        quantitaInput.max = maxQty;
-                        if (parseInt(quantitaInput.value) > maxQty) {
-                            quantitaInput.value = maxQty;
-                        }
-                        infoDiv.textContent = `Prenotazione parziale possibile (max ${maxQty} unità)`;
-                    }
-                }
-            } else {
-                // Nessuna risorsa selezionata
-                quantitaInput.readOnly = false;
-                infoDiv.textContent = '';
-            }
-        }
+<div class="content-card">
+    <form method="post" style="max-width: 500px; margin: 0 auto;">
+        {% csrf_token %}
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const risorsaSelect = document.getElementById('id_risorsa');
-            if (risorsaSelect) {
-                risorsaSelect.addEventListener('change', updateQuantityField);
-                // Piccola pausa per assicurarsi che il DOM sia pronto
-                setTimeout(updateQuantityField, 100);
-            }
-        });
-    </script>
-</head>
-<body>
-    <div class="container">
-        <h1>Prenota una risorsa</h1>
-        <form method="post">
-            {% csrf_token %}
-            <label for="id_risorsa">Risorsa:</label>
+        <div style="margin-bottom: 1.5rem;">
+            <label for="id_risorsa" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">Risorsa:</label>
             {{ form.risorsa }}
             <div id="resource-info" class="resource-info"></div>
-            <label for="id_data">Data:</label>
-            {{ form.data }}
-            <label for="id_ora_inizio">Ora inizio:</label>
-            {{ form.ora_inizio }}
-            <label for="id_ora_fine">Ora fine:</label>
-            {{ form.ora_fine }}
-            <label for="id_quantita">Quantità:</label>
-            {{ form.quantita }}
-            <button type="submit">Prenota</button>
-        </form>
-        {% if messaggio %}
-            <div class="message{% if success %} success{% endif %}">
-                {% if success %}
-                    <h3>Ciao {{ request.user.first_name|default:request.user.username }} 🎉</h3>
-                    <p>{{ messaggio|safe }}</p>
-                    <p>Vuoi prenotare qualcos'altro? <a href="{% url 'prenota_laboratorio' %}">Fai una nuova prenotazione</a></p>
-                {% else %}
-                    <p>{{ messaggio|safe }}</p>
-                {% endif %}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+                <label for="id_data" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">Data:</label>
+                {{ form.data }}
             </div>
-        {% endif %}
-    </div>
-</body>
-</html>
+            <div>
+                <label for="id_ora_inizio" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">Ora inizio:</label>
+                {{ form.ora_inizio }}
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+                <label for="id_ora_fine" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">Ora fine:</label>
+                {{ form.ora_fine }}
+            </div>
+            <div>
+                <label for="id_quantita" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">Quantità:</label>
+                {{ form.quantita }}
+            </div>
+        </div>
+
+        <button type="submit" style="width: 100%; padding: 14px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 1rem;">
+            ✅ Conferma Prenotazione
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Funzione semplificata per aggiornare il campo quantità
+    function updateQuantityField() {
+        const risorsaSelect = document.getElementById('id_risorsa');
+        const quantitaInput = document.getElementById('id_quantita');
+        const infoDiv = document.getElementById('resource-info');
+        const selectedOption = risorsaSelect.options[risorsaSelect.selectedIndex];
+
+        if (selectedOption && selectedOption.value) {
+            const tipo = selectedOption.textContent.toLowerCase();
+
+            if (tipo.includes('laboratorio')) {
+                // Laboratori: prenotazione fissa dell'intero spazio
+                quantitaInput.value = 1;
+                quantitaInput.readOnly = true;
+                infoDiv.textContent = 'Prenotazione dell\'intero laboratorio (spazio fisso)';
+            } else if (tipo.includes('carrello')) {
+                // Carrelli: prenotazione parziale possibile
+                quantitaInput.readOnly = false;
+                // Estrai il numero dal nome (es. "Carrello 25 iPad" -> 25)
+                const match = selectedOption.textContent.match(/(\d+)/);
+                if (match) {
+                    const maxQty = parseInt(match[1]);
+                    quantitaInput.max = maxQty;
+                    if (parseInt(quantitaInput.value) > maxQty) {
+                        quantitaInput.value = maxQty;
+                    }
+                    infoDiv.textContent = `Prenotazione parziale possibile (max ${maxQty} unità)`;
+                }
+            }
+        } else {
+            // Nessuna risorsa selezionata
+            quantitaInput.readOnly = false;
+            infoDiv.textContent = '';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const risorsaSelect = document.getElementById('id_risorsa');
+        if (risorsaSelect) {
+            risorsaSelect.addEventListener('change', updateQuantityField);
+            // Piccola pausa per assicurarsi che il DOM sia pronto
+            setTimeout(updateQuantityField, 100);
+        }
+    });
+</script>
+{% endblock %}

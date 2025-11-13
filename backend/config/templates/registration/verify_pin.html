@@ -1,33 +1,57 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <title>Verifica PIN</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f7f7f7; }
-        .container { max-width: 400px; margin: 60px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 32px 24px; }
-        h2 { text-align: center; color: #2c3e50; }
-        label { display: block; margin-top: 16px; margin-bottom: 4px; color: #34495e; }
-        input[type="text"] { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 12px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #2980b9; color: #fff; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; margin-top: 12px; }
-        button:hover { background: #3498db; }
-        .error { color: #c0392b; text-align: center; margin-bottom: 12px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Inserisci il PIN ricevuto via email</h2>
-        {% if messages %}
-            {% for message in messages %}
-                <div class="error">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
+{% extends "base.html" %}
+
+{% block title %}Verifica PIN - Sistema di Prenotazioni{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    <h2 style="text-align: center; color: #2c3e50; margin-bottom: 2rem;">🔐 Verifica PIN</h2>
+
+    <div style="max-width: 400px; margin: 0 auto;">
+        <p style="text-align: center; color: #6c757d; margin-bottom: 2rem;">
+            Inserisci il PIN che hai ricevuto via email per completare l'accesso.
+        </p>
+
         <form method="post">
             {% csrf_token %}
-            <label for="pin">PIN:</label>
-            <input type="text" name="pin" id="pin" maxlength="6" required autofocus>
-            <button type="submit">Accedi</button>
+            <div style="margin-bottom: 1.5rem;">
+                <label for="pin" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">PIN a 6 cifre:</label>
+                <input type="text" name="pin" id="pin" maxlength="6"
+                       style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 18px; text-align: center; letter-spacing: 0.5rem; box-sizing: border-box;"
+                       required autofocus>
+                <div style="text-align: center; margin-top: 0.5rem;">
+                    <small style="color: #6c757d;">Controlla la tua email scolastica</small>
+                </div>
+            </div>
+            <button type="submit" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                ✅ Verifica PIN
+            </button>
         </form>
+
+        <div style="text-align: center; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #dee2e6;">
+            <p style="color: #6c757d; font-size: 14px;">
+                Non hai ricevuto il PIN?
+                <a href="{% url 'email_login' %}" style="color: #007bff; text-decoration: none;">Richiedine uno nuovo</a>
+            </p>
+        </div>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-focus and input formatting for PIN
+    document.addEventListener('DOMContentLoaded', function() {
+        const pinInput = document.getElementById('pin');
+        if (pinInput) {
+            pinInput.addEventListener('input', function(e) {
+                // Remove non-numeric characters
+                this.value = this.value.replace(/\D/g, '');
+                // Limit to 6 characters
+                if (this.value.length > 6) {
+                    this.value = this.value.slice(0, 6);
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

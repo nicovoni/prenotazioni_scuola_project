@@ -1,104 +1,72 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <title>Homepage - Prenotazioni Scuola</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f7f7f7;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 500px;
-            margin: 60px auto;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            padding: 40px 32px;
-            text-align: center;
-        }
-        h1 {
-            color: #2c3e50;
-        }
-        .btn {
-            display: inline-block;
-            margin: 16px 8px;
-            padding: 14px 28px;
-            background: #2980b9;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 2px 4px rgba(41,128,185,0.2);
-        }
-        .btn:hover {
-            background: #3498db;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(41,128,185,0.3);
-        }
-        .btn-admin {
-            background: #e74c3c;
-        }
-        .btn-admin:hover {
-            background: #c0392b;
-        }
-        .btn-teacher {
-            background: #27ae60;
-        }
-        .btn-teacher:hover {
-            background: #229954;
-        }
-        .access-options {
-            margin-top: 40px;
-        }
-        .access-description {
-            font-size: 14px;
-            color: #666;
-            margin: 8px 0 24px 0;
-            font-style: italic;
-        }
-    .clock {
-        font-size: 2.2em;
-        font-weight: bold;
-        color: #2980b9;
-        background: #f4f8fb;
-        border-radius: 8px;
-        padding: 16px 0;
-        margin: 24px 0 0 0;
-        letter-spacing: 2px;
-        box-shadow: 0 1px 4px rgba(41,128,185,0.08);
-    }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Benvenuto nel sistema di prenotazioni della scuola!</h1>
-        <div class="clock" id="clock"></div>
-        <p>Utilizza il sistema per prenotare laboratori e risorse scolastiche.</p>
+{% extends "base.html" %}
 
-        <div class="access-options">
-            <a href="{% url 'admin:index' %}" class="btn btn-admin">🔧 Accesso Amministratore</a>
-            <p class="access-description">Per visualizzare tutte le prenotazioni e gestire il sistema</p>
+{% block title %}Homepage - Sistema di Prenotazioni Scolastiche{% endblock %}
 
-            <a href="{% url 'email_login' %}" class="btn btn-teacher">👨‍🏫 Accesso Docente</a>
-            <p class="access-description">Per prenotare risorse e visualizzare le tue prenotazioni</p>
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🏫 Benvenuto nel Sistema di Prenotazioni</h1>
+    <p class="page-subtitle">Istituto Comprensivo Roma Nord</p>
+    <div class="clock" id="clock"></div>
+</div>
+
+<div class="content-card">
+    <h2>🚀 Come utilizzare il sistema</h2>
+    <p>Il sistema permette di prenotare risorse scolastiche in modo semplice e organizzato:</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem;">
+        <div style="text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
+            <h3 style="color: #2c3e50; margin-bottom: 1rem;">🏫 Laboratori</h3>
+            <p style="color: #666;">Prenota l'intero laboratorio multimediale per le tue lezioni.</p>
+        </div>
+
+        <div style="text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
+            <h3 style="color: #2c3e50; margin-bottom: 1rem;">📱 Dispositivi</h3>
+            <p style="color: #666;">Prenota iPad e notebook in base alle tue esigenze (prenotazioni parziali disponibili).</p>
+        </div>
+
+        <div style="text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
+            <h3 style="color: #2c3e50; margin-bottom: 1rem;">📅 Organizzazione</h3>
+            <p style="color: #666;">Prenota con anticipo e gestisci facilmente le tue risorse scolastiche.</p>
         </div>
     </div>
-    <script>
-        function updateClock() {
-            const now = new Date();
-            const options = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
-            const timeString = now.toLocaleTimeString('it-IT', options);
-            document.getElementById('clock').textContent = timeString;
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
-    </script>
-</body>
-</html>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+    .clock {
+        font-size: 2.5em;
+        font-weight: bold;
+        color: #667eea;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border-radius: 12px;
+        padding: 20px;
+        margin: 2rem 0;
+        letter-spacing: 3px;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.1);
+        text-align: center;
+        font-family: 'Courier New', monospace;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function updateClock() {
+        const now = new Date();
+        const options = {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        };
+        const timeString = now.toLocaleTimeString('it-IT', options);
+        document.getElementById('clock').textContent = timeString;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+</script>
+{% endblock %}
