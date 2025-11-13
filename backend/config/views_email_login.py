@@ -26,10 +26,20 @@ def send_pin_email_async(email, pin):
     def _send():
         logger = logging.getLogger('django.security')
         try:
+            logger.info(f"=== AVVIO INVIO EMAIL PIN ===")
+            logger.info(f"Destinatario: {email}")
+            logger.info(f"PIN: {pin}")
+            logger.info(f"Host: {settings.EMAIL_HOST}:{settings.EMAIL_PORT}")
+            logger.info(f"Username: {settings.EMAIL_HOST_USER}")
+            logger.info(f"Password presente: {'SI' if settings.EMAIL_HOST_PASSWORD else 'NO'}")
+            logger.info(f"From: {settings.DEFAULT_FROM_EMAIL}")
+            logger.info(f"TLS: {settings.EMAIL_USE_TLS}, Timeout: 10s")
+
             # Use direct SMTP backend with shorter timeout
             from django.core.mail.backends.smtp import EmailBackend
             from django.core.mail import EmailMessage
 
+            logger.info("Creazione backend SMTP...")
             # Create backend with very short timeout
             backend = EmailBackend(
                 host=settings.EMAIL_HOST,
@@ -39,6 +49,7 @@ def send_pin_email_async(email, pin):
                 use_tls=settings.EMAIL_USE_TLS,
                 timeout=10  # Very short timeout
             )
+            logger.info("Backend creato, connessione SMTP...")
 
             email_message = EmailMessage(
                 subject="Il tuo PIN di accesso",
@@ -46,17 +57,36 @@ def send_pin_email_async(email, pin):
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 to=[email]
             )
+            logger.info("Messaggio email creato")
 
-            logger.info(f"Tentativo invio PIN a {email} via {settings.EMAIL_HOST}:{settings.EMAIL_PORT}")
-            backend.send_messages([email_message])
+            logger.info("Invio messaggio...")
+            result = backend.send_messages([email_message])
+            logger.info(f"send_messages() restituito: {result}")
+
             backend.close()
-            logger.info(f"PIN inviato con SUCCESSO via email a {email}")
+            logger.info("Connessione chiusa")
+            logger.info(f"=== EMAIL PIN INVIATA CON SUCCESSO A {email} ===")
 
         except Exception as e:
-            logger.error(f"Errore invio PIN a {email}: {str(e)}")
-            # Don't log sensitive config info in production
-            if settings.DEBUG:
-                logger.error(f"Configurazione email - Host: {settings.EMAIL_HOST}, Port: {settings.EMAIL_PORT}, User: {settings.EMAIL_HOST_USER}, From: {settings.DEFAULT_FROM_EMAIL}")
+            logger.error(f"=== ERRORE INVIO EMAIL PIN ===")
+            logger.error(f"Destinatario: {email}")
+            logger.error(f"Tipo eccezione: {type(e).__name__}")
+            logger.error(f"Messaggio errore: {str(e)}")
+
+            # Log full traceback
+            import traceback
+            logger.error(f"Traceback completo:\n{traceback.format_exc()}")
+
+            # Log connection details
+            logger.error("Dettagli connessione SMTP:")
+            logger.error(f"  Host: {settings.EMAIL_HOST}")
+            logger.error(f"  Port: {settings.EMAIL_PORT}")
+            logger.error(f"  Username: {settings.EMAIL_HOST_USER}")
+            logger.error(f"  Password length: {len(settings.EMAIL_HOST_PASSWORD) if settings.EMAIL_HOST_PASSWORD else 0}")
+            logger.error(f"  From: {settings.DEFAULT_FROM_EMAIL}")
+            logger.error(f"  TLS: {settings.EMAIL_USE_TLS}")
+            logger.error(f"  Timeout: 10")
+            logger.error("==========================")
 
     thread = threading.Thread(target=_send)
     thread.daemon = True
@@ -161,7 +191,8 @@ def email_login(request):
 
         logger.info(f"PIN GENERATO per {email}: {pin}")
 
-        messages.success(request, "PIN inviato via email. Controlla la tua casella di posta.")
+        # TEMPORANEO: Mostra PIN direttamente all'utente per test
+        messages.success(request, f"PIN generato: {pin}. Usa questo PIN per accedere.")
 
         logger.info(f"PIN inviato con SUCCESSO a {email} IP: {ip}")
         return redirect('verify_pin')
