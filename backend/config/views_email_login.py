@@ -26,19 +26,38 @@ def send_pin_email_async(email, pin):
     def _send():
         logger = logging.getLogger('django.security')
         try:
-            from django.core.mail import send_mail
-            logger.info(f"Tentativo invio PIN a {email} via {settings.EMAIL_HOST}:{settings.EMAIL_PORT}")
-            send_mail(
-                subject="Il tuo PIN di accesso",
-                message=f"Il tuo PIN di accesso è: {pin}",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False  # We want to catch exceptions
+            # Use direct SMTP backend with shorter timeout
+            from django.core.mail.backends.smtp import EmailBackend
+            from django.core.mail import EmailMessage
+
+            # Create backend with very short timeout
+            backend = EmailBackend(
+                host=settings.EMAIL_HOST,
+                port=settings.EMAIL_PORT,
+                username=settings.EMAIL_HOST_USER,
+                password=settings.EMAIL_HOST_PASSWORD,
+                use_tls=settings.EMAIL_USE_TLS,
+                timeout=10  # Very short timeout
             )
+
+            email_message = EmailMessage(
+                subject="Il tuo PIN di accesso",
+                body=f"Il tuo PIN di accesso è: {pin}",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[email]
+            )
+
+            logger.info(f"Tentativo invio PIN a {email} via {settings.EMAIL_HOST}:{settings.EMAIL_PORT}")
+            backend.send_messages([email_message])
+            backend.close()
             logger.info(f"PIN inviato con SUCCESSO via email a {email}")
+
         except Exception as e:
             logger.error(f"Errore invio PIN a {email}: {str(e)}")
-            logger.error(f"Configurazione email - Host: {settings.EMAIL_HOST}, Port: {settings.EMAIL_PORT}, User: {settings.EMAIL_HOST_USER}, From: {settings.DEFAULT_FROM_EMAIL}")
+            # Don't log sensitive config info in production
+            if settings.DEBUG:
+                logger.error(f"Configurazione email - Host: {settings.EMAIL_HOST}, Port: {settings.EMAIL_PORT}, User: {settings.EMAIL_HOST_USER}, From: {settings.DEFAULT_FROM_EMAIL}")
+
     thread = threading.Thread(target=_send)
     thread.daemon = True
     thread.start()
