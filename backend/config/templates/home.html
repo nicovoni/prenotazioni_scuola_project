@@ -24,19 +24,44 @@
         }
         .btn {
             display: inline-block;
-            margin-top: 32px;
-            padding: 12px 32px;
+            margin: 16px 8px;
+            padding: 14px 28px;
             background: #2980b9;
             color: #fff;
             border: none;
-            border-radius: 4px;
-            font-size: 18px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
             text-decoration: none;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(41,128,185,0.2);
         }
         .btn:hover {
             background: #3498db;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(41,128,185,0.3);
+        }
+        .btn-admin {
+            background: #e74c3c;
+        }
+        .btn-admin:hover {
+            background: #c0392b;
+        }
+        .btn-teacher {
+            background: #27ae60;
+        }
+        .btn-teacher:hover {
+            background: #229954;
+        }
+        .access-options {
+            margin-top: 40px;
+        }
+        .access-description {
+            font-size: 14px;
+            color: #666;
+            margin: 8px 0 24px 0;
+            font-style: italic;
         }
     .clock {
         font-size: 2.2em;
@@ -56,7 +81,14 @@
         <h1>Benvenuto nel sistema di prenotazioni della scuola!</h1>
         <div class="clock" id="clock"></div>
         <p>Utilizza il sistema per prenotare laboratori e risorse scolastiche.</p>
-        <a href="/api/prenota/" class="btn">Prenota laboratorio</a>
+
+        <div class="access-options">
+            <a href="{% url 'admin:index' %}" class="btn btn-admin">🔧 Accesso Amministratore</a>
+            <p class="access-description">Per visualizzare tutte le prenotazioni e gestire il sistema</p>
+
+            <a href="{% url 'email_login' %}" class="btn btn-teacher">👨‍🏫 Accesso Docente</a>
+            <p class="access-description">Per prenotare risorse e visualizzare le tue prenotazioni</p>
+        </div>
     </div>
     <script>
         function updateClock() {

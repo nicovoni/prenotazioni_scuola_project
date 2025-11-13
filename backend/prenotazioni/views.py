@@ -24,11 +24,11 @@ class PrenotazioneViewSet(viewsets.ModelViewSet):
 @login_required
 def prenota_laboratorio(request):
     """
-    View per la prenotazione di un laboratorio.
+    View per la prenotazione di risorse (laboratori e carrelli).
 
     Utilizza i servizi di business per validazione e creazione prenotazione.
     """
-    risorse = Risorsa.objects.filter(tipo='lab')
+    risorse = Risorsa.objects.all().order_by('tipo', 'nome')
     messaggio = None
     success = False
 
@@ -41,7 +41,7 @@ def prenota_laboratorio(request):
                 # Crea la prenotazione utilizzando il servizio
                 success, result = BookingService.create_booking(
                     utente=request.user,
-                    risorsa_id=form.cleaned_data['laboratorio'].id,
+                    risorsa_id=form.cleaned_data['risorsa'].id,
                     quantita=form.cleaned_data['quantita'],
                     inizio=form.cleaned_data['inizio'],
                     fine=form.cleaned_data['fine']
@@ -143,7 +143,7 @@ def edit_prenotazione(request, pk):
     else:
         # GET request - inizializza form con dati esistenti
         initial_data = {
-            'laboratorio': prenotazione.risorsa,
+            'risorsa': prenotazione.risorsa,
             'data': prenotazione.inizio.date(),
             'ora_inizio': prenotazione.inizio.time(),
             'ora_fine': prenotazione.fine.time(),
@@ -151,7 +151,7 @@ def edit_prenotazione(request, pk):
         }
         form = PrenotazioneForm(initial=initial_data, user=request.user, prenotazione_id=pk)
 
-    risorse = Risorsa.objects.filter(tipo='lab')
+    risorse = Risorsa.objects.all().order_by('tipo', 'nome')
     return render(request, 'prenotazioni/edit.html', {
         'prenotazione': prenotazione,
         'form': form,

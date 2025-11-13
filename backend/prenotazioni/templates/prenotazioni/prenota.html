@@ -62,28 +62,84 @@
             background: #eafaf1;
             color: #27ae60;
         }
+        .resource-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+            margin-bottom: 12px;
+        }
     </style>
+    <script>
+        function updateQuantityField() {
+            const risorsaSelect = document.getElementById('id_risorsa');
+            const quantitaInput = document.getElementById('id_quantita');
+            const infoDiv = document.getElementById('resource-info');
+            const selectedValue = risorsaSelect.value;
+
+            if (selectedValue) {
+                // Parse data from the select element's data-risorse attribute
+                const dataRisorse = risorsaSelect.getAttribute('data-risorse');
+                const risorse = dataRisorse.split('|');
+
+                for (const risorsaStr of risorse) {
+                    const [id, tipo, totale] = risorsaStr.split(':');
+                    if (id === selectedValue) {
+                        if (tipo === 'lab') {
+                            // Laboratori: prenotazione fissa dell'intero spazio
+                            quantitaInput.value = 1;
+                            quantitaInput.max = 1;
+                            quantitaInput.min = 1;
+                            quantitaInput.readOnly = true;
+                            infoDiv.textContent = 'Prenotazione dell\'intero laboratorio (spazio fisso)';
+                        } else if (tipo === 'carrello') {
+                            // Carrelli: prenotazione parziale possibile
+                            quantitaInput.min = 1;
+                            quantitaInput.max = parseInt(totale);
+                            quantitaInput.readOnly = false;
+                            if (parseInt(quantitaInput.value) > parseInt(totale)) {
+                                quantitaInput.value = totale;
+                            }
+                            infoDiv.textContent = `Prenotazione parziale possibile (max ${totale} unità)`;
+                        }
+                        break;
+                    }
+                }
+            } else {
+                // Nessuna risorsa selezionata
+                quantitaInput.value = 1;
+                quantitaInput.min = 1;
+                quantitaInput.max = 999;
+                quantitaInput.readOnly = false;
+                infoDiv.textContent = '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const risorsaSelect = document.getElementById('id_risorsa');
+            if (risorsaSelect) {
+                risorsaSelect.addEventListener('change', updateQuantityField);
+                // Inizializza al caricamento
+                updateQuantityField();
+            }
+        });
+    </script>
 </head>
 <body>
     <div class="container">
-        <h1>Prenota un laboratorio</h1>
+        <h1>Prenota una risorsa</h1>
         <form method="post">
             {% csrf_token %}
-            <label for="laboratorio">Laboratorio:</label>
-            <select name="laboratorio" id="laboratorio" required>
-                <option value="">-- Seleziona --</option>
-                {% for risorsa in risorse %}
-                    <option value="{{ risorsa.id }}" {% if preserved.laboratorio == risorsa.id|stringformat:"s" %}selected{% endif %}>{{ risorsa.nome }}</option>
-                {% endfor %}
-            </select>
-            <label for="data">Data:</label>
-            <input type="date" name="data" id="data" value="{{ preserved.data }}" required>
-            <label for="ora_inizio">Ora inizio:</label>
-            <input type="time" name="ora_inizio" id="ora_inizio" value="{{ preserved.ora_inizio }}" required>
-            <label for="ora_fine">Ora fine:</label>
-            <input type="time" name="ora_fine" id="ora_fine" value="{{ preserved.ora_fine }}" required>
-            <label for="quantita">Quantità (se applicabile):</label>
-            <input type="number" name="quantita" id="quantita" min="1" value="{{ preserved.quantita|default:'1' }}">
+            <label for="id_risorsa">Risorsa:</label>
+            {{ form.risorsa }}
+            <div id="resource-info" class="resource-info"></div>
+            <label for="id_data">Data:</label>
+            {{ form.data }}
+            <label for="id_ora_inizio">Ora inizio:</label>
+            {{ form.ora_inizio }}
+            <label for="id_ora_fine">Ora fine:</label>
+            {{ form.ora_fine }}
+            <label for="id_quantita">Quantità:</label>
+            {{ form.quantita }}
             <button type="submit">Prenota</button>
         </form>
         {% if messaggio %}

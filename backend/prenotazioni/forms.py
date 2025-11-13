@@ -11,10 +11,10 @@ class PrenotazioneForm(forms.Form):
     """
     Form per la creazione e modifica di prenotazioni.
     """
-    laboratorio = forms.ModelChoiceField(
-        queryset=Risorsa.objects.filter(tipo='lab'),
-        empty_label="Seleziona un laboratorio",
-        widget=forms.Select(attrs={'class': 'form-control'})
+    risorsa = forms.ModelChoiceField(
+        queryset=Risorsa.objects.all(),
+        empty_label="Seleziona una risorsa",
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_risorsa'})
     )
 
     data = forms.DateField(
@@ -43,7 +43,8 @@ class PrenotazioneForm(forms.Form):
         min_value=1,
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
-            'min': '1'
+            'min': '1',
+            'id': 'id_quantita'
         })
     )
 
@@ -52,19 +53,46 @@ class PrenotazioneForm(forms.Form):
         self.prenotazione_id = kwargs.pop('prenotazione_id', None)
         super().__init__(*args, **kwargs)
 
+        # Aggiungi attributi data alle opzioni del select
+        choices = [('', 'Seleziona una risorsa')]
+        for risorsa in Risorsa.objects.all().order_by('tipo', 'nome'):
+            choices.append((
+                risorsa.id,
+                risorsa.nome
+            ))
+        self.fields['risorsa'].choices = choices
+
+        # Personalizza il widget per aggiungere data attributes
+        self.fields['risorsa'].widget.attrs.update({
+            'data-risorse': '|'.join([
+                f"{r.id}:{r.tipo}:{r.quantita_totale}"
+                for r in Risorsa.objects.all().order_by('tipo', 'nome')
+            ])
+        })
+
     def clean(self):
         """
         Validazione complessiva del form.
         """
         cleaned_data = super().clean()
-        laboratorio = cleaned_data.get('laboratorio')
+        risorsa = cleaned_data.get('risorsa')
         data = cleaned_data.get('data')
         ora_inizio = cleaned_data.get('ora_inizio')
         ora_fine = cleaned_data.get('ora_fine')
         quantita = cleaned_data.get('quantita')
 
-        if not (laboratorio and data and ora_inizio and ora_fine and quantita):
+        if not (risorsa and data and ora_inizio and ora_fine and quantita):
             return cleaned_data
+
+        # Validazione specifica per tipo di risorsa
+        if risorsa.tipo == 'lab':
+            # Laboratori: prenotazione dell'intero laboratorio (quantità = 1)
+            if quantita != 1:
+                raise forms.ValidationError("Per i laboratori è possibile prenotare solo l'intero spazio.")
+        elif risorsa.tipo == 'carrello':
+            # Carrelli: prenotazione parziale possibile
+            if quantita > risorsa.quantita_totale:
+                raise forms.ValidationError(f"Quantità richiesta ({quantita}) supera la disponibilità totale ({risorsa.quantita_totale}).")
 
         # Crea oggetti datetime per validazione
         try:
@@ -103,7 +131,7 @@ class PrenotazioneForm(forms.Form):
             # Controllo disponibilità
             from .services import BookingService
             is_available, disponibile, errors = BookingService.check_resource_availability(
-                laboratorio.id, inizio, fine, quantita, exclude_booking_id=self.prenotazione_id
+                risorsa.id, inizio, fine, quantita, exclude_booking_id=self.prenotazione_id
             )
 
             if not is_available:

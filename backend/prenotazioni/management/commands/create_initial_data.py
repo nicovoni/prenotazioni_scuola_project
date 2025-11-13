@@ -11,19 +11,15 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write('Creating initial resources...')
 
-        # Create laboratories
+        # Create laboratory (fixed workstations - cannot be partially booked)
         laboratories = [
-            {'nome': 'Laboratorio di Informatica 1', 'tipo': 'lab', 'quantita_totale': 24},
-            {'nome': 'Laboratorio di Informatica 2', 'tipo': 'lab', 'quantita_totale': 24},
-            {'nome': 'Laboratorio di Informatica 3', 'tipo': 'lab', 'quantita_totale': 20},
-            {'nome': 'Laboratorio di Scienze', 'tipo': 'lab', 'quantita_totale': 16},
-            {'nome': 'Laboratorio di Arte', 'tipo': 'lab', 'quantita_totale': 12},
+            {'nome': 'Laboratorio Multimediale', 'tipo': 'lab', 'quantita_totale': 1},  # 1 means the whole lab
         ]
 
-        # Create equipment carts
+        # Create equipment carts (can be partially booked)
         equipment = [
-            {'nome': 'Carrello Notebook', 'tipo': 'carrello', 'quantita_totale': 25},
-            {'nome': 'Carrello iPad', 'tipo': 'carrello', 'quantita_totale': 30},
+            {'nome': 'Carrello 25 iPad', 'tipo': 'carrello', 'quantita_totale': 25},
+            {'nome': 'Carrello 30 Notebook', 'tipo': 'carrello', 'quantita_totale': 30},
         ]
 
         created_count = 0
