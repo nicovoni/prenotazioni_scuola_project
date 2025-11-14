@@ -18,8 +18,8 @@ class Command(BaseCommand):
 
         # Create equipment carts (can be partially booked)
         equipment = [
-            {'nome': 'Carrello 25 iPad', 'tipo': 'carrello', 'quantita_totale': 25},
-            {'nome': 'Carrello 30 Notebook', 'tipo': 'carrello', 'quantita_totale': 30},
+            {'nome': 'Carrello iPad', 'tipo': 'carrello', 'quantita_totale': 25},
+            {'nome': 'Carrello Notebook', 'tipo': 'carrello', 'quantita_totale': 30},
         ]
 
         created_count = 0
