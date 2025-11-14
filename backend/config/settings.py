@@ -179,9 +179,15 @@ LOGGING = {
 # =========================
 # Branding e scuola
 # =========================
-SCHOOL_NAME = os.environ.get("SCHOOL_NAME", "Istituto Comprensivo Roma Nord")
+SCHOOL_NAME = os.environ.get("SCHOOL_NAME", "Istituto Statale di Istruzione Superiore di Follonica")
 AUTHOR = os.environ.get("AUTHOR", "Sistema sviluppato da TUO NOME")
 SCHOOL_EMAIL_DOMAIN = os.environ.get("SCHOOL_EMAIL_DOMAIN", "isufol.it")
+
+# =========================
+# Admin emails
+# =========================
+# Lista email che hanno accesso come amministratore
+ADMINS_EMAIL_LIST = os.environ.get("ADMINS_EMAIL_LIST", "n.cantalupo@isufol.it").split(",")
 
 # =========================
 # Risorse disponibili

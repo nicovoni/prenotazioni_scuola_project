@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">🏫 Benvenuto nel Sistema di Prenotazioni</h1>
-    <p class="page-subtitle">Istituto Comprensivo Roma Nord</p>
+    <p class="page-subtitle">Istituto Statale di Istruzione Superiore di Follonica</p>
     <div class="clock" id="clock"></div>
 </div>
 
@@ -54,17 +54,15 @@
 <script>
     function updateClock() {
         const now = new Date();
-        const options = {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        };
-        const timeString = now.toLocaleTimeString('it-IT', options);
-        document.getElementById('clock').textContent = timeString;
+        const time = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const weekday = now.toLocaleDateString('it-IT', { weekday: 'long' });
+        const capitalizedWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+        const day = now.getDate();
+        const month = now.toLocaleDateString('it-IT', { month: 'long' });
+        const capitalizedMonth = month.charAt(0).toUpperCase() + month.slice(1);
+        const year = now.getFullYear();
+        const date = `${capitalizedWeekday}, ${day} ${capitalizedMonth} ${year}`;
+        document.getElementById('clock').innerHTML = `Ora Esatta<br>${time}<br>${date}`;
     }
     setInterval(updateClock, 1000);
     updateClock();

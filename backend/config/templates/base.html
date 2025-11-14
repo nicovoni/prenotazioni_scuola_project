@@ -18,6 +18,50 @@
             line-height: 1.6;
         }
 
+        /* Stili specifici per ruolo amministratore */
+        .admin-interface .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        }
+
+        .admin-interface .btn-primary {
+            background: #e74c3c;
+        }
+
+        .admin-interface .btn-primary:hover {
+            background: #c0392b;
+        }
+
+        .admin-interface .page-header {
+            background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+            border-left: 5px solid #e74c3c;
+        }
+
+        .admin-interface .content-card {
+            border-left: 4px solid #e74c3c;
+        }
+
+        /* Stili specifici per ruolo docente */
+        .docente-interface .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .docente-interface .btn-primary {
+            background: #28a745;
+        }
+
+        .docente-interface .btn-primary:hover {
+            background: #218838;
+        }
+
+        .docente-interface .page-header {
+            background: white;
+            border-left: none;
+        }
+
+        .docente-interface .content-card {
+            border-left: none;
+        }
+
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -240,7 +284,7 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="{% if user.is_authenticated %}{% if user.is_admin %}admin-interface{% else %}docente-interface{% endif %}{% endif %}">
     <header class="header">
         <nav class="nav-container">
             <a href="{% url 'home' %}" class="logo">📚 Sistema Prenotazioni</a>
@@ -309,7 +353,7 @@
 
     <footer class="footer">
         <div class="footer-content">
-            <p>&copy; 2025 Sistema di Prenotazioni Scolastiche - Istituto Comprensivo Roma Nord</p>
+            <p>&copy; 2025 Sistema di Prenotazioni Scolastiche - Istituto Statale di Istruzione Superiore di Follonica</p>
         </div>
     </footer>
 

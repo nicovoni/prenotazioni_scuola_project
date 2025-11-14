@@ -281,7 +281,13 @@ def verify_pin(request):
             return render(request, 'registration/verify_pin.html')
         # Autentica utente (crea o recupera Utente)
         from prenotazioni.models import Utente
-        user, created = Utente.objects.get_or_create(username=email, defaults={'email': email, 'ruolo': 'docente'})
+        # Determina ruolo basato sull'email
+        ruolo = 'admin' if email in settings.ADMINS_EMAIL_LIST else 'docente'
+        user, created = Utente.objects.get_or_create(username=email, defaults={'email': email, 'ruolo': ruolo})
+        # Aggiorna ruolo se già esistente e non è admin
+        if not created and user.ruolo != 'admin':
+            user.ruolo = ruolo
+            user.save()
         from django.contrib.auth import login
         login(request, user)
         # Pulisci sessione
