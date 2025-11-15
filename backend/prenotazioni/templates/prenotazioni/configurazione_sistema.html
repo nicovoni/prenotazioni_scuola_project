@@ -1,93 +1,193 @@
-{% extends "base.html" %}
+{% if not user.is_authenticated %}
+    {% load static %}
+    <!DOCTYPE html>
+    <html lang="it">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Configurazione Sistema</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+            body { background: #f8f9fa; }
+            .page-header { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 2rem; text-align: center; }
+        </style>
+    </head>
+    <body>
+{% else %}
+    {% extends "base.html" %}
+{% endif %}
 
 {% block title %}Configurazione Sistema{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 class="page-title">⚙️ Configurazione Iniziale del Sistema</h1>
-    <p class="page-subtitle">Configura le risorse disponibili per il sistema di prenotazioni</p>
-</div>
+<div class="container mt-5">
+    <div class="page-header">
+        <h1 class="page-title">⚙️ Configurazione Sistema di Prenotazioni</h1>
+        <p class="page-subtitle">
+            {% if step == 1 %}Crea il primo utente amministratore{% elif step == 2 %}Definisci quante risorse creare{% elif step == 3 %}Configura i dettagli delle risorse{% endif %}
+        </p>
+    </div>
 
-<div class="content-card">
-    {% if step == 1 %}
-        <h3>Passo 1: Numero di risorse</h3>
-        <p>Inserisci quante risorse vuoi configurare per il sistema.</p>
+    <div class="content-card">
+        {% if step == 1 %}
+            <!-- Passo 1: Crea Admin -->
+            <h3>📝 Passo 1: Crea Account Amministratore</h3>
+            <p>Crea il primo account amministratore per gestire il sistema.</p>
 
-        <form method="post">
-            {% csrf_token %}
-            <div class="mb-3">
-                <label for="{{ form_num.num_risorse.id_for_label }}" class="form-label">{{ form_num.num_risorse.label }}</label>
-                {{ form_num.num_risorse }}
-                {% if form_num.num_risorse.help_text %}
-                    <div class="form-text">{{ form_num.num_risorse.help_text }}</div>
-                {% endif %}
-                {% if form_num.num_risorse.errors %}
-                    <div class="text-danger">
-                        {% for error in form_num.num_risorse.errors %}
-                            <small>{{ error }}</small>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            </div>
-            <button type="submit" name="step1" class="btn btn-primary">Avanti →</button>
-        </form>
-
-    {% elif step == 2 %}
-        <h3>Passo 2: Dettagli delle risorse</h3>
-        <p>Configura ogni risorsa specificando nome, tipo e quantità.</p>
-
-        <form method="post">
-            {% csrf_token %}
-            {% for i in form_dettagli %}
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h5>Risorsa {{ forloop.counter }}</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <label for="{{ i.nome.id_for_label }}" class="form-label">Nome</label>
-                                {{ i.nome }}
-                                {% if i.nome.errors %}
-                                    <div class="text-danger">
-                                        {% for error in i.nome.errors %}
-                                            <small>{{ error }}</small>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="{{ form_admin.username.id_for_label }}" class="form-label">{{ form_admin.username.label }}</label>
+                        {{ form_admin.username }}
+                        {% if form_admin.username.help_text %}
+                            <div class="form-text">{{ form_admin.username.help_text }}</div>
+                        {% endif %}
+                        {% if form_admin.username.errors %}
+                            <div class="text-danger">
+                                {% for error in form_admin.username.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
                             </div>
-                            <div class="col-md-4">
-                                <label for="{{ i.tipo.id_for_label }}" class="form-label">Tipo</label>
-                                {{ i.tipo }}
-                                {% if i.tipo.errors %}
-                                    <div class="text-danger">
-                                        {% for error in i.tipo.errors %}
-                                            <small>{{ error }}</small>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form_admin.email.id_for_label }}" class="form-label">{{ form_admin.email.label }}</label>
+                        {{ form_admin.email }}
+                        {% if form_admin.email.help_text %}
+                            <div class="form-text">{{ form_admin.email.help_text }}</div>
+                        {% endif %}
+                        {% if form_admin.email.errors %}
+                            <div class="text-danger">
+                                {% for error in form_admin.email.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
                             </div>
-                            <div class="col-md-4">
-                                <label for="{{ i.quantita.id_for_label }}" class="form-label">Quantità</label>
-                                {{ i.quantita }}
-                                {% if i.quantita.errors %}
-                                    <div class="text-danger">
-                                        {% for error in i.quantita.errors %}
-                                            <small>{{ error }}</small>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <label for="{{ form_admin.password.id_for_label }}" class="form-label">{{ form_admin.password.label }}</label>
+                        {{ form_admin.password }}
+                        {% if form_admin.password.help_text %}
+                            <div class="form-text">{{ form_admin.password.help_text }}</div>
+                        {% endif %}
+                        {% if form_admin.password.errors %}
+                            <div class="text-danger">
+                                {% for error in form_admin.password.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form_admin.conferma_password.id_for_label }}" class="form-label">{{ form_admin.conferma_password.label }}</label>
+                        {{ form_admin.conferma_password }}
+                        {% if form_admin.conferma_password.errors %}
+                            <div class="text-danger">
+                                {% for error in form_admin.conferma_password.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="submit" name="step1" class="btn btn-primary">Crea Amministratore e Continua →</button>
+                </div>
+            </form>
+
+        {% elif step == 2 %}
+            <!-- Passo 2: Numero risorse -->
+            <h3>🔢 Passo 2: Numero di risorse</h3>
+            <p>Quante risorse vuoi creare per il sistema di prenotazioni?</p>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="row justify-content-center">
+                    <div class="col-md-6">
+                        <label for="{{ form_num.num_risorse.id_for_label }}" class="form-label">{{ form_num.num_risorse.label }}</label>
+                        {{ form_num.num_risorse }}
+                        {% if form_num.num_risorse.help_text %}
+                            <div class="form-text">{{ form_num.num_risorse.help_text }}</div>
+                        {% endif %}
+                        {% if form_num.num_risorse.errors %}
+                            <div class="text-danger">
+                                {% for error in form_num.num_risorse.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mt-3 text-center">
+                    <button type="submit" name="step2" class="btn btn-primary">Avanti →</button>
+                </div>
+            </form>
+
+        {% elif step == 3 %}
+            <!-- Passo 3: Dettagli risorse -->
+            <h3>📋 Passo 3: Configurazione risorse</h3>
+            <p>Definisci i dettagli per ciascuna risorsa.</p>
+
+            <form method="post">
+                {% csrf_token %}
+                {% for i in form_dettagli %}
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5>🎯 Risorsa {{ forloop.counter }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="{{ i.nome.id_for_label }}" class="form-label">Nome risorsa</label>
+                                    {{ i.nome }}
+                                    {% if i.nome.errors %}
+                                        <div class="text-danger">
+                                            {% for error in i.nome.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="{{ i.tipo.id_for_label }}" class="form-label">Tipo risorsa</label>
+                                    {{ i.tipo }}
+                                    {% if i.tipo.errors %}
+                                        <div class="text-danger">
+                                            {% for error in i.tipo.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="{{ i.quantita.id_for_label }}" class="form-label">Quantità</label>
+                                    {{ i.quantita }}
+                                    {% if i.quantita.errors %}
+                                        <div class="text-danger">
+                                            {% for error in i.quantita.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            {% endfor %}
+                {% endfor %}
 
-            <div class="d-flex gap-2">
-                <button type="button" onclick="window.history.back()" class="btn btn-secondary">← Indietro</button>
-                <button type="submit" name="step2" class="btn btn-success">Salva Configurazione</button>
-            </div>
-        </form>
-    {% endif %}
+                <div class="text-center">
+                    <button type="submit" name="step3" class="btn btn-success">💾 Salva Configurazione</button>
+                </div>
+            </form>
+        {% endif %}
+    </div>
 </div>
+
+{% if not user.is_authenticated %}
+    </body>
+    </html>
+{% endif %}
 {% endblock %}
