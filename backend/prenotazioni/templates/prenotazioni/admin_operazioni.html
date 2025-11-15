@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Operazioni Amministrative{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">⚙️ Operazioni Amministrative</h1>
+    <p class="page-subtitle">Funzioni avanzate per amministratori del sistema</p>
+</div>
+
+<div class="content-card">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="alert alert-danger" role="alert">
+                <h4 class="alert-heading">⚠️ Zona di pericolo</h4>
+                <p>Le operazioni elencate di seguito eseguono modifiche irreversibili al sistema. Utilizzale solo se sei sicuro di quello che fai.</p>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">🔄 Reset Completo del Sistema</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Questa operazione eliminerà:</p>
+                    <ul class="list-unstyled ms-3">
+                        <li>✅ Tutti gli utenti tranne l'amministratore corrente</li>
+                        <li>✅ Tutte le prenotazioni esistenti</li>
+                        <li>✅ Tutte le risorse (laboratori e carrelli)</li>
+                        <li>✅ Tutte le informazioni sulla scuola</li>
+                    </ul>
+                    <p class="card-text">
+                        <strong>Dopo il reset, verrai reindirizzato alla riconfigurazione del sistema.</strong>
+                    </p>
+
+                    <form method="post" onsubmit="return confirm('ATTENZIONE: Questa operazione è IRREVERSIBILE!\n\nSei sicuro di voler procedere con il reset completo del sistema?\n\nTutti i dati verranno persi definitivamente.');">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reset">
+                        <button type="submit" class="btn btn-danger btn-lg">
+                            🚨 Esegui Reset Completo
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">ℹ️ Altre Operazioni Future</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Qui verranno aggiunte altre funzionalità amministrative avanzate.</p>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="{% url 'lista_prenotazioni' %}" class="btn btn-secondary">
+                    ← Torna alle Prenotazioni
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    border: none;
+    border-radius: 10px;
+}
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+}
+.btn-danger {
+    border: none;
+    padding: 12px 30px;
+}
+.btn-danger:hover {
+    background-color: #dc3545;
+}
+</style>
+{% endblock %}

@@ -395,3 +395,32 @@ def configurazione_sistema(request):
             'step': 'school',
             'form_school': SchoolInfoForm(instance=school_info),
         })
+
+
+@login_required
+def admin_operazioni(request):
+    """
+    View per le operazioni amministrative avanzate, come reset completo.
+
+    Accesso riservato agli amministratori.
+    """
+    if not request.user.is_admin():
+        messages.error(request, 'Accesso riservato agli amministratori.')
+        return redirect('lista_prenotazioni')
+
+    if request.method == 'POST' and request.POST.get('action') == 'reset':
+        # Reset completo: elimina tutti gli utenti tranne l'admin corrente, tutte le prenotazioni, risorse e informazioni scuola
+        current_admin = request.user
+        deleted_school_info = SchoolInfo.objects.all().delete()[0]
+        deleted_users = Utente.objects.exclude(id=current_admin.id).delete()[0]
+        deleted_prenotazioni = Prenotazione.objects.all().delete()[0]
+        deleted_risorse = Risorsa.objects.all().delete()[0]
+
+        messages.success(request, 'Reset completo effettuato con successo! '
+                         f'Eliminati {deleted_school_info} record scuola, {deleted_users} utenti, {deleted_prenotazioni} prenotazioni e {deleted_risorse} risorse. '
+                         'Ora puoi riconfigurare il sistema.')
+        logger.info(f"Reset completo effettuato da admin {current_admin}: "
+                   f"{deleted_school_info} school info, {deleted_users} utenti, {deleted_prenotazioni} prenotazioni, {deleted_risorse} risorse eliminati")
+        return redirect('configurazione_sistema')
+
+    return render(request, 'prenotazioni/admin_operazioni.html')
