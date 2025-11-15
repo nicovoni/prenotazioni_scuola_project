@@ -14,7 +14,6 @@ from .models import Prenotazione, Risorsa, Utente
 from .serializers import PrenotazioneSerializer
 from .services import BookingService, EmailService
 from .forms import PrenotazioneForm, ConfirmDeleteForm, ConfigurazioneSistemaForm, AdminUserForm
-from django.contrib.auth.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -261,7 +260,7 @@ def configurazione_sistema(request):
     Successivi: solo risorse (se admin connesso).
     """
     # Se primo accesso (no utenti), procedi senza auth
-    primo_accesso = not User.objects.exists()
+    primo_accesso = not Utente.objects.exists()
 
     if not primo_accesso:
         # Richiede login se utenti esistono ma non loggato
@@ -281,14 +280,15 @@ def configurazione_sistema(request):
             form_admin = AdminUserForm(request.POST)
             if form_admin.is_valid():
                 # Crea admin user
-                user = User.objects.create_user(
+                user = Utente.objects.create_user(
                     username=form_admin.cleaned_data['username'],
                     email=form_admin.cleaned_data['email'],
                     password=form_admin.cleaned_data['password'],
-                    is_staff=True,
-                    is_superuser=True,
-                    first_name='Amministratore'
+                    ruolo='admin'
                 )
+                user.is_staff = True
+                user.is_superuser = True
+                user.first_name = 'Amministratore'
                 user.save()
                 messages.success(request, 'Utente amministratore creato.')
                 # Logga automaticamente? O richiedi login
