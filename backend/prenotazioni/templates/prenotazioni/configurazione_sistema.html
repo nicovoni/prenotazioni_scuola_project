@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Configurazione Sistema{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">⚙️ Configurazione Iniziale del Sistema</h1>
+    <p class="page-subtitle">Configura le risorse disponibili per il sistema di prenotazioni</p>
+</div>
+
+<div class="content-card">
+    {% if step == 1 %}
+        <h3>Passo 1: Numero di risorse</h3>
+        <p>Inserisci quante risorse vuoi configurare per il sistema.</p>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="{{ form_num.num_risorse.id_for_label }}" class="form-label">{{ form_num.num_risorse.label }}</label>
+                {{ form_num.num_risorse }}
+                {% if form_num.num_risorse.help_text %}
+                    <div class="form-text">{{ form_num.num_risorse.help_text }}</div>
+                {% endif %}
+                {% if form_num.num_risorse.errors %}
+                    <div class="text-danger">
+                        {% for error in form_num.num_risorse.errors %}
+                            <small>{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <button type="submit" name="step1" class="btn btn-primary">Avanti →</button>
+        </form>
+
+    {% elif step == 2 %}
+        <h3>Passo 2: Dettagli delle risorse</h3>
+        <p>Configura ogni risorsa specificando nome, tipo e quantità.</p>
+
+        <form method="post">
+            {% csrf_token %}
+            {% for i in form_dettagli %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5>Risorsa {{ forloop.counter }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label for="{{ i.nome.id_for_label }}" class="form-label">Nome</label>
+                                {{ i.nome }}
+                                {% if i.nome.errors %}
+                                    <div class="text-danger">
+                                        {% for error in i.nome.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ i.tipo.id_for_label }}" class="form-label">Tipo</label>
+                                {{ i.tipo }}
+                                {% if i.tipo.errors %}
+                                    <div class="text-danger">
+                                        {% for error in i.tipo.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ i.quantita.id_for_label }}" class="form-label">Quantità</label>
+                                {{ i.quantita }}
+                                {% if i.quantita.errors %}
+                                    <div class="text-danger">
+                                        {% for error in i.quantita.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+
+            <div class="d-flex gap-2">
+                <button type="button" onclick="window.history.back()" class="btn btn-secondary">← Indietro</button>
+                <button type="submit" name="step2" class="btn btn-success">Salva Configurazione</button>
+            </div>
+        </form>
+    {% endif %}
+</div>
+{% endblock %}

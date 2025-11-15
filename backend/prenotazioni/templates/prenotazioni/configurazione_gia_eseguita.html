@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Sistema Già Configurato{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">✅ Sistema Già Configurato</h1>
+    <p class="page-subtitle">Il sistema è già stato configurato e contiene risorse esistenti</p>
+</div>
+
+<div class="content-card">
+    <div class="alert alert-info">
+        <h4>ℹ️ Sistema Configurato</h4>
+        <p>Il sistema di prenotazioni è stato già configurato e contiene le seguenti risorse:</p>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Nome Risorsa</th>
+                    <th>Tipo</th>
+                    <th>Quantità Totale</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for risorsa in risorse %}
+                    <tr>
+                        <td>{{ risorsa.nome }}</td>
+                        <td>
+                            {% if risorsa.tipo == 'lab' %}
+                                <span class="badge bg-primary">Laboratorio</span>
+                            {% else %}
+                                <span class="badge bg-success">Carrello</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ risorsa.quantita_totale }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted">Nessuna risorsa presente</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4">
+        <h5>Opzioni:</h5>
+        <ul>
+            <li><a href="{% url 'lista_prenotazioni' %}" class="btn btn-primary">📋 Vai alle Prenotazioni</a></li>
+            <li><a href="{% url 'database_viewer' %}" class="btn btn-secondary">📊 Visualizza Database Completo</a></li>
+        </ul>
+
+        {% if user.is_admin %}
+        <div class="alert alert-warning mt-3">
+            <h6>🔧 Opzioni Amministrative</h6>
+            <p>Per riconfigurare il sistema completamente, puoi:</p>
+            <p class="mb-2">
+                <strong>Opzione 1:</strong> Usa il management command:
+                <code>python manage.py create_initial_data --reset</code>
+            </p>
+            <p>
+                <strong>Opzione 2:</strong> Elimina manualmente le risorse esistenti e ricarica la pagina.
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

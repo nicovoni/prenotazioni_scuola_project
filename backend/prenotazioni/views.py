@@ -13,7 +13,7 @@ from django.utils import timezone
 from .models import Prenotazione, Risorsa, Utente
 from .serializers import PrenotazioneSerializer
 from .services import BookingService, EmailService
-from .forms import PrenotazioneForm, ConfirmDeleteForm
+from .forms import PrenotazioneForm, ConfirmDeleteForm, ConfigurazioneSistemaForm
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,14 @@ def prenota_laboratorio(request):
 
     Utilizza i servizi di business per validazione e creazione prenotazione.
     """
+    # Controllo configurazione sistema
+    if not Risorsa.objects.exists():
+        if request.user.is_admin():
+            messages.warning(request, 'Il sistema non è ancora configurato. Vai alla configurazione per impostarlo.')
+        else:
+            messages.error(request, 'Il sistema non è ancora stato configurato dall\'amministratore.')
+            return redirect('lista_prenotazioni')
+
     risorse = Risorsa.objects.all().order_by('tipo', 'nome')
     messaggio = None
     success = False
@@ -242,3 +250,85 @@ def delete_prenotazione(request, pk):
             logger.error(f"Errore eliminazione prenotazione {pk} per utente {request.user}: {e}")
 
     return render(request, 'prenotazioni/delete_confirm.html', {'prenotazione': prenotazione})
+
+
+@login_required
+def configurazione_sistema(request):
+    """
+    Wizard per la configurazione iniziale del sistema.
+
+    Permette agli admin di configurare dinamicamente le risorse disponibili.
+    """
+    if not request.user.is_admin():
+        messages.error(request, 'Solo gli amministratori possono configurare il sistema.')
+        return redirect('home')
+
+    # Se il sistema è già configurato, mostra un messaggio
+    if Risorsa.objects.exists():
+        risorse = Risorsa.objects.all().order_by('nome')
+        return render(request, 'prenotazioni/configurazione_gia_eseguita.html', {'risorse': risorse})
+
+    if request.method == 'POST':
+        # Form con numero di risorse
+        form_num = ConfigurazioneSistemaForm(request.POST)
+        if 'step1' in request.POST and form_num.is_valid():
+            # Salva numero di risorse nelle sessioni
+            request.session['num_risorse'] = form_num.cleaned_data['num_risorse']
+            # Passa al passo 2
+            form_dettagli = ConfigurazioneSistemaForm(num_risorse=form_num.cleaned_data['num_risorse'])
+            return render(request, 'prenotazioni/configurazione_sistema.html', {
+                'form_num': form_num,
+                'form_dettagli': form_dettagli,
+                'step': 2
+            })
+        elif 'step2' in request.POST:
+            num_risorse = request.session.get('num_risorse')
+            if not num_risorse:
+                messages.error(request, 'Sessione scaduta. Ricomincia la configurazione.')
+                return redirect('configurazione_sistema')
+
+            form_dettagli = ConfigurazioneSistemaForm(request.POST, num_risorse=num_risorse)
+            if form_dettagli.is_valid():
+                # Crea le risorse
+                risorse_create = []
+                for i in range(1, num_risorse + 1):
+                    nome = form_dettagli.cleaned_data[f'nome_{i}']
+                    tipo = form_dettagli.cleaned_data[f'tipo_{i}']
+                    quantita = form_dettagli.cleaned_data[f'quantita_{i}']
+                    risorse_create.append(Risorsa(nome=nome, tipo=tipo, quantita_totale=quantita))
+
+                # Valida che non ci siano duplicati
+                nomi = [r.nome for r in risorse_create]
+                if len(nomi) != len(set(nomi)):
+                    messages.error(request, 'Nomi delle risorse devono essere unici.')
+                    return render(request, 'prenotazioni/configurazione_sistema.html', {
+                        'form_num': ConfigurazioneSistemaForm(),
+                        'form_dettagli': form_dettagli,
+                        'step': 2
+                    })
+
+                # Salva nel DB
+                try:
+                    Risorsa.objects.bulk_create(risorse_create)
+                    # Rimuovi dalla sessione
+                    del request.session['num_risorse']
+                    messages.success(request, f'Sistema configurato con successo! Create {num_risorse} risorse.')
+                    logger.info(f"Sistema configurato dall'admin {request.user}: {num_risorse} risorse")
+                    return redirect('lista_prenotazioni')
+                except Exception as e:
+                    messages.error(request, f'Errore durante il salvataggio: {str(e)}')
+                    logger.error(f"Errore configurazione sistema per admin {request.user}: {e}")
+
+        # Se non step1 o step2 o errore, ricarica step1
+        form_num = ConfigurazioneSistemaForm()
+        return render(request, 'prenotazioni/configurazione_sistema.html', {
+            'form_num': form_num,
+            'step': 1
+        })
+
+    # GET request - mostra passo 1
+    form_num = ConfigurazioneSistemaForm()
+    return render(request, 'prenotazioni/configurazione_sistema.html', {
+        'form_num': form_num,
+        'step': 1
+    })

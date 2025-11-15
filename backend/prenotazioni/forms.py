@@ -141,3 +141,54 @@ class ConfirmDeleteForm(forms.Form):
         required=True,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
+
+
+class ConfigurazioneSistemaForm(forms.Form):
+    """
+    Form per la configurazione iniziale del sistema di prenotazioni.
+
+    Permette di creare dinamicamente risorse (laboratori e carrelli).
+    """
+    num_risorse = forms.IntegerField(
+        min_value=1,
+        max_value=50,
+        initial=3,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'min': '1',
+            'max': '50'
+        }),
+        label="Numero di risorse da configurare",
+        help_text="Inserisci quante risorse vuoi creare (laboratori, carrelli, ecc.)"
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.num_risorse = kwargs.pop('num_risorse', None)
+        super().__init__(*args, **kwargs)
+
+        # Se abbiamo numero di risorse, aggiungiamo camp i per ciascuna
+        if self.num_risorse:
+            for i in range(1, self.num_risorse + 1):
+                self.fields[f'nome_{i}'] = forms.CharField(
+                    max_length=120,
+                    widget=forms.TextInput(attrs={'class': 'form-control'}),
+                    label=f"Nome risorsa {i}",
+                    help_text="Nome identificativo della risorsa"
+                )
+
+                self.fields[f'tipo_{i}'] = forms.ChoiceField(
+                    choices=Risorsa.TIPO_SCELTE,
+                    widget=forms.Select(attrs={'class': 'form-control'}),
+                    label=f"Tipo risorsa {i}",
+                    help_text="Tipo di risorsa (laboratorio o carrello)"
+                )
+
+                self.fields[f'quantita_{i}'] = forms.IntegerField(
+                    min_value=1,
+                    widget=forms.NumberInput(attrs={
+                        'class': 'form-control',
+                        'min': '1'
+                    }),
+                    label=f"Quantità risorsa {i}",
+                    help_text="Per laboratori: 1 (intero lab). Per carrelli: numero di dispositivi"
+                )

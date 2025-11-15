@@ -7,6 +7,9 @@ def create_resources(apps, schema_editor):
     # Get the Risorsa model using apps for historical model compatibility
     Risorsa = apps.get_model('prenotazioni', 'Risorsa')
 
+    # Clear any existing resources to ensure we have exactly the three required ones
+    Risorsa.objects.all().delete()
+
     # Create the three main resources
     resources_data = [
         {'nome': 'Laboratorio Multimediale', 'tipo': 'lab', 'quantita_totale': 1},
@@ -15,21 +18,17 @@ def create_resources(apps, schema_editor):
     ]
 
     for resource_data in resources_data:
-        Risorsa.objects.get_or_create(
+        Risorsa.objects.create(
             nome=resource_data['nome'],
-            defaults={
-                'tipo': resource_data['tipo'],
-                'quantita_totale': resource_data['quantita_totale']
-            }
+            tipo=resource_data['tipo'],
+            quantita_totale=resource_data['quantita_totale']
         )
 
 
 def remove_resources(apps, schema_editor):
-    # Reverse operation: remove the resources
+    # Reverse operation: remove all resources
     Risorsa = apps.get_model('prenotazioni', 'Risorsa')
-    Risorsa.objects.filter(
-        nome__in=['Laboratorio Multimediale', 'Carrello iPad', 'Carrello Notebook']
-    ).delete()
+    Risorsa.objects.all().delete()
 
 
 class Migration(migrations.Migration):
