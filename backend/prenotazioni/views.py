@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 
-from .models import Prenotazione, Risorsa
+from .models import Prenotazione, Risorsa, Utente
 from .serializers import PrenotazioneSerializer
 from .services import BookingService, EmailService
 from .forms import PrenotazioneForm, ConfirmDeleteForm
@@ -176,25 +176,28 @@ def database_viewer(request):
         return redirect('lista_prenotazioni')
 
     # Recupera i dati da tutte le tabelle principali
-    from .models import Utente, Risorsa, Prenotazione
-
-    tables_data = {
-        'utenti': {
-            'name': 'Utenti',
-            'data': Utente.objects.all().order_by('username'),
-            'fields': ['username', 'first_name', 'last_name', 'email', 'ruolo', 'telefono', 'classe', 'is_active']
-        },
-        'risorse': {
-            'name': 'Risorse',
-            'data': Risorsa.objects.all().order_by('nome'),
-            'fields': ['nome', 'tipo', 'quantita_totale']
-        },
-        'prenotazioni': {
-            'name': 'Prenotazioni',
-            'data': Prenotazione.objects.all().select_related('utente', 'risorsa').order_by('-inizio'),
-            'fields': ['id', 'utente__username', 'risorsa__nome', 'inizio', 'fine', 'quantita']
+    try:
+        tables_data = {
+            'utenti': {
+                'name': 'Utenti',
+                'data': list(Utente.objects.all().order_by('username')),
+                'fields': ['username', 'first_name', 'last_name', 'email', 'ruolo', 'telefono', 'classe', 'is_active']
+            },
+            'risorse': {
+                'name': 'Risorse',
+                'data': list(Risorsa.objects.all().order_by('nome')),
+                'fields': ['nome', 'tipo', 'quantita_totale']
+            },
+            'prenotazioni': {
+                'name': 'Prenotazioni',
+                'data': list(Prenotazione.objects.all().select_related('utente', 'risorsa').order_by('-inizio')),
+                'fields': ['id', 'Utente', 'Risorsa', 'quantita', 'inizio', 'fine']
+            }
         }
-    }
+    except Exception as e:
+        logger.error(f"Errore nel caricamento dati database viewer: {e}")
+        messages.error(request, 'Errore nel caricamento dei dati del database.')
+        return redirect('lista_prenotazioni')
 
     return render(request, 'prenotazioni/database_viewer.html', {
         'tables_data': tables_data

@@ -6,13 +6,23 @@
 <div class="page-header">
     <h1 class="page-title">📋 {% if is_admin_view %}Tutte le Prenotazioni{% else %}Le mie Prenotazioni{% endif %}</h1>
     <p class="page-subtitle">{% if is_admin_view %}Visualizza e gestisci tutte le prenotazioni del sistema{% else %}Visualizza e gestisci tutte le tue prenotazioni{% endif %}</p>
-    {% if is_admin_view %}
-    <div style="margin-top: 10px;">
-        <a href="{% url 'database_viewer' %}" style="color: #6c757d; text-decoration: none; font-size: 14px; padding: 5px 10px; border: 1px solid #6c757d; border-radius: 4px;">
+    <div class="admin-controls" style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+        {% if is_admin_view %}
+        <a href="{% url 'database_viewer' %}" style="display: inline-block; padding: 8px 16px; background: #28a745; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">
             🔍 Vista Database
         </a>
+        <a href="{% url 'prenota_laboratorio' %}" style="display: inline-block; padding: 8px 16px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">
+            ➕ Nuova Prenotazione
+        </a>
+        <div style="display: inline-block; padding: 8px 16px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px; color: #6c757d;">
+            📊 Totale: {{ prenotazioni|length }} prenotazioni
+        </div>
+        {% else %}
+        <a href="{% url 'prenota_laboratorio' %}" style="display: inline-block; padding: 8px 16px; background: #28a745; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">
+            📅 Effettua Prenotazione
+        </a>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 
 <div class="content-card">
