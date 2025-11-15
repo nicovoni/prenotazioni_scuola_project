@@ -10,10 +10,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 
-from .models import Prenotazione, Risorsa, Utente
+from .models import Prenotazione, Risorsa, Utente, SchoolInfo
 from .serializers import PrenotazioneSerializer
 from .services import BookingService, EmailService
-from .forms import PrenotazioneForm, ConfirmDeleteForm, ConfigurazioneSistemaForm, AdminUserForm
+from .forms import PrenotazioneForm, ConfirmDeleteForm, ConfigurazioneSistemaForm, AdminUserForm, SchoolInfoForm
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +186,11 @@ def database_viewer(request):
     # Recupera i dati da tutte le tabelle principali
     try:
         tables_data = {
+            'school_info': {
+                'name': 'Informazioni Scuola',
+                'data': list(SchoolInfo.objects.all()),
+                'fields': ['nome_scuola', 'indirizzo', 'telefono', 'email_scuola', 'sito_web', 'codice_scuola']
+            },
             'utenti': {
                 'name': 'Utenti',
                 'data': list(Utente.objects.all().order_by('username')),
@@ -291,48 +296,36 @@ def configurazione_sistema(request):
                 user.first_name = 'Amministratore'
                 user.save()
                 messages.success(request, 'Utente amministratore creato.')
-                # Logga automaticamente? O richiedi login
-                # Passa a passo 2
+                # Passa a passo scuola
+                return render(request, 'prenotazioni/configurazione_sistema.html', {
+                    'step': 'school',
+                    'form_school': SchoolInfoForm(),
+                })
+            else:
+                return render(request, 'prenotazioni/configurazione_sistema.html', {
+                    'step': primo_accesso and 1 or 'admin',
+                    'form_admin': form_admin,
+                })
+
+        elif 'step_school' in request.POST:  # Informazioni scuola
+            school_info, created = SchoolInfo.objects.get_or_create(id=1)
+            form_school = SchoolInfoForm(request.POST, instance=school_info)
+            if form_school.is_valid():
+                form_school.save()
+                messages.success(request, 'Informazioni scuola salvate con successo.')
+                # Passa a passo risorse
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
                     'step': 2,
                     'form_num': ConfigurazioneSistemaForm(),
                 })
-                else:
-                    return render(request, 'prenotazioni/configurazione_sistema.html', {
-                        'step': primo_accesso and 1 or 'admin',
-                        'form_admin': form_admin,
-                    })
-
-
-@login_required
-def admin_operazioni(request):
-    """
-    View per le operazioni amministrative avanzate, come reset completo.
-
-    Accesso riservato agli amministratori.
-    """
-    if not request.user.is_admin():
-        messages.error(request, 'Accesso riservato agli amministratori.')
-        return redirect('lista_prenotazioni')
-
-    if request.method == 'POST' and request.POST.get('action') == 'reset':
-        # Reset completo: elimina tutti gli utenti tranne l'admin corrente, tutte le prenotazioni e risorse
-        current_admin = request.user
-        deleted_users = Utente.objects.exclude(id=current_admin.id).delete()[0]
-        deleted_prenotazioni = Prenotazione.objects.all().delete()[0]
-        deleted_risorse = Risorsa.objects.all().delete()[0]
-
-        messages.success(request, 'Reset completo effettuato con successo! '
-                         f'Eliminati {deleted_users} utenti, {deleted_prenotazioni} prenotazioni e {deleted_risorse} risorse. '
-                         'Ora puoi riconfigurare il sistema.')
-        logger.info(f"Reset completo effettuato da admin {current_admin}: "
-                   f"{deleted_users} utenti, {deleted_prenotazioni} prenotazioni, {deleted_risorse} risorse eliminati")
-        return redirect('configurazione_sistema')
-
-    return render(request, 'prenotazioni/admin_operazioni.html')
+            else:
+                return render(request, 'prenotazioni/configurazione_sistema.html', {
+                    'step': 'school',
+                    'form_school': form_school,
+                })
 
         elif 'step2' in request.POST:  # Numero risorse
-        form_num = ConfigurazioneSistemaForm(request.POST)
+            form_num = ConfigurazioneSistemaForm(request.POST)
             if form_num.is_valid():
                 request.session['num_risorse'] = form_num.cleaned_data['num_risorse']
                 # Passa a passo 3
@@ -396,7 +389,9 @@ def admin_operazioni(request):
             'form_admin': AdminUserForm(),
         })
     else:
+        # Reconfigurazione: inizia con informazioni scuola
+        school_info, created = SchoolInfo.objects.get_or_create(id=1)
         return render(request, 'prenotazioni/configurazione_sistema.html', {
-            'step': 2,
-            'form_num': ConfigurazioneSistemaForm(),
+            'step': 'school',
+            'form_school': SchoolInfoForm(instance=school_info),
         })

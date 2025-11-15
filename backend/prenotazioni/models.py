@@ -6,6 +6,66 @@ Definisce le entità principali: Utente, Risorsa e Prenotazione.
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
+from django.contrib.auth import get_user_model
+
+
+class SchoolInfo(models.Model):
+    """
+    Informazioni sulla scuola.
+
+    Singola istanza (singleton) per configurazione generale.
+    """
+    nome_scuola = models.CharField(
+        max_length=200,
+        verbose_name='Nome della scuola',
+        help_text='Nome completo della scuola'
+    )
+    indirizzo = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Indirizzo',
+        help_text='Indirizzo completo della scuola'
+    )
+    telefono = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name='Telefono',
+        help_text='Numero di telefono della scuola'
+    )
+    email_scuola = models.EmailField(
+        blank=True,
+        null=True,
+        verbose_name='Email della scuola',
+        help_text='Indirizzo email principale della scuola'
+    )
+    sito_web = models.URLField(
+        blank=True,
+        null=True,
+        verbose_name='Sito web',
+        help_text='URL del sito web della scuola'
+    )
+    codice_scuola = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name='Codice scuola',
+        help_text='Codice identificativo della scuola (es. codice meccanografico)'
+    )
+
+    class Meta:
+        verbose_name = 'Informazioni scuola'
+        verbose_name_plural = 'Informazioni scuola'
+
+    def __str__(self):
+        """Rappresentazione stringa delle informazioni scuola."""
+        return self.nome_scuola
+
+    @classmethod
+    def get_instance(cls):
+        """Ottiene l'unica istanza oppure ne crea una vuota se non esiste."""
+        instance, created = cls.objects.get_or_create(id=1)
+        return instance
 
 
 class Utente(AbstractUser):

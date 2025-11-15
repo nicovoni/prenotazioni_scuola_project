@@ -4,7 +4,7 @@ Form Django per la validazione dei dati di prenotazione.
 from django import forms
 from django.utils import timezone
 from django.conf import settings
-from .models import Prenotazione, Risorsa
+from .models import Prenotazione, Risorsa, SchoolInfo
 
 
 class PrenotazioneForm(forms.Form):
@@ -229,3 +229,25 @@ class ConfigurazioneSistemaForm(forms.Form):
                     label=f"Quantità risorsa {i}",
                     help_text="Per laboratori: 1 (intero lab). Per carrelli: numero di dispositivi"
                 )
+
+
+class SchoolInfoForm(forms.ModelForm):
+    """
+    Form per la configurazione delle informazioni sulla scuola.
+    """
+    class Meta:
+        model = SchoolInfo
+        fields = ['nome_scuola', 'indirizzo', 'telefono', 'email_scuola', 'sito_web', 'codice_scuola']
+        widgets = {
+            'nome_scuola': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome completo della scuola'}),
+            'indirizzo': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Indirizzo completo'}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Numero di telefono'}),
+            'email_scuola': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@scuola.it'}),
+            'sito_web': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://www.scuola.it'}),
+            'codice_scuola': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Codice identificativo'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Rendi nome_scuola obbligatorio, gli altri campi opzionali
+        self.fields['nome_scuola'].required = True
