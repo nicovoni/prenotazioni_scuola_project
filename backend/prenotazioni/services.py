@@ -180,7 +180,7 @@ class BookingService:
 
         Args:
             prenotazione_id: ID prenotazione
-            utente: Utente proprietario
+            utente: Utente che esegue l'operazione (può essere proprietario o admin)
             inizio: Nuovo inizio
             fine: Nuova fine
             quantita: Nuova quantità
@@ -191,7 +191,8 @@ class BookingService:
         try:
             prenotazione = Prenotazione.objects.get(pk=prenotazione_id)
 
-            if prenotazione.utente != utente:
+            # Controllo autorizzazioni: admin può modificare qualsiasi prenotazione, altri solo le proprie
+            if not utente.is_admin() and prenotazione.utente != utente:
                 return False, ["Non hai i permessi per modificare questa prenotazione."]
 
             # Controllo disponibilità escludendo questa prenotazione
@@ -224,7 +225,7 @@ class BookingService:
 
         Args:
             prenotazione_id: ID prenotazione
-            utente: Utente proprietario
+            utente: Utente che esegue l'operazione (può essere proprietario o admin)
 
         Returns:
             tuple: (success, errors)
@@ -232,7 +233,8 @@ class BookingService:
         try:
             prenotazione = Prenotazione.objects.get(pk=prenotazione_id)
 
-            if prenotazione.utente != utente:
+            # Controllo autorizzazioni: admin può eliminare qualsiasi prenotazione, altri solo le proprie
+            if not utente.is_admin() and prenotazione.utente != utente:
                 return False, ["Non hai i permessi per eliminare questa prenotazione."]
 
             prenotazione.delete()

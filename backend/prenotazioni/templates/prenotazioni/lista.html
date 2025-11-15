@@ -1,11 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}Le mie Prenotazioni - Sistema di Prenotazioni{% endblock %}
+{% block title %}{% if is_admin_view %}Tutte le Prenotazioni{% else %}Le mie Prenotazioni{% endif %} - Sistema di Prenotazioni{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">📋 Le mie Prenotazioni</h1>
-    <p class="page-subtitle">Visualizza e gestisci tutte le tue prenotazioni</p>
+    <h1 class="page-title">📋 {% if is_admin_view %}Tutte le Prenotazioni{% else %}Le mie Prenotazioni{% endif %}</h1>
+    <p class="page-subtitle">{% if is_admin_view %}Visualizza e gestisci tutte le prenotazioni del sistema{% else %}Visualizza e gestisci tutte le tue prenotazioni{% endif %}</p>
+    {% if is_admin_view %}
+    <div style="margin-top: 10px;">
+        <a href="{% url 'database_viewer' %}" style="color: #6c757d; text-decoration: none; font-size: 14px; padding: 5px 10px; border: 1px solid #6c757d; border-radius: 4px;">
+            🔍 Vista Database
+        </a>
+    </div>
+    {% endif %}
 </div>
 
 <div class="content-card">
@@ -14,6 +21,9 @@
             <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                 <thead>
                     <tr style="background: #f8f9fa;">
+                        {% if is_admin_view %}
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Utente</th>
+                        {% endif %}
                         <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Risorsa</th>
                         <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Data</th>
                         <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Orario</th>
@@ -25,6 +35,15 @@
                 <tbody>
                     {% for p in prenotazioni %}
                         <tr style="border-bottom: 1px solid #dee2e6;">
+                            {% if is_admin_view %}
+                            <td style="padding: 12px;">
+                                <strong>{{ p.utente.username }}</strong>
+                                {% if p.utente.first_name or p.utente.last_name %}
+                                    <br><small style="color: #6c757d;">{{ p.utente.first_name }} {{ p.utente.last_name }}</small>
+                                {% endif %}
+                                <br><small style="color: #6c757d;">{% if p.utente.is_docente %}👨‍🏫 Docente{% elif p.utente.is_admin %}⚡ Admin{% else %}🎓 {{ p.utente.ruolo|title }}{% endif %}</small>
+                            </td>
+                            {% endif %}
                             <td style="padding: 12px;">
                                 <strong>{{ p.risorsa.nome }}</strong>
                                 {% if p.risorsa.tipo == 'lab' %}
@@ -79,11 +98,15 @@
         <div style="text-align: center; padding: 3rem; color: #6c757d;">
             <div style="font-size: 4rem; margin-bottom: 1rem;">📅</div>
             <h3 style="color: #2c3e50; margin-bottom: 1rem;">Nessuna prenotazione</h3>
+            {% if is_admin_view %}
+            <p>Non ci sono prenotazioni nel sistema.</p>
+            {% else %}
             <p>Non hai ancora effettuato nessuna prenotazione.</p>
             <a href="{% url 'prenota_laboratorio' %}"
                style="display: inline-block; margin-top: 1rem; padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 6px;">
                 📅 Effettua una prenotazione
             </a>
+            {% endif %}
         </div>
     {% endif %}
 </div>

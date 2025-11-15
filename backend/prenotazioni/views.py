@@ -80,11 +80,16 @@ def lista_prenotazioni(request):
     """
     View per visualizzare l'elenco delle prenotazioni dell'utente.
 
-    Mostra tutte le prenotazioni dell'utente corrente ordinate per data.
+    Amministratore: mostra tutte le prenotazioni.
+    Docente/altro: mostra solo le proprie prenotazioni.
     """
-    prenotazioni = Prenotazione.objects.filter(utente=request.user).order_by('-inizio')
+    if request.user.is_admin():
+        prenotazioni = Prenotazione.objects.all().order_by('-inizio')
+    else:
+        prenotazioni = Prenotazione.objects.filter(utente=request.user).order_by('-inizio')
+
     logger.info(f"Elenco prenotazioni richiesto dall'utente {request.user}: {prenotazioni.count()} prenotazioni")
-    return render(request, 'prenotazioni/lista.html', {'prenotazioni': prenotazioni})
+    return render(request, 'prenotazioni/lista.html', {'prenotazioni': prenotazioni, 'is_admin_view': request.user.is_admin()})
 
 
 @login_required
@@ -96,8 +101,8 @@ def edit_prenotazione(request, pk):
     """
     prenotazione = get_object_or_404(Prenotazione, pk=pk)
 
-    # Controllo autorizzazioni
-    if prenotazione.utente != request.user:
+    # Controllo autorizzazioni: admin può modificare qualsiasi prenotazione, altri solo le proprie
+    if not request.user.is_admin() and prenotazione.utente != request.user:
         messages.error(request, 'Non hai i permessi per modificare questa prenotazione.')
         logger.warning(f"Utente {request.user} ha tentato di modificare prenotazione {pk} di altro utente")
         return redirect('lista_prenotazioni')
@@ -160,6 +165,43 @@ def edit_prenotazione(request, pk):
 
 
 @login_required
+def database_viewer(request):
+    """
+    View riservata all'amministratore per visualizzare il contenuto grezzo del database.
+
+    Mostra tutte le tabelle principali in formato tabulare semplice.
+    """
+    if not request.user.is_admin():
+        messages.error(request, 'Accesso riservato agli amministratori.')
+        return redirect('lista_prenotazioni')
+
+    # Recupera i dati da tutte le tabelle principali
+    from .models import Utente, Risorsa, Prenotazione
+
+    tables_data = {
+        'utenti': {
+            'name': 'Utenti',
+            'data': Utente.objects.all().order_by('username'),
+            'fields': ['username', 'first_name', 'last_name', 'email', 'ruolo', 'telefono', 'classe', 'is_active']
+        },
+        'risorse': {
+            'name': 'Risorse',
+            'data': Risorsa.objects.all().order_by('nome'),
+            'fields': ['nome', 'tipo', 'quantita_totale']
+        },
+        'prenotazioni': {
+            'name': 'Prenotazioni',
+            'data': Prenotazione.objects.all().select_related('utente', 'risorsa').order_by('-inizio'),
+            'fields': ['id', 'utente__username', 'risorsa__nome', 'inizio', 'fine', 'quantita']
+        }
+    }
+
+    return render(request, 'prenotazioni/database_viewer.html', {
+        'tables_data': tables_data
+    })
+
+
+@login_required
 def delete_prenotazione(request, pk):
     """
     View per l'eliminazione di una prenotazione.
@@ -168,8 +210,8 @@ def delete_prenotazione(request, pk):
     """
     prenotazione = get_object_or_404(Prenotazione, pk=pk)
 
-    # Controllo autorizzazioni
-    if prenotazione.utente != request.user:
+    # Controllo autorizzazioni: admin può eliminare qualsiasi prenotazione, altri solo le proprie
+    if not request.user.is_admin() and prenotazione.utente != request.user:
         messages.error(request, 'Non hai i permessi per eliminare questa prenotazione.')
         logger.warning(f"Utente {request.user} ha tentato di eliminare prenotazione {pk} di altro utente")
         return redirect('lista_prenotazioni')
