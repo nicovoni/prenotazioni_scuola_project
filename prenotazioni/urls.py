@@ -1,6 +1,9 @@
 from rest_framework import routers
 from .views import PrenotazioneViewSet, prenota_laboratorio, lista_prenotazioni, edit_prenotazione, delete_prenotazione, database_viewer, configurazione_sistema, admin_operazioni
 from django.urls import path, include
+
+app_name = 'prenotazioni'
+
 router = routers.DefaultRouter()
 router.register(r'prenotazioni', PrenotazioneViewSet)
 urlpatterns = [
