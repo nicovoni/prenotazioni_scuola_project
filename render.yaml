@@ -4,10 +4,10 @@ services:
     env: python
     plan: free
     buildCommand: cd backend && pip install -r requirements.txt
-    startCommand: PYTHONPATH=/app gunicorn backend.config.wsgi:application --bind 0.0.0.0:$PORT --timeout 120
+    startCommand: cd backend && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --timeout 120
     envVars:
       - key: DJANGO_SETTINGS_MODULE
-        value: backend.config.settings
+        value: config.settings
       - key: DJANGO_SECRET_KEY
         sync: false
       - key: DJANGO_DEBUG
