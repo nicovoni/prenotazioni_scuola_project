@@ -33,9 +33,13 @@
 - ✅ `DJANGO_SETTINGS_MODULE` impostato in wsgi.py e manage.py
 
 #### Import Fix risolto errore:
-**Error Log**: `ImproperlyConfigured: Requested setting LOGGING_CONFIG, but settings are not configured`
+**Errore 1**: `ImproperlyConfigured: Requested setting LOGGING_CONFIG, but settings are not configured`
 
 **Fix**: Re-added `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.config.settings')` in `wsgi.py` and `manage.py` per garantire condizioni pre-settings configura.
+
+**Errore 2**: `ModuleNotFoundError: No module named 'prenotazioni'`
+
+**Fix**: Aggiornato `INSTALLED_APPS` e `AUTH_USER_MODEL` da `'prenotazioni'` a `'backend.prenotazioni'` per riflettere la struttura del progetto (app sotto `backend/`).
 
 ### 4. Runtime Error Prevention
 **Problema**: Database connection issues causing 500 Internal Server Error.
