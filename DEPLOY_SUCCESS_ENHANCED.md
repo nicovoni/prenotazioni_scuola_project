@@ -28,8 +28,14 @@
 
 **Verifica Applicata**:
 - ✅ `buildCommand` corretto per root level requirements.txt
+- ✅ `startCommand` con `PYTHONPATH=/app` preset per moduli gunicorn
 - ✅ `startCommand` con timeout aumentato (120s) per prevenire SIGKILL
-- ✅ `DJANGO_SETTINGS_MODULE` correttamente impostato
+- ✅ `DJANGO_SETTINGS_MODULE` impostato in wsgi.py e manage.py
+
+#### Import Fix risolto errore:
+**Error Log**: `ImproperlyConfigured: Requested setting LOGGING_CONFIG, but settings are not configured`
+
+**Fix**: Re-added `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.config.settings')` in `wsgi.py` and `manage.py` per garantire condizioni pre-settings configura.
 
 ### 4. Runtime Error Prevention
 **Problema**: Database connection issues causing 500 Internal Server Error.
