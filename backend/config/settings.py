@@ -216,4 +216,9 @@ DURATA_MASSIMA_PRENOTAZIONE_MINUTI = int(os.environ.get("DURATA_MASSIMA_PRENOTAZ
 # =========================
 # (aggiungi qui altre variabili se necessario)
 
+# Configurazione login/logout
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'login'
+
 AUTH_USER_MODEL = 'prenotazioni.Utente'

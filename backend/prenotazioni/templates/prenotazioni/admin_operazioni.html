@@ -17,6 +17,27 @@
             </div>
 
             <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">⚙️ Configurazione Sistema</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Accesso al wizard di configurazione iniziale del sistema.</p>
+                    <p class="card-text">
+                        <strong>Permette di:</strong>
+                    </p>
+                    <ul class="list-unstyled ms-3">
+                        <li>✏️ Modificare le informazioni della scuola</li>
+                        <li>🔧 Gestire risorse (laboratori e carrelli)</li>
+                        <li>👤 Ricreare/amministrare l'account amministratore</li>
+                    </ul>
+
+                    <a href="{% url 'configurazione_sistema' %}" class="btn btn-primary btn-lg">
+                        🚀 Apri Wizard Configurazione
+                    </a>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
                 <div class="card-header bg-danger text-white">
                     <h5 class="card-title mb-0">🔄 Reset Completo del Sistema</h5>
                 </div>
