@@ -1,4 +1,4 @@
-# 🚀 DEPLOY SUCCESS - Enhanced Configuration Applied
+# 🚀 DEPLOY SUCCESS - Full Module Path Resolution Applied
 
 ## ✅ FIXES IMPLEMENTED BASED ON RENDER TROUBLESHOOTING GUIDE
 
@@ -39,7 +39,11 @@
 
 **Errore 2**: `ModuleNotFoundError: No module named 'prenotazioni'`
 
-**Fix**: Aggiornato `INSTALLED_APPS` e `AUTH_USER_MODEL` da `'prenotazioni'` a `'backend.prenotazioni'` per riflettere la struttura del progetto (app sotto `backend/`).
+**Fix**: Aggiornato `PYTHONPATH` a `/app/backend` per permettere import di `'prenotazioni'`, impostato `INSTALLED_APPS` a `'prenotazioni'`, e `AUTH_USER_MODEL` a `'prenotazioni.Utente'` (app label 'prenotazioni').
+
+**Errore 3**: `ValueError: Invalid model reference 'backend.prenotazioni.Utente'` (string model references must be of the form 'app_label.ModelName').
+
+**Fix**: Risolto impostando `AUTH_USER_MODEL` correttamente come `'prenotazioni.Utente'` con PYTHONPATH adeguato.
 
 ### 4. Runtime Error Prevention
 **Problema**: Database connection issues causing 500 Internal Server Error.

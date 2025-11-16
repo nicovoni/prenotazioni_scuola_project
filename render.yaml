@@ -10,7 +10,7 @@ services:
       - key: DJANGO_SETTINGS_MODULE
         value: backend.config.settings
       - key: PYTHONPATH
-        value: /app
+        value: /app/backend
       - key: DJANGO_SECRET_KEY
         sync: false
       - key: DJANGO_DEBUG
