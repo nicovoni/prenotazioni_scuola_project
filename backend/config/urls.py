@@ -1,7 +1,7 @@
 
 from django.contrib import admin
 from django.urls import path, include
-from .views import home
+from .views import home, health_check
 from .views_login import custom_login
 from .views_email_login import email_login, verify_pin
 
@@ -12,5 +12,6 @@ urlpatterns = [
     path('accounts/verify-pin/', verify_pin, name='verify_pin'),
     path('accounts/login/', custom_login, name='login'),
     path('accounts/', include('django.contrib.auth.urls')),
+    path('health/', health_check, name='health_check'),
     path('', home, name='home'),
 ]
