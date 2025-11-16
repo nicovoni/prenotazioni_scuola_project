@@ -115,7 +115,10 @@ TEMPLATES = [
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3')
+        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
+        # Ottimizzazioni per free tier Render
+        conn_max_age=600,  # 10 minuti connessione persistente
+        conn_health_checks=True,  # Controllo stato connessione
     )
 }
 
@@ -139,6 +142,44 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # =========================
 WHITENOISE_USE_FINDERS = True
 WHITENOISE_AUTOREFRESH = True
+
+# =========================
+# Ottimizzazioni per FREE TIER Render (512MB RAM)
+# =========================
+if os.environ.get('RENDER_FREE_TIER', 'false').lower() == 'true':
+    # Logging ridotto per risparmiare memoria
+    LOGGING['root']['level'] = 'WARNING'
+    LOGGING['root']['handlers'] = ['console']  # Solo console, no file logging
+    del LOGGING['handlers']['file']  # Rimuovi file handler
+
+    # Cache semplice per ridurre database load
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unique-snowflake',
+        }
+    }
+
+    # Limita dimensioni upload per free tier
+    FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5MB
+    DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5MB
+
+    # Database query timeout (se supportato dal database)
+    DATABASES['default']['OPTIONS'] = {
+        'options': '-c statement_timeout=30000'  # 30 secondi timeout
+    } if 'postgresql' in DATABASES['default'].get('ENGINE', '') else {}
+
+    # Disabilita Collector automatico per ridurre CPU
+    COLLECTOR_DISABLE = True
+
+else:
+    # Produzione normale - abilita tutte le features
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unique-snowflake',
+        }
+    }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

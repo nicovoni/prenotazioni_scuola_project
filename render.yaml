@@ -6,6 +6,7 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --config gunicorn.conf.py --bind 0.0.0.0:$PORT
     healthCheckPath: /health/
+    healthCheckTimeout: 300
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings
@@ -32,3 +33,5 @@ services:
         sync: false
       - key: EMAIL_HOST_PASSWORD
         sync: false
+      - key: RENDER_FREE_TIER
+        value: "true"

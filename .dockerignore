@@ -1,38 +1,70 @@
-# Evita di copiare file inutili nell'immagine Docker
-
 # Git
 .git
 .gitignore
 
-# Python cache
-__pycache__/
+# Python
+__pycache__
 *.pyc
 *.pyo
 *.pyd
+.Python
+env
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.pytest_cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+*.egg-info
 
-# Ambienti virtuali
-.venv/
-env/
-venv/
+# Django
+.cache
+*.log
+.static
+*.db
+/media
+/staticfiles
+*.sqlite3
 
-# Config locali
-*.env
-.env.local
-.env.dev
-.env.test
-
-# Editor/IDE
+# IDEs
 .vscode/
 .idea/
 *.swp
+*.swo
+*~
 
-# File di sistema
+# OS
 .DS_Store
 Thumbs.db
 
-# Docker
-docker-compose.override.yml
+# Node.js (if any)
+node_modules/
+npm-debug.log*
 
-# Static e media locali (se generati in dev)
-staticfiles/
-media/
+# Docs
+*.md
+!README.md
+
+# Test files
+test_*.py
+*_test.py
+
+# Development files
+.env.example
+.env.local
+test_*
+
+# Docker
+Dockerfile.*
+docker-compose*.yml
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Render deploy files
+render.yaml

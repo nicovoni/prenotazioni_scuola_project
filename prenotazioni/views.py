@@ -6,6 +6,7 @@ Gestisce le operazioni CRUD per le prenotazioni e l'interfaccia utente.
 import logging
 from rest_framework import viewsets
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
@@ -34,7 +35,7 @@ def prenota_laboratorio(request):
             messages.warning(request, 'Il sistema non è ancora configurato. Vai alla configurazione per impostarlo.')
         else:
             messages.error(request, 'Il sistema non è ancora stato configurato dall\'amministratore.')
-            return redirect('lista_prenotazioni')
+            return redirect(reverse('prenotazioni:lista_prenotazioni'))
 
     risorse = Risorsa.objects.all().order_by('tipo', 'nome')
     messaggio = None
@@ -58,7 +59,7 @@ def prenota_laboratorio(request):
                 if success:
                     messages.success(request, "Prenotazione effettuata con successo! Ti abbiamo inviato una mail di conferma.")
                     logger.info(f"Prenotazione creata dall'utente {request.user}: {result}")
-                    return redirect('lista_prenotazioni')
+                    return redirect(reverse('prenotazioni:lista_prenotazioni'))
                 else:
                     messaggio = "<br>".join(result)
                     logger.warning(f"Errore creazione prenotazione per utente {request.user}: {result}")
@@ -113,7 +114,7 @@ def edit_prenotazione(request, pk):
     if not request.user.is_admin() and prenotazione.utente != request.user:
         messages.error(request, 'Non hai i permessi per modificare questa prenotazione.')
         logger.warning(f"Utente {request.user} ha tentato di modificare prenotazione {pk} di altro utente")
-        return redirect('lista_prenotazioni')
+        return redirect(reverse('prenotazioni:lista_prenotazioni'))
 
     if request.method == 'POST':
         # Crea form con i dati POST e prenotazione esistente
@@ -133,7 +134,7 @@ def edit_prenotazione(request, pk):
                 if success:
                     messages.success(request, 'Prenotazione aggiornata con successo.')
                     logger.info(f"Prenotazione {pk} aggiornata dall'utente {request.user}")
-                    return redirect('lista_prenotazioni')
+                    return redirect(reverse('prenotazioni:lista_prenotazioni'))
                 else:
                     # Mostra errori dal servizio
                     for error in result:
@@ -181,7 +182,7 @@ def database_viewer(request):
     """
     if not request.user.is_admin():
         messages.error(request, 'Accesso riservato agli amministratori.')
-        return redirect('lista_prenotazioni')
+        return redirect(reverse('prenotazioni:lista_prenotazioni'))
 
     # Recupera i dati da tutte le tabelle principali
     try:
@@ -210,7 +211,7 @@ def database_viewer(request):
     except Exception as e:
         logger.error(f"Errore nel caricamento dati database viewer: {e}")
         messages.error(request, 'Errore nel caricamento dei dati del database.')
-        return redirect('lista_prenotazioni')
+        return redirect(reverse('prenotazioni:lista_prenotazioni'))
 
     return render(request, 'prenotazioni/database_viewer.html', {
         'tables_data': tables_data
@@ -230,7 +231,7 @@ def delete_prenotazione(request, pk):
     if not request.user.is_admin() and prenotazione.utente != request.user:
         messages.error(request, 'Non hai i permessi per eliminare questa prenotazione.')
         logger.warning(f"Utente {request.user} ha tentato di eliminare prenotazione {pk} di altro utente")
-        return redirect('lista_prenotazioni')
+        return redirect(reverse('prenotazioni:lista_prenotazioni'))
 
     if request.method == 'POST':
         try:
@@ -243,7 +244,7 @@ def delete_prenotazione(request, pk):
             if success:
                 messages.success(request, 'Prenotazione eliminata con successo.')
                 logger.info(f"Prenotazione {pk} eliminata dall'utente {request.user}")
-                return redirect('lista_prenotazioni')
+                return redirect(reverse('prenotazioni:lista_prenotazioni'))
             else:
                 # Mostra errori dal servizio
                 for error in errors:
@@ -271,10 +272,10 @@ def configurazione_sistema(request):
         # Richiede login se utenti esistono ma non loggato
         if not request.user.is_authenticated:
             messages.error(request, 'Devi accedere per riconfigurare il sistema.')
-            return redirect('login')
+            return redirect(reverse('login'))
         if not request.user.is_staff:
             messages.error(request, 'Solo amministratori possono riconfigurare il sistema.')
-            return redirect('home')
+            return redirect(reverse('home'))
         # Se già configurato, mostra pagina esistente
         if Risorsa.objects.exists():
             risorse = Risorsa.objects.all().order_by('nome')
@@ -377,7 +378,7 @@ def configurazione_sistema(request):
             num_risorse = request.session.get('num_risorse')
             if not num_risorse:
                 messages.error(request, 'Sessione scaduta. Ricomincia.')
-                return redirect('configurazione_sistema')
+            return redirect(reverse('prenotazioni:configurazione_sistema'))
 
             form_dettagli = ConfigurazioneSistemaForm(request.POST, num_risorse=num_risorse)
             if form_dettagli.is_valid():
@@ -405,9 +406,9 @@ def configurazione_sistema(request):
                 messages.success(request, f'Configurazione completata! {num_risorse} risorse create.')
                 if primo_accesso:
                     messages.info(request, 'Ora puoi accedere con l\'account amministratore creato.')
-                    return redirect('login')
+                    return redirect(reverse('login'))
                 else:
-                    return redirect('home')
+                    return redirect(reverse('home'))
             else:
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
                     'step': 3,
@@ -438,7 +439,7 @@ def admin_operazioni(request):
     """
     if not request.user.is_admin():
         messages.error(request, 'Accesso riservato agli amministratori.')
-        return redirect('lista_prenotazioni')
+        return redirect(reverse('prenotazioni:lista_prenotazioni'))
 
     if request.method == 'POST' and request.POST.get('action') == 'reset':
         # Memorizza info admin corrente prima del reset
@@ -470,6 +471,6 @@ def admin_operazioni(request):
                    f"{deleted_school_info} school info, {total_users} utenti, {deleted_prenotazioni} prenotazioni, {deleted_risorse} risorse eliminati")
 
         # Reindirizza alla pagina di configurazione dopo reset
-        return redirect('configurazione_sistema')
+        return redirect(reverse('prenotazioni:configurazione_sistema'))
 
     return render(request, 'prenotazioni/admin_operazioni.html')
