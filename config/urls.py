@@ -7,7 +7,7 @@ from .views_email_login import email_login, verify_pin
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('prenotazioni.urls')),  # file prenotazioni/urls.py
+    path('api/', include('prenotazioni.urls', namespace='prenotazioni')),  # file prenotazioni/urls.py
     path('accounts/email-login/', email_login, name='email_login'),
     path('accounts/verify-pin/', verify_pin, name='verify_pin'),
     path('accounts/login/', custom_login, name='login'),
