@@ -1,26 +1,30 @@
-# Usa un'immagine Python leggera
 FROM python:3.11-slim
 
-# Imposta variabile di ambiente
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV PORT=8000
 
-# Crea cartella app
+# Set work directory
 WORKDIR /app
 
-# Installa dipendenze
-COPY requirements.txt /app/
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia il backend
-COPY backend/ /app/backend/
+# Copy project files
+COPY . .
 
-# Copia entrypoint
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash app \
+    && chown -R app:app /app
+USER app
 
-# Imposta directory di lavoro
-WORKDIR /app/backend
-
-# Comando di avvio
-CMD ["/app/entrypoint.sh"]
+# Run the application
+CMD ["gunicorn", "backend.config.wsgi:application", "--bind", "0.0.0.0:8000", "--timeout", "120"]
