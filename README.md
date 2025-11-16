@@ -174,6 +174,22 @@ export EMAIL_HOST_USER='noreply@isufol.it'
 export EMAIL_HOST_PASSWORD='la_password'
 ```
 
+Per un workflow di sviluppo efficiente, usa i comandi del Makefile:
+
+```bash
+make help      # Mostra tutti i comandi disponibili
+make install   # Installa dipendenze
+make migrate   # Esegue migrazioni database
+make run       # Avvia server di sviluppo
+make test      # Esegue test
+make clean     # Pulisce file temporanei
+```
+
+O esegui direttamente:
+```bash
+python manage.py test prenotazioni.tests.test_email_validation
+```
+
 Esegui il comando di test via docker-compose (se usi docker-compose):
 
 ```bash
