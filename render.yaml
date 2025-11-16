@@ -9,6 +9,8 @@ services:
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: backend.config.settings
+      - key: PYTHONPATH
+        value: /app
       - key: DJANGO_SECRET_KEY
         sync: false
       - key: DJANGO_DEBUG
