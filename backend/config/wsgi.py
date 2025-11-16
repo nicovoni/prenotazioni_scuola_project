@@ -1,5 +1,5 @@
 import os
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+# La variabile DJANGO_SETTINGS_MODULE viene impostata nel render.yaml
 application = get_wsgi_application()
