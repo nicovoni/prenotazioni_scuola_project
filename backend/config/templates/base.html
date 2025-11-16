@@ -300,10 +300,15 @@
                             {% if user.ruolo == 'docente' %}👨‍🏫 Docente{% endif %}
                             {% if user.ruolo == 'studente' %}👨‍🎓 Studente{% endif %}
                             {% if user.ruolo == 'assistente' %}🛠️ Assistente{% endif %}
-                            {% if user.ruolo == 'admin' %}⚙️ Amministratore{% endif %}
+                        {% if user.ruolo == 'admin' %}⚙️ Amministratore{% endif %}
                         </span>
                     </div>
                     <div class="auth-buttons">
+                        {% if user.is_admin %}
+                        <a href="{% url 'admin_operazioni' %}" class="btn btn-danger" style="margin-right: 10px;">
+                            ⚙️ Admin
+                        </a>
+                        {% endif %}
                         <a href="{% url 'prenota_laboratorio' %}" class="btn btn-primary">
                             📅 Prenota
                         </a>
