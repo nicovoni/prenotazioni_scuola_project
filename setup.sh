@@ -79,25 +79,22 @@ echo ""
 echo "🗄️  Setup database..."
 
 # Migrazioni Django
-cd backend
-python3 manage.py migrate --settings=config.settings
+python manage.py migrate
 echo "✅ Migrazioni eseguite"
 
 echo ""
 echo "👤 Creazione utente admin..."
-echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(is_superuser=True).delete(); User.objects.create_superuser('admin', '$admin_email', '123456')" | python3 manage.py shell --settings=config.settings || true
+echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(is_superuser=True).delete(); User.objects.create_superuser('admin', '$admin_email', '123456')" | python manage.py shell || true
 
 echo ""
 echo "📧 Test configurazione email..."
-python3 manage.py sendtestemail admin@$school_domain --settings=config.settings || echo "⚠️  Configura l'email nel file .env per abilitare gli invii"
-
-cd ..
+python manage.py sendtestemail admin@$school_domain || echo "⚠️  Configura l'email nel file .env per abilitare gli invii"
 
 echo ""
 echo "🎉 Setup completato!"
 echo ""
 echo "🚀 Avvio server di sviluppo:"
-echo "cd backend && python3 manage.py runserver --settings=config.settings"
+echo "python manage.py runserver"
 echo ""
 echo "Admin panel: http://localhost:8000/admin"
 echo "Username: admin"

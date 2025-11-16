@@ -143,7 +143,7 @@ Eseguire i test locali
 Versione consigliata con virtualenv:
 
 ```bash
-cd c:\Users\giorg\progetti\prenotazioni_scuola_project\backend
+cd c:\Users\giorg\progetti\prenotazioni_scuola_project
 python -m venv .venv
 source .venv/bin/activate   # su Windows PowerShell usa .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
