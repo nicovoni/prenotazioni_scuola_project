@@ -80,7 +80,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'backend.prenotazioni',
+    'prenotazioni',
 ]
 
 MIDDLEWARE = [
@@ -221,4 +221,4 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
 
-AUTH_USER_MODEL = 'backend.prenotazioni.Utente'
+AUTH_USER_MODEL = 'prenotazioni.Utente'
