@@ -13,7 +13,7 @@ services:
       - key: DJANGO_DEBUG
         value: "False"
       - key: DJANGO_ALLOWED_HOSTS
-        fromSecret: dj-allowed-hosts  # Import from secret for Render, use env var for other providers
+        value: ".onrender.com,localhost,127.0.0.1"
       - key: DATABASE_URL
         sync: false
       # Email / SMTP (set these in Render > Environment)
