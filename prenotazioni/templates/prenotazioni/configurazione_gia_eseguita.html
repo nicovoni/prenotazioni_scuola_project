@@ -48,8 +48,8 @@
     <div class="mt-4">
         <h5>Opzioni:</h5>
         <ul>
-            <li><a href="{% url 'lista_prenotazioni' %}" class="btn btn-primary">📋 Vai alle Prenotazioni</a></li>
-            <li><a href="{% url 'database_viewer' %}" class="btn btn-secondary">📊 Visualizza Database Completo</a></li>
+            <li><a href="{% url 'prenotazioni:lista_prenotazioni' %}" class="btn btn-primary">📋 Vai alle Prenotazioni</a></li>
+            <li><a href="{% url 'prenotazioni:database_viewer' %}" class="btn btn-secondary">📊 Visualizza Database Completo</a></li>
         </ul>
 
         {% if user.is_admin %}

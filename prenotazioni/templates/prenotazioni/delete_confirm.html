@@ -16,7 +16,7 @@
         <form method="post">
             {% csrf_token %}
             <button type="submit">Sì, elimina</button>
-            <a href="{% url 'lista_prenotazioni' %}">Annulla</a>
+            <a href="{% url 'prenotazioni:lista_prenotazioni' %}">Annulla</a>
         </form>
     </div>
 </body>
