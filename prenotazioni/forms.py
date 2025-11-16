@@ -145,39 +145,13 @@ class ConfirmDeleteForm(forms.Form):
 
 class AdminUserForm(forms.Form):
     """
-    Form per la creazione del primo utente amministratore.
+    Form per la creazione del primo utente amministratore con verifica PIN via email.
     """
-    username = forms.CharField(
-        max_length=150,
-        widget=forms.TextInput(attrs={'class': 'form-control'}),
-        label="Nome utente amministratore",
-        help_text="Nome utente per l'accesso amministratore"
-    )
     email = forms.EmailField(
         widget=forms.EmailInput(attrs={'class': 'form-control'}),
         label="Email amministratore",
-        help_text="Email per le comunicazioni e recupero password"
+        help_text="Email per la verifica PIN e comunicazioni elettroniche"
     )
-    password = forms.CharField(
-        min_length=8,
-        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
-        label="Password amministratore",
-        help_text="Minimo 8 caratteri"
-    )
-    conferma_password = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
-        label="Conferma password"
-    )
-
-    def clean(self):
-        cleaned_data = super().clean()
-        password = cleaned_data.get('password')
-        conferma = cleaned_data.get('conferma_password')
-
-        if password and conferma and password != conferma:
-            raise forms.ValidationError("Le password non corrispondono.")
-
-        return cleaned_data
 
 
 class ConfigurazioneSistemaForm(forms.Form):

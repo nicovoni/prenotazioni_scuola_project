@@ -284,23 +284,55 @@ def configurazione_sistema(request):
         if 'step1' in request.POST:  # Creazione admin (solo primo accesso)
             form_admin = AdminUserForm(request.POST)
             if form_admin.is_valid():
-                # Crea admin user
-                user = Utente.objects.create_user(
-                    username=form_admin.cleaned_data['username'],
-                    email=form_admin.cleaned_data['email'],
-                    password=form_admin.cleaned_data['password'],
+                email = form_admin.cleaned_data['email']
+                # Controlla se utente già esiste
+                if Utente.objects.filter(email=email).exists():
+                    messages.error(request, 'Un utente con questa email esiste già.')
+                    return render(request, 'prenotazioni/configurazione_sistema.html', {
+                        'step': primo_accesso and 1 or 'admin',
+                        'form_admin': form_admin,
+                    })
+
+                # Crea admin user con password temporanea
+                admin_user = Utente.objects.create_user(
+                    username=email,  # usa email come username temporaneamente
+                    email=email,
+                    password=None,  # password verrà settata dopo verifica PIN
                     ruolo='admin'
                 )
-                user.is_staff = True
-                user.is_superuser = True
-                user.first_name = 'Amministratore'
-                user.save()
-                messages.success(request, 'Utente amministratore creato.')
-                # Passa a passo scuola
-                return render(request, 'prenotazioni/configurazione_sistema.html', {
-                    'step': 'school',
-                    'form_school': SchoolInfoForm(),
-                })
+                admin_user.is_active = False  # disattivato fino a verifica PIN
+                admin_user.save()
+
+                # Invia PIN via email
+                success, message = EmailService.send_admin_pin_email(admin_user)
+
+                if success:
+                    # Crea messaggio di successo specifico per admin
+                    admin_welcome_message = (
+                        f"Tì sei stato designato come amministratore del sistema di prenotazioni. "
+                        f"Un PIN di verifica è stato inviato all'email {email}. "
+                        f"Una volta verificato, potrai completare la configurazione del sistema."
+                    )
+                    messages.success(request, admin_welcome_message)
+
+                    # Se primo accesso, passa direttamente a passo scuola senza attesa della verifica
+                    # Questo permette admin di completare config subito dopo invio PIN
+                    return render(request, 'prenotazioni/configurazione_sistema.html', {
+                        'step': 'school',
+                        'form_school': SchoolInfoForm(),
+                        'admin_created': True,
+                        'admin_email': email
+                    })
+                else:
+                    # Se errore invio email, elimina utente creato e mostra errore
+                    admin_user.delete()
+                    messages.error(request, f'Errore nell\'invio dell\'email di verifica: {message}')
+                    logger.error(f"Errore email admin per {email}: {message}")
+                    return render(request, 'prenotazioni/configurazione_sistema.html', {
+                        'step': primo_accesso and 1 or 'admin',
+                        'form_admin': form_admin,
+                    })
+
             else:
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
                     'step': primo_accesso and 1 or 'admin',
@@ -409,18 +441,35 @@ def admin_operazioni(request):
         return redirect('lista_prenotazioni')
 
     if request.method == 'POST' and request.POST.get('action') == 'reset':
-        # Reset completo: elimina TUTTI i dati per riportare al primo accesso
-        current_admin = request.user
+        # Memorizza info admin corrente prima del reset
+        current_admin_username = request.user.username
+        current_admin_email = request.user.email
+
+        # Reset completo: elimina TUTTI i dati tranne lasciar completare la richiesta all'admin corrente
         deleted_school_info = SchoolInfo.objects.all().delete()[0]
-        deleted_users = Utente.objects.all().delete()[0]  # Elimina TUTTI gli utenti, incluso l'admin corrente
+
+        # Elimina tutte le prenotazioni e risorse prima degli utenti
         deleted_prenotazioni = Prenotazione.objects.all().delete()[0]
         deleted_risorse = Risorsa.objects.all().delete()[0]
 
+        # Crea lista di tutti gli utenti per statistica
+        all_users = list(Utente.objects.all())
+        total_users = len(all_users)
+
+        # Elimina tutti gli utenti
+        Utente.objects.all().delete()
+
+        # Logout forzato dell'admin corrente (se ancora esistente)
+        from django.contrib.auth import logout
+        logout(request)
+
         messages.success(request, 'Reset completo effettuato con successo! '
-                         f'Eliminati {deleted_school_info} record scuola, {deleted_users} utenti (incluso attuale), {deleted_prenotazioni} prenotazioni e {deleted_risorse} risorse. '
-                         'Il sistema è stato riportato allo stato iniziale. Accedi a /configurazione-sistema per riconfigurarlo.')
-        logger.info(f"Reset completo di tutti i dati effettuato da admin {current_admin}: "
-                   f"{deleted_school_info} school info, {deleted_users} utenti, {deleted_prenotazioni} prenotazioni, {deleted_risorse} risorse eliminati")
+                         f'Eliminati {deleted_school_info} record scuola, {total_users} utenti, {deleted_prenotazioni} prenotazioni e {deleted_risorse} risorse. '
+                         'La tua sessione è stata terminata e il sistema è stato riportato allo stato iniziale. Ricarica la pagina per accedere nuovamente alla configurazione.')
+        logger.info(f"Reset completo di tutti i dati effettuato da admin {current_admin_username} ({current_admin_email}): "
+                   f"{deleted_school_info} school info, {total_users} utenti, {deleted_prenotazioni} prenotazioni, {deleted_risorse} risorse eliminati")
+
+        # Reindirizza alla pagina di configurazione dopo reset
         return redirect('configurazione_sistema')
 
     return render(request, 'prenotazioni/admin_operazioni.html')

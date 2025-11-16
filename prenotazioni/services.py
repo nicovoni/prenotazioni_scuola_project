@@ -327,6 +327,77 @@ class EmailService:
         return True, None
 
     @staticmethod
+    def send_admin_pin_email(user):
+        """
+        Invia email con PIN di verifica per attivazione account amministratore.
+
+        Args:
+            user: Utente amministratore
+
+        Returns:
+            tuple: (success, message)
+        """
+        try:
+            from .management.commands.send_test_pin import generate_pin  # Import local function
+
+            # Genera PIN
+            pin = generate_pin(user)
+
+            # Preparazione messaggio specifico per admin
+            base_url = settings.ALLOWED_HOSTS[0].replace('https://', '').replace('http://', '')
+            full_url = f"https://{base_url}"
+            subject = "Verifica email amministratore - Sistema Prenotazioni"
+
+            message = (
+                f"Ciao,\n\n"
+                f"Ti è stato conferito l'accesso come amministratore del Sistema di Prenotazioni.\n\n"
+                f"**URL del sito**: {full_url}\n\n"
+                f"**PIN di verifica**: {pin}\n\n"
+                f"Per completare l'attivazione del tuo account amministratore:\n"
+                "1. Accedi al link di login nell'interfaccia web\n"
+                f"2. Inserisci il codice PIN sopra quando richiesto\n\n"
+                f"Una volta verificato il PIN, avrai accesso completo alle funzionalità amministrative.\n\n"
+                "Se non hai richiesto questo accesso, ignora questa email.\n"
+                "I PIN sono validi per 24 ore.\n\n"
+                "Sistema di Prenotazioni Automatiche"
+            )
+
+            logger.info(f"=== INVIO EMAIL PIN ADMIN ===")
+            logger.info(f"Destinatario: {user.email}")
+            logger.info(f"PIN generato: {pin}")
+
+            # Invia utilizzando backend SMTP robusto
+            from django.core.mail.backends.smtp import EmailBackend
+            from django.core.mail import EmailMessage
+
+            backend = EmailBackend(
+                host=settings.EMAIL_HOST,
+                port=settings.EMAIL_PORT,
+                username=settings.EMAIL_HOST_USER,
+                password=settings.EMAIL_HOST_PASSWORD,
+                use_tls=settings.EMAIL_USE_TLS,
+                timeout=15
+            )
+
+            email_message = EmailMessage(
+                subject=subject,
+                body=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[user.email]
+            )
+
+            backend.send_messages([email_message])
+            backend.close()
+
+            logger.info(f"Email PIN admin inviata con SUCCESSO a {user.email}")
+            return True, "Email PIN amministratore inviata con successo"
+
+        except Exception as e:
+            error_msg = f"Errore invio email PIN amministratore: {str(e)}"
+            logger.error(f"{error_msg} - Destinatario: {user.email}")
+            return False, error_msg
+
+    @staticmethod
     def test_email_configuration():
         """
         Testa la configurazione email inviando un'email di test.
