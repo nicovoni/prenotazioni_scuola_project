@@ -4,7 +4,7 @@ Form Django per la validazione dei dati di prenotazione.
 from django import forms
 from django.utils import timezone
 from django.conf import settings
-from .models import Prenotazione, Risorsa, SchoolInfo
+from .models import Prenotazione, Risorsa, SchoolInfo, Device
 
 
 class PrenotazioneForm(forms.Form):
