@@ -304,35 +304,30 @@ def configurazione_sistema(request):
                 admin_user.is_active = False  # disattivato fino a verifica PIN
                 admin_user.save()
 
-                # Invia PIN via email
-                success, message = EmailService.send_admin_pin_email(admin_user)
+                # Genera PIN (temporaneamente mostrato nella pagina invece di inviato via email)
+                from .management.commands.send_test_pin import generate_pin
+                pin = generate_pin(admin_user)
 
-                if success:
-                    # Crea messaggio di successo specifico per admin
-                    admin_welcome_message = (
-                        f"Tì sei stato designato come amministratore del sistema di prenotazioni. "
-                        f"Un PIN di verifica è stato inviato all'email {email}. "
-                        f"Una volta verificato, potrai completare la configurazione del sistema."
-                    )
-                    messages.success(request, admin_welcome_message)
+                # TEMPORANEO: Mostra PIN direttamente per testare funzionalità
+                admin_welcome_message = (
+                    f"Account amministratore creato con successo! "
+                    f"Il PIN di verifica è: **{pin}** "
+                    f"Usa questo PIN per completare l'accesso al sistema."
+                )
+                messages.success(request, admin_welcome_message)
 
-                    # Se primo accesso, passa direttamente a passo scuola senza attesa della verifica
-                    # Questo permette admin di completare config subito dopo invio PIN
-                    return render(request, 'prenotazioni/configurazione_sistema.html', {
-                        'step': 'school',
-                        'form_school': SchoolInfoForm(),
-                        'admin_created': True,
-                        'admin_email': email
-                    })
-                else:
-                    # Se errore invio email, elimina utente creato e mostra errore
-                    admin_user.delete()
-                    messages.error(request, f'Errore nell\'invio dell\'email di verifica: {message}')
-                    logger.error(f"Errore email admin per {email}: {message}")
-                    return render(request, 'prenotazioni/configurazione_sistema.html', {
-                        'step': primo_accesso and 1 or 'admin',
-                        'form_admin': form_admin,
-                    })
+                # Salva PIN in sessione per verifica successiva (temporaneo)
+                request.session['admin_setup_pin'] = pin
+                request.session['admin_setup_email'] = email
+
+                # Se primo accesso, passa direttamente a passo scuola
+                return render(request, 'prenotazioni/configurazione_sistema.html', {
+                    'step': 'school',
+                    'form_school': SchoolInfoForm(),
+                    'admin_created': True,
+                    'admin_email': email,
+                    'temp_pin': pin  # Mostra PIN nella pagina per test
+                })
 
             else:
                 return render(request, 'prenotazioni/configurazione_sistema.html', {

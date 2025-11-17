@@ -11,6 +11,20 @@
         </p>
     </div>
 
+    <!-- TEMPORANEO: Mostra PIN admin se appena creato -->
+    {% if temp_pin %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <h4 class="alert-heading">🔐 PIN di Accesso Amministratore</h4>
+        <p>Account amministratore creato con successo per <strong>{{ admin_email }}</strong></p>
+        <p class="mb-2">Il PIN per completare l'accesso è:</p>
+        <h2 class="text-center text-primary" style="font-family: monospace; font-size: 2rem; font-weight: bold;">
+            {{ temp_pin }}
+        </h2>
+        <p><em>Copia questo PIN per usarlo nella pagina di login dopo aver completato la configurazione.</em></p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Chiudi"></button>
+    </div>
+    {% endif %}
+
     <div class="content-card">
         {% if step == 1 %}
             <!-- Passo 1: Designazione Admin -->
