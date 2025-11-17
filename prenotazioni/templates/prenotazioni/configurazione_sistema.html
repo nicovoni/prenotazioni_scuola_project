@@ -232,75 +232,60 @@
             <form method="post">
                 {% csrf_token %}
 
-                {% for field_name, field in form_dettagli.fields.items %}
-                    {% if 'nome_' in field_name %}
-                        {% with resource_num=field_name|slice:"5"|add:0 %}
-                        <div class="card mb-4">
-                            <div class="card-header bg-primary text-white">
-                                <h5 class="mb-0">🎯 Risorsa {{ resource_num }}</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <!-- Campo nome -->
-                                    <div class="col-md-6 mb-3">
-                                        <label for="{{ field.id_for_label }}" class="form-label fw-bold">
-                                            {{ field.label }}
-                                        </label>
-                                        {{ field }}
-                                        {% if field.errors %}
-                                            <div class="text-danger small">
-                                                {% for error in field.errors %}{{ error }}{% endfor %}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-
-                                    <!-- Campo tipo -->
-                                    <div class="col-md-6 mb-3">
-                                        <label for="tipo_{{ resource_num }}" class="form-label fw-bold">
-                                            Tipo risorsa
-                                        </label>
-                                        {% for choice_field_name, choice_field in form_dettagli.fields.items %}
-                                            {% if choice_field_name == 'tipo_'|add:resource_num %}
-                                                {{ choice_field }}
-                                                {% if choice_field.errors %}
-                                                    <div class="text-danger small">
-                                                        {% for error in choice_field.errors %}{{ error }}{% endfor %}
-                                                    </div>
-                                                {% endif %}
-                                                <div class="form-text">Laboratorio: prenotabile solo per intero. Carrello: prenotabile parzialmente.</div>
+                {% for resource_num in num_risorse %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">🎯 Risorsa {{ resource_num }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <!-- Campo nome -->
+                                <div class="col-md-6 mb-3">
+                                    {% for field in form_dettagli %}
+                                        {% if field.name == 'nome_'|add:resource_num|stringformat:"s" %}
+                                            {{ field }}
+                                            {% if field.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in field.errors %}{{ error }}{% endfor %}
+                                                </div>
                                             {% endif %}
-                                        {% endfor %}
-                                    </div>
+                                        {% endif %}
+                                    {% endfor %}
                                 </div>
 
-                                <!-- Campo quantità per carrelli -->
-                                {% for qty_field_name, qty_field in form_dettagli.fields.items %}
-                                    {% if qty_field_name == 'quantita_'|add:resource_num %}
-                                        <div class="quantita-field d-none" id="quantita-{{ resource_num }}">
-                                            <div class="alert alert-secondary">
-                                                <h6><i class="bi bi-cart"></i> Configurazione carrello</h6>
-                                                <div class="row">
-                                                    <div class="col-md-8">
-                                                        <label for="{{ qty_field.id_for_label }}" class="form-label">
-                                                            {{ qty_field.label }}
-                                                        </label>
-                                                        {{ qty_field }}
-                                                        {% if qty_field.errors %}
-                                                            <div class="text-danger small">
-                                                                {% for error in qty_field.errors %}{{ error }}{% endfor %}
-                                                            </div>
-                                                        {% endif %}
-                                                        <div class="form-text">Quanti dispositivi contiene questo carrello?</div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                <!-- Campo tipo -->
+                                <div class="col-md-6 mb-3">
+                                    {% for field in form_dettagli %}
+                                        {% if field.name == 'tipo_'|add:resource_num|stringformat:"s" %}
+                                            {{ field }}
+                                            <div class="form-text">Laboratorio: prenotabile solo per intero. Carrello: prenotabile parzialmente.</div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Campo quantità per carrelli -->
+                            <div class="quantita-field d-none" id="quantita-{{ resource_num }}">
+                                <div class="alert alert-secondary">
+                                    <h6><i class="bi bi-cart"></i> Configurazione carrello</h6>
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            {% for field in form_dettagli %}
+                                                {% if field.name == 'quantita_'|add:resource_num|stringformat:"s" %}
+                                                    {{ field }}
+                                                    {% if field.errors %}
+                                                        <div class="text-danger small">
+                                                            {% for error in field.errors %}{{ error }}{% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endfor %}
                                         </div>
-                                    {% endif %}
-                                {% endfor %}
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        {% endwith %}
-                    {% endif %}
+                    </div>
                 {% endfor %}
 
                 <div class="text-center">

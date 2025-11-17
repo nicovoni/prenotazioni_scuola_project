@@ -371,6 +371,7 @@ def configurazione_sistema(request):
                     'step': 3,
                     'form_num': form_num,
                     'form_dettagli': form_dettagli,
+                    'num_risorse': list(range(1, form_num.cleaned_data['num_risorse'] + 1)),
                 })
             else:
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
