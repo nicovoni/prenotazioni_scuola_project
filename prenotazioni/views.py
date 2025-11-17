@@ -383,42 +383,74 @@ def configurazione_sistema(request):
             num_risorse = request.session.get('num_risorse')
             if not num_risorse:
                 messages.error(request, 'Sessione scaduta. Ricomincia.')
-            return redirect(reverse('prenotazioni:configurazione_sistema'))
+                return redirect(reverse('prenotazioni:configurazione_sistema'))
 
-            form_dettagli = ConfigurazioneSistemaForm(request.POST, num_risorse=num_risorse)
-            if form_dettagli.is_valid():
-                # Crea risorse
-                risorse_create = []
-                for i in range(1, num_risorse + 1):
-                    nome = form_dettagli.cleaned_data[f'nome_{i}']
-                    tipo = form_dettagli.cleaned_data[f'tipo_{i}']
-                    quantita = form_dettagli.cleaned_data[f'quantita_{i}']
-                    risorse_create.append(Risorsa(nome=nome, tipo=tipo, quantita_totale=quantita))
+            # Processa i dati direttamente dal POST (non usando il form Django)
+            risorse_create = []
+            errori = []
 
-                # Valida nomi unici
-                nomi = [r.nome for r in risorse_create]
-                if len(nomi) != len(set(nomi)):
-                    messages.error(request, 'Nomi risorse unici richiesti.')
-                    return render(request, 'prenotazioni/configurazione_sistema.html', {
-                        'step': 3,
-                        'form_dettagli': form_dettagli,
-                    })
+            for i in range(1, num_risorse + 1):
+                nome_key = f'nome_{i}'
+                tipo_key = f'tipo_{i}'
+                quantita_key = f'quantita_{i}'
 
-                # Salva
-                Risorsa.objects.bulk_create(risorse_create)
-                if 'num_risorse' in request.session:
-                    del request.session['num_risorse']
-                messages.success(request, f'Configurazione completata! {num_risorse} risorse create.')
-                if primo_accesso:
-                    messages.info(request, 'Ora puoi accedere con l\'account amministratore creato.')
-                    return redirect(reverse('login'))
+                nome = request.POST.get(nome_key, '').strip()
+                tipo = request.POST.get(tipo_key, '').strip()
+                quantita = request.POST.get(quantita_key, '').strip()
+
+                # Validazioni
+                if not nome:
+                    errori.append(f'Nome richiesto per la risorsa {i}')
+                    continue
+                if not tipo:
+                    errori.append(f'Tipo richiesto per la risorsa {i}')
+                    continue
+                if tipo not in ['lab', 'carrello']:
+                    errori.append(f'Tipo non valido per la risorsa {i}')
+                    continue
+                if tipo == 'carrello':
+                    try:
+                        quantita = int(quantita) if quantita else 0
+                        if quantita <= 0:
+                            errori.append(f'Quantità positiva richiesta per il carrello {i}')
+                            continue
+                    except (ValueError, TypeError):
+                        errori.append(f'Quantità non valida per il carrello {i}')
+                        continue
                 else:
-                    return redirect(reverse('home'))
-            else:
+                    quantita = None  # Laboratori non hanno quantità
+
+                risorse_create.append(Risorsa(nome=nome, tipo=tipo, quantita_totale=quantita))
+
+            # Se ci sono errori, torna indietro
+            if errori:
+                for errore in errori:
+                    messages.error(request, errore)
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
                     'step': 3,
-                    'form_dettagli': form_dettagli,
+                    'num_risorse': list(range(1, num_risorse + 1)),
                 })
+
+            # Valida nomi unici
+            nomi = [r.nome for r in risorse_create]
+            if len(nomi) != len(set(nomi)):
+                messages.error(request, 'Nomi risorse devono essere unici.')
+                return render(request, 'prenotazioni/configurazione_sistema.html', {
+                    'step': 3,
+                    'num_risorse': list(range(1, num_risorse + 1)),
+                })
+
+            # Salva risorse
+            Risorsa.objects.bulk_create(risorse_create)
+            if 'num_risorse' in request.session:
+                del request.session['num_risorse']
+
+            messages.success(request, f'Configurazione completata! {len(risorse_create)} risorse create.')
+            if primo_accesso:
+                messages.info(request, 'Ora puoi accedere con l\'account amministratore creato.')
+                return redirect(reverse('login'))
+            else:
+                return redirect(reverse('home'))
 
     # GET: determina passo
     if primo_accesso:
