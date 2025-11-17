@@ -77,8 +77,8 @@ class PrenotazioneForm(forms.Form):
                 raise forms.ValidationError("Per i laboratori è possibile prenotare solo l'intero spazio.")
         elif risorsa.tipo == 'carrello':
             # Carrelli: prenotazione parziale possibile
-            if quantita > risorsa.quantita_totale:
-                raise forms.ValidationError(f"Quantità richiesta ({quantita}) supera la disponibilità totale ({risorsa.quantita_totale}).")
+            if quantita > risorsa.capacita_massima:
+                raise forms.ValidationError(f"Quantità richiesta ({quantita}) supera la disponibilità totale ({risorsa.capacita_massima}).")
 
         # Crea oggetti datetime per validazione
         try:
@@ -190,7 +190,7 @@ class ConfigurazioneSistemaForm(forms.Form):
     """
     Form per la configurazione iniziale del sistema di prenotazioni.
 
-    Permette di creare dinamicamente risorse (laboratori e carrelli).
+    Passo 1: Numero di risorse da creare
     """
     num_risorse = forms.IntegerField(
         min_value=1,
@@ -205,16 +205,27 @@ class ConfigurazioneSistemaForm(forms.Form):
         help_text="Inserisci quante risorse vuoi creare (laboratori, carrelli, ecc.) - max 20"
     )
 
+
+class RisorseConfigurazioneForm(forms.Form):
+    """
+    Form per il passo finale della configurazione risorse.
+
+    Permette di selezionare dispositivi dai catalogati per creare carrelli.
+    """
+
     def __init__(self, *args, **kwargs):
         self.num_risorse = kwargs.pop('num_risorse', None)
+        self.dispositivi_disponibili = kwargs.pop('dispositivi_disponibili', None)
         super().__init__(*args, **kwargs)
 
-        # Se abbiamo numero di risorse, aggiungiamo camp i per ciascuna
-        if self.num_risorse:
+        # Se abbiamo numero di risorse, aggiungiamo campi per ciascuna
+        if self.num_risorse and self.dispositivi_disponibili is not None:
+            dispositivi_choices = [(d.id, f"{d.produttore_display} {d.nome} ({d.modello})") for d in self.dispositivi_disponibili]
+
             for i in range(1, self.num_risorse + 1):
                 # Campo nome - sempre visibile
                 self.fields[f'nome_{i}'] = forms.CharField(
-                    max_length=120,
+                    max_length=100,
                     widget=forms.TextInput(attrs={
                         'class': 'form-control',
                         'id': f'id_nome_{i}',
@@ -236,34 +247,20 @@ class ConfigurazioneSistemaForm(forms.Form):
                     help_text="Seleziona il tipo di risorsa da creare"
                 )
 
-                # Campo quantità - condizionale per carrelli
-                self.fields[f'quantita_{i}'] = forms.IntegerField(
-                    min_value=1,
-                    max_value=100,
-                    widget=forms.NumberInput(attrs={
-                        'class': 'form-control d-none',
-                        'id': f'id_quantita_{i}',
-                        'min': '1',
-                        'max': '100',
-                        'placeholder': 'Es: 30 dispositivi'
-                    }),
-                    label=f"Risorsa {i} - Numero dispositivi",
-                    help_text="Quanti dispositivi contiene questo carrello?",
-                    required=False
-                )
-
-                # Campo selezione dispositivi - condizionale per carrelli
+                # Campo selezione dispositivi - per carrelli
                 self.fields[f'dispositivi_{i}'] = forms.MultipleChoiceField(
-                    choices=[],  # Sarà popolato dinamicamente
+                    choices=dispositivi_choices,
                     widget=forms.SelectMultiple(attrs={
                         'class': 'form-control d-none',
                         'id': f'id_dispositivi_{i}',
                         'size': '4'
                     }),
-                    label=f"Risorsa {i} - Dispositivi contenuti",
-                    help_text="Seleziona i dispositivi che contiene questo carrello (puoi crearne di nuovi sotto)",
+                    label=f"Risorsa {i} - Dispositivi nel carrello",
+                    help_text="Seleziona i dispositivi che saranno disponibili in questo carrello",
                     required=False
                 )
+
+
 
     def clean(self):
         """
@@ -294,29 +291,138 @@ class ConfigurazioneSistemaForm(forms.Form):
         return cleaned_data
 
 
+class DeviceWizardForm(forms.ModelForm):
+    """
+    Form semplificato per wizard configurazione sistemi - dispositivi.
+
+    Campo active nascosto (sempre True per dispositivi di configurazione).
+    """
+    class Meta:
+        model = Device
+        fields = ['nome', 'tipo', 'produttore', 'modello', 'sistema_operativo',
+                  'tipo_display', 'processore', 'storage', 'schermo', 'caratteristiche_extra']
+        widgets = {
+            'nome': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'ej: iPad Pro 12.9'}),
+            'produttore': forms.Select(attrs={'class': 'form-control mb-2'}),
+            'modello': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'ej: A2343'}),
+            'sistema_operativo': forms.Select(attrs={'class': 'form-control mb-2'}),
+            'processore': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'ej: Apple M2, 8GB RAM'}),
+            'storage': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'ej: 256GB SSD'}),
+            'schermo': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'ej: 12.9" Liquid Retina XDR'}),
+            'caratteristiche_extra': forms.Textarea(attrs={
+                'class': 'form-control mb-2',
+                'rows': 2,
+                'placeholder': 'ej: Apple Pencil support, USB-C, etc.'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Campo attivo non mostrato (sempre True nei wizard)
+        if 'attivo' in self.fields:
+            del self.fields['attivo']
+        if 'tipo' in self.fields:
+            del self.fields['tipo']  # Determinato automaticamente da produttore/sistema
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Determina tipo automatico basato su produttore/sistema
+        produttore = cleaned_data.get('produttore')
+        sistema = cleaned_data.get('sistema_operativo')
+
+        if produttore == 'apple' and sistema in ['ios', 'macos']:
+            cleaned_data['tipo'] = 'notebook' if sistema == 'macos' else 'tablet'
+        elif sistema == 'chromeos':
+            cleaned_data['tipo'] = 'chromebook'
+        elif sistema in ['windows', 'linux']:
+            cleaned_data['tipo'] = 'notebook'
+        elif sistema == 'android':
+            cleaned_data['tipo'] = 'tablet'
+        else:
+            cleaned_data['tipo'] = 'altro'
+
+        return cleaned_data
+
+
 class DeviceForm(forms.ModelForm):
     """
     Form per creare/modificare dispositivi.
     """
     class Meta:
         model = Device
-        fields = ['nome', 'tipo', 'modello', 'caratteristiche']
+        fields = ['nome', 'tipo', 'produttore', 'modello', 'sistema_operativo',
+                  'tipo_display', 'processore', 'storage', 'schermo', 'caratteristiche_extra']
         widgets = {
-            'nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'iPad Pro 11", MacBook Air M2'}),
+            'nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'iPad Pro 12.9'}),
             'tipo': forms.Select(attrs={'class': 'form-control'}),
-            'modello': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'M2, M1, 2023'}),
-            'caratteristiche': forms.Textarea(attrs={
+            'produttore': forms.Select(attrs={'class': 'form-control'}),
+            'modello': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'A2343'}),
+            'sistema_operativo': forms.Select(attrs={'class': 'form-control'}),
+            'tipo_display': forms.Select(attrs={'class': 'form-control'}),
+            'processore': forms.TextInput(attrs={
                 'class': 'form-control',
-                'rows': 2,
-                'placeholder': 'CPU: Apple M2, RAM: 8GB, Storage: 256GB, Display: 13.6"'
+                'placeholder': 'Apple M2, 8GB RAM'
+            }),
+            'storage': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '256GB SSD'
+            }),
+            'schermo': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '12.9" Liquid Retina XDR'
+            }),
+            'caratteristiche_extra': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Apple Pencil support, USB-C, etc.'
             }),
         }
         labels = {
-            'nome': 'Nome dispositivo',
-            'tipo': 'Tipo',
+            'nome': 'Nome commerciale',
+            'tipo': 'Tipo dispositivo',
+            'produttore': 'Produttore',
             'modello': 'Modello',
-            'caratteristiche': 'Caratteristiche tecniche',
+            'sistema_operativo': 'Sistema operativo',
+            'tipo_display': 'Tipo display',
+            'processore': 'CPU/RAM',
+            'storage': 'Memoria',
+            'schermo': 'Schermo',
+            'caratteristiche_extra': 'Caratteristiche aggiuntive',
         }
+        help_texts = {
+            'nome': 'Nome commerciale del dispositivo (es. "iPad Pro 12.9")',
+            'tipo': 'Categoria generale: notebook, tablet, chromebook',
+            'produttore': 'Azienda produttrice (Apple, Dell, etc.)',
+            'modello': 'Codice modello specifico',
+            'sistema_operativo': 'OS installato sul dispositivo',
+            'tipo_display': 'Tipo di display/interazione',
+            'processore': 'CPU e quantità RAM (es. "Intel Core i5, 16GB RAM")',
+            'storage': 'Capacità e tipo di storage (es. "512GB NVMe SSD")',
+            'schermo': 'Dimensioni e caratteristiche display',
+            'caratteristiche_extra': 'Porte, accessori, funzionalità speciali',
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        nome = cleaned_data.get('nome')
+        modello = cleaned_data.get('modello')
+        produttore = cleaned_data.get('produttore')
+
+        # Controlla unicità nome + modello per produttore
+        if nome and modello and produttore:
+            qs = Device.objects.filter(
+                nome=nome,
+                modello=modello,
+                produttore=produttore
+            )
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError(
+                    "Esiste già un dispositivo con questo nome, modello e produttore."
+                )
+
+        return cleaned_data
 
 
 class SchoolInfoForm(forms.ModelForm):

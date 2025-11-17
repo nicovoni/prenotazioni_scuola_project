@@ -14,7 +14,8 @@ from django.utils import timezone
 from .models import Prenotazione, Risorsa, Utente, SchoolInfo
 from .serializers import PrenotazioneSerializer
 from .services import BookingService, EmailService
-from .forms import PrenotazioneForm, ConfirmDeleteForm, ConfigurazioneSistemaForm, AdminUserForm, SchoolInfoForm
+from .forms import PrenotazioneForm, ConfirmDeleteForm, ConfigurazioneSistemaForm, AdminUserForm, SchoolInfoForm, DeviceWizardForm, DeviceForm, RisorseConfigurazioneForm
+from .models import Device, Risorsa
 
 logger = logging.getLogger(__name__)
 
@@ -349,11 +350,11 @@ def configurazione_sistema(request):
                 form_school.save()
                 messages.success(request, 'Informazioni scuola salvate con successo.')
 
-                # IMPORTANTE: Dopo aver salvato la scuola, continua con il wizard
-                # Passa direttamente al passo 2 (numero risorse) SENZA CONTROLLARE RISORSE ESISTENTI
+                # Nuovo flusso: dopo school info → passo device catalog
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
-                    'step': 2,
-                    'form_num': ConfigurazioneSistemaForm(),
+                    'step': 'device',
+                    'form_device': DeviceWizardForm(),
+                    'dispositivi_esistenti': Device.objects.all().order_by('produttore', 'nome'),
                 })
             else:
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
@@ -361,17 +362,73 @@ def configurazione_sistema(request):
                     'form_school': form_school,
                 })
 
+        elif 'add_device' in request.POST:  # Aggiungere nuovo dispositivo
+            form_device = DeviceWizardForm(request.POST)
+            if form_device.is_valid():
+                device = form_device.save()
+                messages.success(request, f'Dispositivo "{device.get_display_completo()}" aggiunto con successo.')
+                # Ricarica pagina con lista aggiornata
+                return render(request, 'prenotazioni/configurazione_sistema.html', {
+                    'step': 'device',
+                    'form_device': DeviceWizardForm(),
+                    'dispositivi_esistenti': Device.objects.all().order_by('produttore', 'nome'),
+                })
+            else:
+                return render(request, 'prenotazioni/configurazione_sistema.html', {
+                    'step': 'device',
+                    'form_device': form_device,
+                    'dispositivi_esistenti': Device.objects.all().order_by('produttore', 'nome'),
+                })
+
+        elif 'remove_device' in request.POST:  # Rimuovere dispositivo esistente
+            device_id = request.POST.get('device_id')
+            try:
+                device = Device.objects.get(id=device_id)
+                nome_device = device.get_display_completo()
+                device.delete()
+                messages.success(request, f'Dispositivo "{nome_device}" rimosso con successo.')
+            except Device.DoesNotExist:
+                messages.error(request, 'Dispositivo non trovato.')
+
+            return render(request, 'prenotazioni/configurazione_sistema.html', {
+                'step': 'device',
+                'form_device': DeviceWizardForm(),
+                'dispositivi_esistenti': Device.objects.all().order_by('produttore', 'nome'),
+            })
+
+        elif 'step_device_continue' in request.POST:  # Continua dal passo device
+            if not Device.objects.exists():
+                messages.error(request, 'Devi catalogare almeno un dispositivo prima di continuare.')
+                return render(request, 'prenotazioni/configurazione_sistema.html', {
+                    'step': 'device',
+                    'form_device': DeviceWizardForm(),
+                    'dispositivi_esistenti': Device.objects.all().order_by('produttore', 'nome'),
+                })
+
+            # Passa al passo risorse (numero risorse)
+            return render(request, 'prenotazioni/configurazione_sistema.html', {
+                'step': 2,
+                'form_num': ConfigurazioneSistemaForm(),
+                'dispositivi_disponibili': Device.objects.all().order_by('produttore', 'nome'),
+            })
+
         elif 'step2' in request.POST:  # Numero risorse
             form_num = ConfigurazioneSistemaForm(request.POST)
             if form_num.is_valid():
-                request.session['num_risorse'] = form_num.cleaned_data['num_risorse']
-                # Passa a passo 3
-                form_dettagli = ConfigurazioneSistemaForm(num_risorse=form_num.cleaned_data['num_risorse'])
+                num_risorse = form_num.cleaned_data['num_risorse']
+                request.session['num_risorse'] = num_risorse
+
+                # Carica dispositivi disponibili e passa a passo 3
+                dispositivi_disponibili = Device.objects.all().order_by('produttore', 'nome')
+                form_dettagli = RisorseConfigurazioneForm(num_risorse=num_risorse, dispositivi_disponibili=dispositivi_disponibili)
+
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
                     'step': 3,
                     'form_num': form_num,
                     'form_dettagli': form_dettagli,
-                    'num_risorse': list(range(1, form_num.cleaned_data['num_risorse'] + 1)),
+                    'num_risorse': num_risorse,
+                    'dispositivi_disponibili': dispositivi_disponibili,
+                    'num_risorse_range': list(range(1, num_risorse + 1)),
                 })
             else:
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
@@ -379,26 +436,28 @@ def configurazione_sistema(request):
                     'form_num': form_num,
                 })
 
-        elif 'step3' in request.POST:  # Dettagli risorse
+        elif 'step3' in request.POST:  # Dettagli risorse con selezione dispositivi
             num_risorse = request.session.get('num_risorse')
             if not num_risorse:
                 messages.error(request, 'Sessione scaduta. Ricomincia.')
                 return redirect(reverse('prenotazioni:configurazione_sistema'))
 
-            # Processa i dati direttamente dal POST (non usando il form Django)
+            # Carica dispositivi disponibili per validazione
+            dispositivi_disponibili = {d.id: d for d in Device.objects.all()}
             risorse_create = []
+            associazioni_dispositivi = {}  # {risorsa_index: [device_ids]}
             errori = []
 
             for i in range(1, num_risorse + 1):
                 nome_key = f'nome_{i}'
                 tipo_key = f'tipo_{i}'
-                quantita_key = f'quantita_{i}'
+                dispositivi_key = f'dispositivi_{i}'
 
                 nome = request.POST.get(nome_key, '').strip()
                 tipo = request.POST.get(tipo_key, '').strip()
-                quantita = request.POST.get(quantita_key, '').strip()
+                dispositivi_selezionati = request.POST.getlist(dispositivi_key)
 
-                # Validazioni
+                # Validazioni base
                 if not nome:
                     errori.append(f'Nome richiesto per la risorsa {i}')
                     continue
@@ -408,44 +467,89 @@ def configurazione_sistema(request):
                 if tipo not in ['lab', 'carrello']:
                     errori.append(f'Tipo non valido per la risorsa {i}')
                     continue
-                if tipo == 'carrello':
-                    try:
-                        quantita = int(quantita) if quantita else 0
-                        if quantita <= 0:
-                            errori.append(f'Quantità positiva richiesta per il carrello {i}')
-                            continue
-                    except (ValueError, TypeError):
-                        errori.append(f'Quantità non valida per il carrello {i}')
-                        continue
-                else:
-                    quantita = None  # Laboratori non hanno quantità
 
-                risorse_create.append(Risorsa(nome=nome, tipo=tipo, quantita_totale=quantita))
+                # Per carrelli, calcola capacità automaticamente basata sui dispositivi selezionati
+                if tipo == 'carrello':
+                    if not dispositivi_selezionati:
+                        errori.append(f'Devono essere selezionati dispositivi per il carrello {i}')
+                        continue
+
+                    # Valida che tutti i dispositivi selezionati esistano
+                    dispositivi_validi = []
+                    for device_id in dispositivi_selezionati:
+                        try:
+                            device_id_int = int(device_id)
+                            if device_id_int not in dispositivi_disponibili:
+                                errori.append(f'Dispositivo non trovato nel carrello {nome}')
+                                break
+                            dispositivi_validi.append(dispositivi_disponibili[device_id_int])
+                        except (ValueError, TypeError):
+                            errori.append(f'Dispositivo non valido nel carrello {nome}')
+                            break
+                    else:
+                        # Tutti i dispositivi sono validi
+                        capacita = len(dispositivi_validi)
+                        risorse_create.append(Risorsa(
+                            nome=nome,
+                            tipo=tipo,
+                            capacita_massima=capacita
+                        ))
+                        associazioni_dispositivi[i] = dispositivi_validi
+                else:
+                    # Laboratori
+                    risorse_create.append(Risorsa(
+                        nome=nome,
+                        tipo=tipo,
+                        capacita_massima=None
+                    ))
+                    associazioni_dispositivi[i] = []
 
             # Se ci sono errori, torna indietro
             if errori:
                 for errore in errori:
                     messages.error(request, errore)
+                dispositivi_disponibili_list = list(dispositivi_disponibili.values())
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
                     'step': 3,
-                    'num_risorse': list(range(1, num_risorse + 1)),
+                    'num_risorse': num_risorse,
+                    'num_risorse_range': list(range(1, num_risorse + 1)),
+                    'dispositivi_disponibili': dispositivi_disponibili_list,
                 })
 
             # Valida nomi unici
             nomi = [r.nome for r in risorse_create]
             if len(nomi) != len(set(nomi)):
                 messages.error(request, 'Nomi risorse devono essere unici.')
+                dispositivi_disponibili_list = list(dispositivi_disponibili.values())
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
                     'step': 3,
-                    'num_risorse': list(range(1, num_risorse + 1)),
+                    'num_risorse': num_risorse,
+                    'num_risorse_range': list(range(1, num_risorse + 1)),
+                    'dispositivi_disponibili': dispositivi_disponibili_list,
                 })
 
-            # Salva risorse
-            Risorsa.objects.bulk_create(risorse_create)
+            # Salva risorse e associazioni dispositivi
+            risorse_salvate = []
+            risorse_indices = list(range(1, num_risorse + 1))
+
+            for risorsa_obj, indice in zip(risorse_create, risorse_indices):
+                risorsa = Risorsa.objects.create(
+                    nome=risorsa_obj.nome,
+                    tipo=risorsa_obj.tipo,
+                    capacita_massima=risorsa_obj.capacita_massima
+                )
+                risorse_salvate.append(risorsa)
+
+                # Associa dispositivi per i carrelli
+                dispositivi_da_associare = associazioni_dispositivi.get(indice, [])
+                if dispositivi_da_associare:
+                    risorsa.dispositivi.set(dispositivi_da_associare)
+                    logger.info(f'Associati {len(dispositivi_da_associare)} dispositivi alla risorsa {risorsa.nome}')
+
             if 'num_risorse' in request.session:
                 del request.session['num_risorse']
 
-            messages.success(request, f'Configurazione completata! {len(risorse_create)} risorse create.')
+            messages.success(request, f'Configurazione completata! {len(risorse_salvate)} risorse create.')
             if primo_accesso:
                 messages.info(request, 'Ora puoi accedere con l\'account amministratore creato.')
                 return redirect(reverse('login'))

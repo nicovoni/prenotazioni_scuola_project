@@ -68,6 +68,175 @@ class SchoolInfo(models.Model):
         return instance
 
 
+class Device(models.Model):
+    """
+    Dispositivo disponibile nel sistema scolastico.
+
+    Catalogo di dispositivi che possono essere contenuti nei carrelli.
+    Permette di specificare esattamente che tipo di dispositivi sono disponibili.
+    """
+    # Tipologie base dispositivo
+    TIPO_DISPOSITIVO_CHOICES = [
+        ('notebook', 'Notebook/Portatile'),
+        ('tablet', 'Tablet'),
+        ('chromebook', 'Chromebook'),
+        ('altro', 'Altro'),
+    ]
+
+    # Produttori principali
+    PRODUTTORE_CHOICES = [
+        ('apple', 'Apple'),
+        ('microsoft', 'Microsoft'),
+        ('google', 'Google'),
+        ('acer', 'Acer'),
+        ('asus', 'Asus'),
+        ('dell', 'Dell'),
+        ('hp', 'HP'),
+        ('lenovo', 'Lenovo'),
+        ('samsung', 'Samsung'),
+        ('altro', 'Altro'),
+    ]
+
+    # Sistemi operativi
+    SISTEMA_OPERATIVO_CHOICES = [
+        ('ios', 'iOS/iPadOS'),
+        ('macos', 'macOS'),
+        ('windows', 'Windows'),
+        ('chromeos', 'ChromeOS'),
+        ('linux', 'Linux'),
+        ('android', 'Android'),
+        ('altro', 'Altro'),
+    ]
+
+    # Tipo display
+    TIPO_DISPLAY_CHOICES = [
+        ('mobile', 'Mobile/Tablet'),
+        ('desktop', 'Desktop/Notebook'),
+    ]
+
+    nome = models.CharField(
+        max_length=100,
+        verbose_name='Nome dispositivo',
+        help_text='Nome commerciale completo (es. "iPad Pro 12.9" o "Dell Latitude 5420")'
+    )
+
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_DISPOSITIVO_CHOICES,
+        verbose_name='Tipo dispositivo',
+        help_text='Categoria generale del dispositivo'
+    )
+
+    produttore = models.CharField(
+        max_length=20,
+        choices=PRODUTTORE_CHOICES,
+        verbose_name='Produttore',
+        help_text='Azienda produttrice del dispositivo'
+    )
+
+    modello = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='Modello',
+        help_text='Modello specifico del dispositivo'
+    )
+
+    sistema_operativo = models.CharField(
+        max_length=20,
+        choices=SISTEMA_OPERATIVO_CHOICES,
+        verbose_name='Sistema operativo',
+        help_text='Sistema operativo installato'
+    )
+
+    tipo_display = models.CharField(
+        max_length=10,
+        choices=TIPO_DISPLAY_CHOICES,
+        verbose_name='Tipo display',
+        help_text='Mobile (tablet) o Desktop (notebook/portatile)'
+    )
+
+    processore = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='Processore',
+        help_text='CPU/RAM (es. "Apple M2, 8GB RAM" o "Intel Core i5, 16GB RAM")'
+    )
+
+    storage = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='Storage',
+        help_text='Capacità disco (es. "256GB SSD" o "512GB NVMe")'
+    )
+
+    schermo = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='Schermo',
+        help_text='Dimensioni e risoluzione (es. "13.3" 2560x1600" o "11" 2388x1668")'
+    )
+
+    caratteristiche_extra = models.TextField(
+        blank=True,
+        verbose_name='Caratteristiche aggiuntive',
+        help_text='Altre specifiche tecniche importanti (camere, porte, batteria, etc.)'
+    )
+
+    attivo = models.BooleanField(
+        default=True,
+        verbose_name='Attivo',
+        help_text='Dispositivo disponibile per l\'uso nei carrelli'
+    )
+
+    class Meta:
+        verbose_name = 'Dispositivo'
+        verbose_name_plural = 'Dispositivi'
+        ordering = ['produttore', 'nome']
+        unique_together = ['nome', 'modello']  # Evita duplicati identici
+
+    def __str__(self):
+        """Rappresentazione stringa del dispositivo."""
+        produttore_display = dict(self.PRODUTTORE_CHOICES).get(self.produttore, self.produttore)
+        return f"{produttore_display} {self.nome}"
+
+    def get_display_completo(self):
+        """Restituisce una descrizione completa formattata."""
+        parts = [self.__str__()]
+        if self.modello:
+            parts.append(f"({self.modello})")
+        if self.processore:
+            parts.append(f"• {self.processore}")
+        return " ".join(parts)
+
+    def get_specifiche_tecniche(self):
+        """Restituisce un dizionario con le specifiche tecniche."""
+        specs = {}
+        if self.processore:
+            specs['Processore'] = self.processore
+        if self.storage:
+            specs['Storage'] = self.storage
+        if self.schermo:
+            specs['Schermo'] = self.schermo
+        if self.caratteristiche_extra:
+            specs['Extra'] = self.caratteristiche_extra
+        return specs
+
+    @property
+    def is_mobile(self):
+        """Verifica se è un dispositivo mobile."""
+        return self.tipo_display == 'mobile'
+
+    @property
+    def is_desktop_type(self):
+        """Verifica se è un dispositivo desktop-type."""
+        return self.tipo_display == 'desktop'
+
+    @property
+    def categoria_display(self):
+        """Restituisce categoria formattata."""
+        return dict(self.TIPO_DISPOSITIVO_CHOICES).get(self.tipo, self.tipo)
+
+
 class Utente(AbstractUser):
     """
     Utente esteso del sistema di autenticazione Django.
@@ -131,61 +300,12 @@ class Utente(AbstractUser):
         return self.ruolo == 'admin'
 
 
-class Device(models.Model):
-    """
-    Dispositivo contenuto nei carrelli.
-
-    Permette di specificare che tipo di dispositivi contiene ciascun carrello.
-    """
-    TIPO_DISPOSITIVO = [
-        ('notebook', 'Notebook'),
-        ('tablet', 'Tablet'),
-        ('chromebook', 'Chromebook'),
-        ('altro', 'Altro'),
-    ]
-
-    nome = models.CharField(
-        max_length=100,
-        verbose_name='Nome dispositivo',
-        help_text='Es: iPad Pro 11", MacBook Air M2, Surface Pro 9'
-    )
-    tipo = models.CharField(
-        max_length=20,
-        choices=TIPO_DISPOSITIVO,
-        verbose_name='Tipo dispositivo',
-        help_text='Categoria del dispositivo'
-    )
-    modello = models.CharField(
-        max_length=100,
-        blank=True,
-        verbose_name='Modello',
-        help_text='Modello specifico o versione'
-    )
-    caratteristiche = models.TextField(
-        blank=True,
-        verbose_name='Caratteristiche tecniche',
-        help_text='CPU, RAM, storage, schermo, ecc. (opzionale)'
-    )
-    attivo = models.BooleanField(
-        default=True,
-        verbose_name='Attivo',
-        help_text='Dispositivo disponibile per l\'uso'
-    )
-
-    class Meta:
-        verbose_name = 'Dispositivo'
-        verbose_name_plural = 'Dispositivi'
-
-    def __str__(self):
-        """Rappresentazione stringa del dispositivo."""
-        return f"{self.nome} ({self.tipo})"
-
 
 class Risorsa(models.Model):
     """
     Risorsa prenotabile del sistema scolastico.
 
-    Può essere un laboratorio o un carrello di dispositivi.
+    Può essere un laboratorio (prenotazione esclusiva) o un carrello (prenotazione condivisa).
     """
     TIPO_SCELTE = [
         ('lab', 'Laboratorio'),
@@ -193,7 +313,7 @@ class Risorsa(models.Model):
     ]
 
     nome = models.CharField(
-        max_length=120,
+        max_length=100,
         verbose_name='Nome risorsa',
         help_text='Nome identificativo della risorsa'
     )
@@ -203,27 +323,44 @@ class Risorsa(models.Model):
         verbose_name='Tipo',
         help_text='Tipo di risorsa (laboratorio o carrello)'
     )
-    quantita_totale = models.PositiveIntegerField(
+    capacita_massima = models.PositiveIntegerField(
         null=True,
         blank=True,
-        verbose_name='Quantità totale',
-        help_text='Per carrelli: numero di dispositivi. Per laboratori: lascia vuoto.'
+        verbose_name='Capacità massima',
+        help_text='Per carrelli: numero massimo di dispositivi prenotabili contemporaneamente'
+    )
+    descrizione = models.TextField(
+        blank=True,
+        verbose_name='Descrizione',
+        help_text='Informazioni aggiuntive sulla risorsa (opzionale, max 500 caratteri)'
     )
     dispositivi = models.ManyToManyField(
         Device,
         blank=True,
-        verbose_name='Dispositivi contenuti',
-        help_text='Per carrelli: seleziona i dispositivi disponibili'
+        related_name='risorse',
+        verbose_name='Dispositivi disponibili',
+        help_text='Per carrelli: seleziona i tipi di dispositivi disponibili nel carrello'
+    )
+    attiva = models.BooleanField(
+        default=True,
+        verbose_name='Attiva',
+        help_text='Risorsa disponibile per prenotazioni'
     )
 
     class Meta:
         verbose_name = 'Risorsa'
         verbose_name_plural = 'Risorse'
+        ordering = ['tipo', 'nome']
+        indexes = [
+            models.Index(fields=['tipo', 'attiva']),  # Query ottimizzate per risorse attive per tipo
+            models.Index(fields=['nome']),  # Ricerca per nome
+        ]
 
     def __str__(self):
         """Rappresentazione stringa della risorsa."""
-        if self.tipo == 'carrello' and self.quantita_totale:
-            return f"{self.nome} ({self.tipo} - {self.quantita_totale} dispositivi)"
+        if self.tipo == 'carrello' and self.capacita_massima:
+            dispositivi_info = self.get_dispositivi_display()
+            return f"{self.nome} ({self.tipo} - {self.capacita_massima} dispositivi: {dispositivi_info})"
         return f"{self.nome} ({self.tipo})"
 
     def is_laboratorio(self):
@@ -233,13 +370,6 @@ class Risorsa(models.Model):
     def is_carrello(self):
         """Verifica se la risorsa è un carrello."""
         return self.tipo == 'carrello'
-
-    def get_dispositivi_display(self):
-        """Restituisce una stringa con i nomi dei dispositivi."""
-        if self.dispositivi.exists():
-            dispositivi_nomi = [d.nome for d in self.dispositivi.all()]
-            return ", ".join(dispositivi_nomi)
-        return "Nessun dispositivo specificato"
 
     def get_disponibilita_in_periodo(self, inizio, fine):
         """
@@ -260,9 +390,41 @@ class Risorsa(models.Model):
             fine__gt=inizio
         )
         quantita_occupata = overlapping.aggregate(Sum('quantita'))['quantita__sum'] or 0
-        disponibile = (self.quantita_totale or 1) - quantita_occupata
+        disponibile = (self.capacita_massima or 1) - quantita_occupata
 
         return max(0, disponibile), quantita_occupata
+
+    def get_prenotazioni_in_periodo(self, inizio, fine):
+        """
+        Restituisce prenotazioni attive in un periodo specifico.
+
+        Args:
+            inizio: Data/ora inizio periodo
+            fine: Data/ora fine periodo
+
+        Returns:
+            QuerySet di Prenotazioni sovrapposte
+        """
+        return self.prenotazione_set.filter(
+            inizio__lt=fine,
+            fine__gt=inizio
+        ).select_related('utente')
+
+    def get_dispositivi_display(self):
+        """Restituisce una stringa con i nomi dei dispositivi disponibili."""
+        if self.dispositivi.exists():
+            dispositivi_nomi = [d.get_display_completo() for d in self.dispositivi.filter(attivo=True)]
+            return ", ".join(dispositivi_nomi)
+        return "Nessun dispositivo specificato"
+
+    def get_dispositivi_riassunto(self):
+        """Restituisce un riassunto dei tipi di dispositivi disponibili."""
+        if self.dispositivi.exists():
+            dispositivi_attivi = self.dispositivi.filter(attivo=True)
+            tipi = dispositivi_attivi.values_list('tipo', flat=True).distinct()
+            tipi_display = [dict(Device.TIPO_DISPOSITIVO_CHOICES).get(tipo, tipo) for tipo in tipi]
+            return f"{len(dispositivi_attivi)} dispositivi ({', '.join(tipi_display)})"
+        return "Nessun dispositivo disponibile"
 
 
 class Prenotazione(models.Model):
@@ -296,11 +458,36 @@ class Prenotazione(models.Model):
         verbose_name='Data/ora fine',
         help_text='Fine del periodo di prenotazione'
     )
+    attiva = models.BooleanField(
+        default=True,
+        verbose_name='Attiva',
+        help_text='Prenotazione attiva (può essere disabilitata da admin)'
+    )
+    creato_il = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Creato il'
+    )
+    modificato_il = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Modificato il'
+    )
 
     class Meta:
         verbose_name = 'Prenotazione'
         verbose_name_plural = 'Prenotazioni'
         ordering = ['-inizio']
+        indexes = [
+            models.Index(fields=['inizio', 'fine']),  # Range queries per sovrapposizioni
+            models.Index(fields=['risorsa', 'inizio', 'fine']),  # Disponibilità per risorsa
+            models.Index(fields=['utente', '-inizio']),  # Mie prenotazioni recenti
+            models.Index(fields=['attiva']),  # Solo prenotazioni attive
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(fine__gt=models.F('inizio')),
+                name='prenotazione_fine_dopo_inizio'
+            ),
+        ]
 
     def __str__(self):
         """Rappresentazione stringa della prenotazione."""

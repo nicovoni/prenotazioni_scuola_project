@@ -115,7 +115,7 @@ class BookingService:
 
             elif risorsa.tipo == 'carrello':
                 # Per i carrelli: controllo disponibilità parziale
-                totale = risorsa.quantita_totale or 1
+                totale = risorsa.capacita_massima or 1
 
                 # Query prenotazioni sovrapposte
                 overlapping = Prenotazione.objects.filter(risorsa_id=risorsa_id)

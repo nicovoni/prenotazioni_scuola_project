@@ -27,7 +27,7 @@ class UtenteAdmin(UserAdmin):
 # Admin per Risorsa
 @admin.register(Risorsa)
 class RisorsaAdmin(admin.ModelAdmin):
-    list_display = ('nome', 'tipo', 'quantita_totale')
+    list_display = ('nome', 'tipo', 'capacita_massima', 'attiva')
     list_filter = ('tipo',)
     search_fields = ('nome',)
 
