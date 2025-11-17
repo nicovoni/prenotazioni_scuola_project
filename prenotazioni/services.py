@@ -366,6 +366,10 @@ class EmailService:
             logger.info(f"Destinatario: {user.email}")
             logger.info(f"PIN generato: {pin}")
 
+            # Verifica configurazione SMTP prima dell'invio
+            logger.info(f"Verifica connessione SMTP a {settings.EMAIL_HOST}:{settings.EMAIL_PORT}")
+            logger.info(f"Configurazione: USER={settings.EMAIL_HOST_USER[:3] if settings.EMAIL_HOST_USER else 'NONE'}***")
+
             # Invia utilizzando backend SMTP robusto
             from django.core.mail.backends.smtp import EmailBackend
             from django.core.mail import EmailMessage
@@ -376,7 +380,7 @@ class EmailService:
                 username=settings.EMAIL_HOST_USER,
                 password=settings.EMAIL_HOST_PASSWORD,
                 use_tls=settings.EMAIL_USE_TLS,
-                timeout=15
+                timeout=30  # Aumentato da 15 secondi per gestire connessioni più lente
             )
 
             email_message = EmailMessage(
