@@ -156,7 +156,8 @@ class AdminUserForm(forms.Form):
     )
 
     def clean_email(self):
-        """Valida che l'email sia del dominio scolastico corretto."""
+        """Valida che l'email sia del dominio scolastico corretto e abbia il formato corretto."""
+        import re
         email = self.cleaned_data['email']
         from django.conf import settings
 
@@ -171,6 +172,15 @@ class AdminUserForm(forms.Form):
             raise forms.ValidationError(
                 f"Sono accettate solo email del dominio @{settings.SCHOOL_EMAIL_DOMAIN}. "
                 f"Questo è necessario per garantire la sicurezza del sistema scolastico."
+            )
+
+        # Validate local-part: initial (letter), dot, full surname (letters, apostrophe allowed)
+        # allow an optional numeric suffix after the surname (e.g. n.cantalupo1)
+        # Note: apostrophe (') is allowed, hyphen is NOT
+        local_regex = r"^[A-Za-z]\.[A-Za-zÀ-ÖØ-öø-ÿ']+[0-9]*$"
+        if not re.match(local_regex, local_part):
+            raise forms.ValidationError(
+                "Formato email non valido. Esempi di indirizzi corretti: g.rossi@isufol.it o g.rossi1@isufol.it"
             )
 
         return email

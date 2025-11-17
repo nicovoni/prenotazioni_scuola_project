@@ -190,7 +190,7 @@ def email_login(request):
         # Note: hyphen is NOT allowed per updated requirement; apostrophe (') is allowed
         local_regex = r"^[A-Za-z]\.[A-Za-zÀ-ÖØ-öø-ÿ']+[0-9]*$"
         if not re.match(local_regex, local_part):
-            messages.error(request, "Formato email non valido. Usa l'iniziale del primo nome, punto e cognome (es. i.nizzo@isufol.it). Se ci sono omonimie, è possibile aggiungere una cifra alla fine (es. i.nizzo1@isufol.it).")
+            messages.error(request, "Formato email non valido. Esempi di indirizzi corretti: g.rossi@isufol.it o g.rossi1@isufol.it")
             request.session['pin_send_attempts'] = attempts + 1
             logger.warning(f"Tentativo login email con formato local-part non valido: {email} IP: {ip}")
             # Optionally block after many attempts
