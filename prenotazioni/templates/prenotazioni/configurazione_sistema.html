@@ -232,7 +232,7 @@
             <form method="post">
                 {% csrf_token %}
 
-                {% for field_name, field in form_dettagli %}
+                {% for field_name, field in form_dettagli.fields.items %}
                     {% if 'nome_' in field_name %}
                         {% with resource_num=field_name|slice:"5"|add:0 %}
                         <div class="card mb-4">
@@ -259,7 +259,7 @@
                                         <label for="tipo_{{ resource_num }}" class="form-label fw-bold">
                                             Tipo risorsa
                                         </label>
-                                        {% for choice_field_name, choice_field in form_dettagli %}
+                                        {% for choice_field_name, choice_field in form_dettagli.fields.items %}
                                             {% if choice_field_name == 'tipo_'|add:resource_num %}
                                                 {{ choice_field }}
                                                 {% if choice_field.errors %}
@@ -274,7 +274,7 @@
                                 </div>
 
                                 <!-- Campo quantità per carrelli -->
-                                {% for qty_field_name, qty_field in form_dettagli %}
+                                {% for qty_field_name, qty_field in form_dettagli.fields.items %}
                                     {% if qty_field_name == 'quantita_'|add:resource_num %}
                                         <div class="quantita-field d-none" id="quantita-{{ resource_num }}">
                                             <div class="alert alert-secondary">
