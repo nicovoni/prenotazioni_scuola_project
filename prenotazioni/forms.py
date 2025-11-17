@@ -184,15 +184,15 @@ class ConfigurazioneSistemaForm(forms.Form):
     """
     num_risorse = forms.IntegerField(
         min_value=1,
-        max_value=50,
+        max_value=20,
         initial=3,
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'min': '1',
-            'max': '50'
+            'max': '20'
         }),
         label="Numero di risorse da configurare",
-        help_text="Inserisci quante risorse vuoi creare (laboratori, carrelli, ecc.)"
+        help_text="Inserisci quante risorse vuoi creare (laboratori, carrelli, ecc.) - max 20"
     )
 
     def __init__(self, *args, **kwargs):
@@ -202,29 +202,111 @@ class ConfigurazioneSistemaForm(forms.Form):
         # Se abbiamo numero di risorse, aggiungiamo camp i per ciascuna
         if self.num_risorse:
             for i in range(1, self.num_risorse + 1):
+                # Campo nome - sempre visibile
                 self.fields[f'nome_{i}'] = forms.CharField(
                     max_length=120,
-                    widget=forms.TextInput(attrs={'class': 'form-control'}),
-                    label=f"Nome risorsa {i}",
-                    help_text="Nome identificativo della risorsa"
+                    widget=forms.TextInput(attrs={
+                        'class': 'form-control',
+                        'id': f'id_nome_{i}',
+                        'placeholder': f'Es: Laboratorio {i}, Carrello Portatili {i}'
+                    }),
+                    label=f"Risorsa {i} - Nome",
+                    help_text="Nome identificativo della risorsa (es: Lab Informatica, Carrello iPad)"
                 )
 
+                # Campo tipo - sempre visibile
                 self.fields[f'tipo_{i}'] = forms.ChoiceField(
                     choices=Risorsa.TIPO_SCELTE,
-                    widget=forms.Select(attrs={'class': 'form-control'}),
-                    label=f"Tipo risorsa {i}",
-                    help_text="Tipo di risorsa (laboratorio o carrello)"
+                    widget=forms.Select(attrs={
+                        'class': 'form-control',
+                        'id': f'id_tipo_{i}',
+                        'onchange': f'updateResourceFields({i})'
+                    }),
+                    label=f"Risorsa {i} - Tipo",
+                    help_text="Seleziona il tipo di risorsa da creare"
                 )
 
+                # Campo quantità - condizionale per carrelli
                 self.fields[f'quantita_{i}'] = forms.IntegerField(
                     min_value=1,
+                    max_value=100,
                     widget=forms.NumberInput(attrs={
-                        'class': 'form-control',
-                        'min': '1'
+                        'class': 'form-control d-none',
+                        'id': f'id_quantita_{i}',
+                        'min': '1',
+                        'max': '100',
+                        'placeholder': 'Es: 30 dispositivi'
                     }),
-                    label=f"Quantità risorsa {i}",
-                    help_text="Per laboratori: 1 (intero lab). Per carrelli: numero di dispositivi"
+                    label=f"Risorsa {i} - Numero dispositivi",
+                    help_text="Quanti dispositivi contiene questo carrello?",
+                    required=False
                 )
+
+                # Campo selezione dispositivi - condizionale per carrelli
+                self.fields[f'dispositivi_{i}'] = forms.MultipleChoiceField(
+                    choices=[],  # Sarà popolato dinamicamente
+                    widget=forms.SelectMultiple(attrs={
+                        'class': 'form-control d-none',
+                        'id': f'id_dispositivi_{i}',
+                        'size': '4'
+                    }),
+                    label=f"Risorsa {i} - Dispositivi contenuti",
+                    help_text="Seleziona i dispositivi che contiene questo carrello (puoi crearne di nuovi sotto)",
+                    required=False
+                )
+
+    def clean(self):
+        """
+        Validazione personalizzata del form.
+        """
+        cleaned_data = super().clean()
+        num_risorse = cleaned_data.get('num_risorse')
+
+        if not num_risorse:
+            return cleaned_data
+
+        # Validiamo ogni risorsa
+        for i in range(1, num_risorse + 1):
+            nome = cleaned_data.get(f'nome_{i}')
+            tipo = cleaned_data.get(f'tipo_{i}')
+
+            if not nome or not tipo:
+                continue
+
+            # Per i carrelli, richiediamo la quantità
+            if tipo == 'carrello':
+                quantita = cleaned_data.get(f'quantita_{i}')
+                if not quantita:
+                    self.add_error(f'quantita_{i}', f"Specifica il numero di dispositivi per {nome}")
+                elif quantita <= 0:
+                    self.add_error(f'quantita_{i}', f"Il numero di dispositivi deve essere positivo")
+
+        return cleaned_data
+
+
+class DeviceForm(forms.ModelForm):
+    """
+    Form per creare/modificare dispositivi.
+    """
+    class Meta:
+        model = Device
+        fields = ['nome', 'tipo', 'modello', 'caratteristiche']
+        widgets = {
+            'nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'iPad Pro 11", MacBook Air M2'}),
+            'tipo': forms.Select(attrs={'class': 'form-control'}),
+            'modello': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'M2, M1, 2023'}),
+            'caratteristiche': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'CPU: Apple M2, RAM: 8GB, Storage: 256GB, Display: 13.6"'
+            }),
+        }
+        labels = {
+            'nome': 'Nome dispositivo',
+            'tipo': 'Tipo',
+            'modello': 'Modello',
+            'caratteristiche': 'Caratteristiche tecniche',
+        }
 
 
 class SchoolInfoForm(forms.ModelForm):

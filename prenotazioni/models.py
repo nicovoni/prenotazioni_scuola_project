@@ -131,6 +131,56 @@ class Utente(AbstractUser):
         return self.ruolo == 'admin'
 
 
+class Device(models.Model):
+    """
+    Dispositivo contenuto nei carrelli.
+
+    Permette di specificare che tipo di dispositivi contiene ciascun carrello.
+    """
+    TIPO_DISPOSITIVO = [
+        ('notebook', 'Notebook'),
+        ('tablet', 'Tablet'),
+        ('chromebook', 'Chromebook'),
+        ('altro', 'Altro'),
+    ]
+
+    nome = models.CharField(
+        max_length=100,
+        verbose_name='Nome dispositivo',
+        help_text='Es: iPad Pro 11", MacBook Air M2, Surface Pro 9'
+    )
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_DISPOSITIVO,
+        verbose_name='Tipo dispositivo',
+        help_text='Categoria del dispositivo'
+    )
+    modello = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='Modello',
+        help_text='Modello specifico o versione'
+    )
+    caratteristiche = models.TextField(
+        blank=True,
+        verbose_name='Caratteristiche tecniche',
+        help_text='CPU, RAM, storage, schermo, ecc. (opzionale)'
+    )
+    attivo = models.BooleanField(
+        default=True,
+        verbose_name='Attivo',
+        help_text='Dispositivo disponibile per l\'uso'
+    )
+
+    class Meta:
+        verbose_name = 'Dispositivo'
+        verbose_name_plural = 'Dispositivi'
+
+    def __str__(self):
+        """Rappresentazione stringa del dispositivo."""
+        return f"{self.nome} ({self.tipo})"
+
+
 class Risorsa(models.Model):
     """
     Risorsa prenotabile del sistema scolastico.
@@ -157,7 +207,13 @@ class Risorsa(models.Model):
         null=True,
         blank=True,
         verbose_name='Quantità totale',
-        help_text='Numero totale di postazioni/dispositivi disponibili'
+        help_text='Per carrelli: numero di dispositivi. Per laboratori: lascia vuoto.'
+    )
+    dispositivi = models.ManyToManyField(
+        Device,
+        blank=True,
+        verbose_name='Dispositivi contenuti',
+        help_text='Per carrelli: seleziona i dispositivi disponibili'
     )
 
     class Meta:
@@ -166,6 +222,8 @@ class Risorsa(models.Model):
 
     def __str__(self):
         """Rappresentazione stringa della risorsa."""
+        if self.tipo == 'carrello' and self.quantita_totale:
+            return f"{self.nome} ({self.tipo} - {self.quantita_totale} dispositivi)"
         return f"{self.nome} ({self.tipo})"
 
     def is_laboratorio(self):
@@ -175,6 +233,13 @@ class Risorsa(models.Model):
     def is_carrello(self):
         """Verifica se la risorsa è un carrello."""
         return self.tipo == 'carrello'
+
+    def get_dispositivi_display(self):
+        """Restituisce una stringa con i nomi dei dispositivi."""
+        if self.dispositivi.exists():
+            dispositivi_nomi = [d.nome for d in self.dispositivi.all()]
+            return ", ".join(dispositivi_nomi)
+        return "Nessun dispositivo specificato"
 
     def get_disponibilita_in_periodo(self, inizio, fine):
         """

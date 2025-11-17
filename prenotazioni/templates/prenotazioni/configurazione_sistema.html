@@ -221,59 +221,125 @@
         {% elif step == 3 %}
             <!-- Passo 3: Dettagli risorse -->
             <h3>📋 Passo 3: Configurazione risorse</h3>
-            <p>Definisci i dettagli per ciascuna risorsa.</p>
+            <p>Definisci i dettagli per ciascuna risorsa selezionata.</p>
+
+            <!-- Messaggio informativo dispositivi -->
+            <div class="alert alert-info">
+                <h6><i class="bi bi-info-circle"></i> 💡 Suggerimento per dispositivi</h6>
+                <p>Puoi creare dispositivi separatamente dalla sezione "Database Viewer" nel menu amministratore, e poi assegnarli ai carrelli quando saranno più strutturati nel sistema.</p>
+            </div>
 
             <form method="post">
                 {% csrf_token %}
-                {% for i in form_dettagli %}
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <h5>🎯 Risorsa {{ forloop.counter }}</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <label for="{{ i.nome.id_for_label }}" class="form-label">Nome risorsa</label>
-                                    {{ i.nome }}
-                                    {% if i.nome.errors %}
-                                        <div class="text-danger">
-                                            {% for error in i.nome.errors %}
-                                                <small>{{ error }}</small>
-                                            {% endfor %}
+
+                {% for field_name, field in form_dettagli %}
+                    {% if 'nome_' in field_name %}
+                        {% with resource_num=field_name|slice:"5"|add:0 %}
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">🎯 Risorsa {{ resource_num }}</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <!-- Campo nome -->
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ field.id_for_label }}" class="form-label fw-bold">
+                                            {{ field.label }}
+                                        </label>
+                                        {{ field }}
+                                        {% if field.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in field.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Campo tipo -->
+                                    <div class="col-md-6 mb-3">
+                                        <label for="tipo_{{ resource_num }}" class="form-label fw-bold">
+                                            Tipo risorsa
+                                        </label>
+                                        {% for choice_field_name, choice_field in form_dettagli %}
+                                            {% if choice_field_name == 'tipo_'|add:resource_num %}
+                                                {{ choice_field }}
+                                                {% if choice_field.errors %}
+                                                    <div class="text-danger small">
+                                                        {% for error in choice_field.errors %}{{ error }}{% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                                <div class="form-text">Laboratorio: prenotabile solo per intero. Carrello: prenotabile parzialmente.</div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <!-- Campo quantità per carrelli -->
+                                {% for qty_field_name, qty_field in form_dettagli %}
+                                    {% if qty_field_name == 'quantita_'|add:resource_num %}
+                                        <div class="quantita-field d-none" id="quantita-{{ resource_num }}">
+                                            <div class="alert alert-secondary">
+                                                <h6><i class="bi bi-cart"></i> Configurazione carrello</h6>
+                                                <div class="row">
+                                                    <div class="col-md-8">
+                                                        <label for="{{ qty_field.id_for_label }}" class="form-label">
+                                                            {{ qty_field.label }}
+                                                        </label>
+                                                        {{ qty_field }}
+                                                        {% if qty_field.errors %}
+                                                            <div class="text-danger small">
+                                                                {% for error in qty_field.errors %}{{ error }}{% endfor %}
+                                                            </div>
+                                                        {% endif %}
+                                                        <div class="form-text">Quanti dispositivi contiene questo carrello?</div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     {% endif %}
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="{{ i.tipo.id_for_label }}" class="form-label">Tipo risorsa</label>
-                                    {{ i.tipo }}
-                                    {% if i.tipo.errors %}
-                                        <div class="text-danger">
-                                            {% for error in i.tipo.errors %}
-                                                <small>{{ error }}</small>
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="{{ i.quantita.id_for_label }}" class="form-label">Quantità</label>
-                                    {{ i.quantita }}
-                                    {% if i.quantita.errors %}
-                                        <div class="text-danger">
-                                            {% for error in i.quantita.errors %}
-                                                <small>{{ error }}</small>
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
+                                {% endfor %}
                             </div>
                         </div>
-                    </div>
+                        {% endwith %}
+                    {% endif %}
                 {% endfor %}
 
                 <div class="text-center">
-                    <button type="submit" name="step3" class="btn btn-success">💾 Salva Configurazione</button>
+                    <button type="submit" name="step3" class="btn btn-success btn-lg">
+                        🚀 Salva Configurazione e Avvia Sistema
+                    </button>
+                    <div class="mt-2">
+                        <small class="text-muted">Dopo aver salvato, il sistema sarà pronto per l'uso!</small>
+                    </div>
                 </div>
             </form>
+
+            <script>
+                // Gestisce il cambio di tipo risorsa per mostrare/nascondere campo quantità
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Trova tutti i select di tipo risorsa
+                    const tipoSelects = document.querySelectorAll('select[name*="tipo_"]');
+
+                    tipoSelects.forEach(function(select) {
+                        select.addEventListener('change', function() {
+                            const resourceNum = this.name.replace('tipo_', '');
+                            const quantitaField = document.getElementById('quantita-' + resourceNum);
+
+                            if (this.value === 'carrello') {
+                                if (quantitaField) {
+                                    quantitaField.classList.remove('d-none');
+                                }
+                            } else {
+                                if (quantitaField) {
+                                    quantitaField.classList.add('d-none');
+                                }
+                            }
+                        });
+
+                        // Trigger iniziale per risorse già configurate
+                        select.dispatchEvent(new Event('change'));
+                    });
+                });
+            </script>
         {% endif %}
     </div>
 </div>
