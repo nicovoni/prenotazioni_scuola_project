@@ -370,6 +370,17 @@ class EmailService:
             logger.info(f"Verifica connessione SMTP a {settings.EMAIL_HOST}:{settings.EMAIL_PORT}")
             logger.info(f"Configurazione: USER={settings.EMAIL_HOST_USER[:3] if settings.EMAIL_HOST_USER else 'NONE'}***")
 
+            # Controllo configurazione SMTP essenziale
+            if not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD:
+                error_msg = "Configurazione SMTP incompleta: mancano EMAIL_HOST_USER o EMAIL_HOST_PASSWORD"
+                logger.error(error_msg)
+                return False, error_msg
+
+            if not settings.EMAIL_HOST:
+                error_msg = "Configurazione SMTP incompleta: manca EMAIL_HOST"
+                logger.error(error_msg)
+                return False, error_msg
+
             # Invia utilizzando backend SMTP robusto
             from django.core.mail.backends.smtp import EmailBackend
             from django.core.mail import EmailMessage
