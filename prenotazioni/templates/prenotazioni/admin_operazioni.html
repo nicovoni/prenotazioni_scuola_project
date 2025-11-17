@@ -38,6 +38,28 @@
             </div>
 
             <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">📊 Database Viewer</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Visualizza il contenuto completo di tutte le tabelle del database.</p>
+                    <p class="card-text">
+                        <strong>Permette di:</strong>
+                    </p>
+                    <ul class="list-unstyled ms-3">
+                        <li>👀 Vedere tutti gli utenti registrati</li>
+                        <li>📅 Esaminare tutte le prenotazioni esistenti</li>
+                        <li>🛠️ Ispezionare risorse e configurazione scuola</li>
+                        <li>🔍 Controllare lo stato completo del sistema</li>
+                    </ul>
+
+                    <a href="{% url 'prenotazioni:database_viewer' %}" class="btn btn-success btn-lg">
+                        👁️ Visualizza Database Completo
+                    </a>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
                 <div class="card-header bg-danger text-white">
                     <h5 class="card-title mb-0">🔄 Reset Completo del Sistema</h5>
                 </div>
