@@ -7,7 +7,7 @@
     <div class="page-header">
         <h1 class="page-title">⚙️ Configurazione Sistema di Prenotazioni</h1>
         <p class="page-subtitle">
-            {% if step == 1 %}Crea il primo utente amministratore{% elif step == "school" %}Inserisci informazioni sulla scuola{% elif step == 2 %}Definisci quante risorse creare{% elif step == 3 %}Configura i dettagli delle risorse{% endif %}
+            {% if step == 1 %}Crea il primo utente amministratore{% elif step == "school" %}Inserisci informazioni sulla scuola{% elif step == "device" %}Catalogo dispositivi scolastici{% elif step == 2 %}Definisci quante risorse creare{% elif step == 3 %}Configura i dettagli delle risorse{% endif %}
         </p>
     </div>
 
@@ -189,6 +189,258 @@
                     }
                 });
             </script>
+
+        {% elif step == "device" %}
+            <!-- Passo Device: Catalogo dispositivi -->
+            <h3>📱 Passo 2: Catalogo Dispositivi Scolastici</h3>
+            <p>Cataloga tutti i dispositivi disponibili nella tua scuola. Questi saranno poi assegnati ai carrelli durante la configurazione delle risorse.</p>
+
+            <div class="row">
+                <!-- Form aggiunta dispositivo -->
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">➕ Aggiungi Dispositivo</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="{{ form_device.nome.id_for_label }}" class="form-label">{{ form_device.nome.label }}</label>
+                                    {{ form_device.nome }}
+                                    {% if form_device.nome.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form_device.nome.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form_device.produttore.id_for_label }}" class="form-label">{{ form_device.produttore.label }}</label>
+                                            {{ form_device.produttore }}
+                                            {% if form_device.produttore.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_device.produttore.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form_device.sistema_operativo.id_for_label }}" class="form-label">{{ form_device.sistema_operativo.label }}</label>
+                                            {{ form_device.sistema_operativo }}
+                                            {% if form_device.sistema_operativo.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_device.sistema_operativo.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form_device.modello.id_for_label }}" class="form-label">{{ form_device.modello.label }}</label>
+                                            {{ form_device.modello }}
+                                            {% if form_device.modello.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_device.modello.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form_device.tipo_display.id_for_label }}" class="form-label">{{ form_device.tipo_display.label }}</label>
+                                            {{ form_device.tipo_display }}
+                                            {% if form_device.tipo_display.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_device.tipo_display.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form_device.processore.id_for_label }}" class="form-label">{{ form_device.processore.label }}</label>
+                                    {{ form_device.processore }}
+                                    {% if form_device.processore.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form_device.processore.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form_device.storage.id_for_label }}" class="form-label">{{ form_device.storage.label }}</label>
+                                            {{ form_device.storage }}
+                                            {% if form_device.storage.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_device.storage.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form_device.schermo.id_for_label }}" class="form-label">{{ form_device.schermo.label }}</label>
+                                            {{ form_device.schermo }}
+                                            {% if form_device.schermo.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_device.schermo.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form_device.caratteristiche_extra.id_for_label }}" class="form-label">{{ form_device.caratteristiche_extra.label }}</label>
+                                    {{ form_device.caratteristiche_extra }}
+                                    {% if form_device.caratteristiche_extra.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form_device.caratteristiche_extra.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <button type="submit" name="add_device" class="btn btn-success w-100">
+                                    <i class="bi bi-plus-circle"></i> Aggiungi Dispositivo
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista dispositivi esistenti -->
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">📋 Dispositivi Catalogati ({{ dispositivi_esistenti|length }})</h5>
+                            {% if dispositivi_esistenti %}
+                                <button type="submit" form="continue-form" class="btn btn-light btn-sm">
+                                    Continua →
+                                </button>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            {% if dispositivi_esistenti %}
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Dispositivo</th>
+                                                <th>Tipo</th>
+                                                <th>SO</th>
+                                                <th>Specifiche</th>
+                                                <th>Azioni</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for dispositivo in dispositivi_esistenti %}
+                                                <tr>
+                                                    <td>
+                                                        <strong>{{ dispositivo.produttore_display }} {{ dispositivo.nome }}</strong>
+                                                        {% if dispositivo.modello %}
+                                                            <br><small class="text-muted">{{ dispositivo.modello }}</small>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-info">{{ dispositivo.categoria_display }}</span>
+                                                        {% if dispositivo.is_mobile %}<br><small class="text-success">Mobile</small>{% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <small>{{ dispositivo.get_sistema_operativo_display }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <small>
+                                                            {% if dispositivo.processore %}
+                                                                {{ dispositivo.processore }}
+                                                            {% endif %}
+                                                            {% if dispositivo.storage %}
+                                                                {% if dispositivo.processore %} • {% endif %}{{ dispositivo.storage }}
+                                                            {% endif %}
+                                                        </small>
+                                                        {% if not dispositivo.processore and not dispositivo.storage %}
+                                                            <small class="text-muted">-</small>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <form method="post" class="d-inline">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="device_id" value="{{ dispositivo.id }}">
+                                                            <button type="submit" name="remove_device" class="btn btn-outline-danger btn-sm"
+                                                                    onclick="return confirm('Sicuro di voler rimuovere questo dispositivo?')">
+                                                                <i class="bi bi-trash"></i> Rimuovi
+                                                            </button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <i class="bi bi-device-hdd fa-3x text-muted mb-3"></i>
+                                    <h5>Nessun dispositivo ancora catalogato</h5>
+                                    <p class="text-muted">Aggiungi almeno un dispositivo per continuare con la configurazione.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form nascosto per continuare (serve CSRF token) -->
+            <form id="continue-form" method="post" style="display: none;">
+                {% csrf_token %}
+                <input type="hidden" name="step_device_continue" value="1">
+            </form>
+
+            <div class="text-center mt-4">
+                {% if dispositivi_esistenti %}
+                    <button type="submit" form="continue-form" class="btn btn-primary btn-lg">
+                        Continua alla Configurazione Risorse →
+                    </button>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Devi catalogare almeno un dispositivo per continuare.
+                    </div>
+                {% endif %}
+            </div>
+
+<script>
+    // Suggerimenti automatici per form dispositivo basato su produttore
+    document.addEventListener('DOMContentLoaded', function() {
+        const produttoreSelect = document.querySelector('#{{ form_device.produttore.id_for_label }}');
+        const sistemaSelect = document.querySelector('#{{ form_device.sistema_operativo.id_for_label }}');
+
+        if (produttoreSelect && sistemaSelect) {
+            produttoreSelect.addEventListener('change', function() {
+                const produttore = this.value;
+                if (!sistemaSelect.value) {  // Solo se non già selezionato
+                    if (produttore === 'apple') {
+                        sistemaSelect.value = 'ios';
+                    } else if (produttore === 'microsoft') {
+                        sistemaSelect.value = 'windows';
+                    } else if (produttore === 'google') {
+                        sistemaSelect.value = 'chromeos';
+                    }
+                    // Trigger change event per aggiornare eventuali listeners
+                    sistemaSelect.dispatchEvent(new Event('change'));
+                }
+            });
+        }
+    });
+</script>
 
         {% elif step == 2 %}
             <!-- Passo 2: Numero risorse -->
