@@ -5,6 +5,19 @@ import random
 import string
 
 
+def generate_pin(user=None):
+    """
+    Generate a 6-digit PIN for user verification.
+
+    Args:
+        user: User instance (optional, for future use)
+
+    Returns:
+        str: Generated PIN
+    """
+    return ''.join(random.choices(string.digits, k=6))
+
+
 class Command(BaseCommand):
     help = 'Invia un PIN di test all\'indirizzo specificato per verificare l\'invio email'
 
