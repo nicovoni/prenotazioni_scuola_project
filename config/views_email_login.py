@@ -294,5 +294,5 @@ def verify_pin(request):
         for k in ['login_email', 'login_pin', 'login_pin_time', 'pin_verify_attempts', 'pin_verify_block_until']:
             request.session.pop(k, None)
         logger.info(f"Accesso riuscito per {email} IP: {ip}")
-        return redirect('prenota_laboratorio')
+        return redirect('prenotazioni:prenota_laboratorio')
     return render(request, 'registration/verify_pin.html')

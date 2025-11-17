@@ -304,21 +304,29 @@ def configurazione_sistema(request):
                 admin_user.is_active = False  # disattivato fino a verifica PIN
                 admin_user.save()
 
-                # Genera PIN (temporaneamente mostrato nella pagina invece di inviato via email)
-                from .management.commands.send_test_pin import generate_pin
-                pin = generate_pin(admin_user)
+                # Usa lo stesso sistema di invio PIN del login normale
+                from config.views_email_login import send_pin_email_async
+                import time as time_module
 
-                # TEMPORANEO: Mostra PIN direttamente per testare funzionalità
+                # Genera PIN monouso usando lo stesso metodo del login
+                import random
+                import string
+                pin = ''.join(random.choices(string.digits, k=6))
+
+                # Salva in sessione come per il login normale
+                request.session['admin_setup_email'] = email
+                request.session['admin_setup_pin'] = pin
+                request.session['admin_setup_pin_time'] = timezone.now().isoformat()
+
+                # Invia PIN con lo stesso sistema del login
+                send_pin_email_async(email, pin)
+
+                # Messaggio successo come per il login normale
                 admin_welcome_message = (
-                    f"Account amministratore creato con successo! "
-                    f"Il PIN di verifica è: **{pin}** "
-                    f"Usa questo PIN per completare l'accesso al sistema."
+                    f"Account amministratore creato con successo per {email}. "
+                    "Ti abbiamo inviato un PIN via email per completare l'accesso."
                 )
                 messages.success(request, admin_welcome_message)
-
-                # Salva PIN in sessione per verifica successiva (temporaneo)
-                request.session['admin_setup_pin'] = pin
-                request.session['admin_setup_email'] = email
 
                 # Se primo accesso, passa direttamente a passo scuola
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
@@ -326,7 +334,6 @@ def configurazione_sistema(request):
                     'form_school': SchoolInfoForm(),
                     'admin_created': True,
                     'admin_email': email,
-                    'temp_pin': pin  # Mostra PIN nella pagina per test
                 })
 
             else:
