@@ -348,7 +348,9 @@ def configurazione_sistema(request):
             if form_school.is_valid():
                 form_school.save()
                 messages.success(request, 'Informazioni scuola salvate con successo.')
-                # Passa a passo risorse
+
+                # IMPORTANTE: Dopo aver salvato la scuola, continua con il wizard
+                # Passa direttamente al passo 2 (numero risorse) SENZA CONTROLLARE RISORSE ESISTENTI
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
                     'step': 2,
                     'form_num': ConfigurazioneSistemaForm(),
