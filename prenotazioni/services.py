@@ -321,10 +321,13 @@ class EmailService:
         Returns:
             tuple: (success, error_message)
         """
-        # Per ora, restituisci sempre successo e invia in background
-        # Questo evita il timeout del worker
-        EmailService.send_booking_confirmation_async(prenotazione)
-        return True, None
+        try:
+            # Per ora, restituisci sempre successo e invia in background
+            # Questo evita il timeout del worker
+            EmailService.send_booking_confirmation_async(prenotazione)
+            return True, None
+        except Exception as e:
+            return False, str(e)
 
     @staticmethod
     def send_admin_pin_email(user):
