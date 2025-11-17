@@ -321,16 +321,29 @@
                 <!-- Lista dispositivi esistenti -->
                 <div class="col-md-8">
                     <div class="card">
-                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">📋 Dispositivi Catalogati ({{ dispositivi_esistenti|length }})</h5>
-                            {% if dispositivi_esistenti %}
+                            {% if dispositivi_esistenti and not db_error %}
                                 <button type="submit" form="continue-form" class="btn btn-light btn-sm">
                                     Continua →
                                 </button>
                             {% endif %}
                         </div>
                         <div class="card-body">
-                            {% if dispositivi_esistenti %}
+                            {% if db_error %}
+                                <div class="alert alert-warning">
+                                    <h6><i class="bi bi-exclamation-triangle"></i> Database Non Sincronizzato</h6>
+                                    <p>Le migrazioni del database non sono state ancora applicate. Questo è normale se hai appena deployato l'applicazione.</p>
+                                    <p><strong>Se stai facendo il deploy su Render:</strong> Le migrazioni vengono applicate automaticamente al primo avvio. Riprova tra qualche minuto.</p>
+                                    <p><strong>Se stai sviluppando localmente:</strong> Esegui <code>python manage.py migrate</code> nel terminale del progetto.</p>
+                                    {% if error_message %}
+                                        <details class="mt-2">
+                                            <summary>Dettagli errore tecnico</summary>
+                                            <small class="text-muted">{{ error_message }}</small>
+                                        </details>
+                                    {% endif %}
+                                </div>
+                            {% elif dispositivi_esistenti %}
                                 <div class="table-responsive">
                                     <table class="table table-striped">
                                         <thead>

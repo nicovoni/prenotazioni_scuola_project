@@ -351,10 +351,20 @@ def configurazione_sistema(request):
                 messages.success(request, 'Informazioni scuola salvate con successo.')
 
                 # Nuovo flusso: dopo school info → passo device catalog
+                # Gestisci caso in cui tabella Device non esista ancora
+                dispositivi_esistenti = []
+                db_error = False
+                try:
+                    dispositivi_esistenti = list(Device.objects.all().order_by('produttore', 'nome'))
+                except Exception as e:
+                    db_error = True
+                    logger.warning(f"Tabella Device non ancora disponibile: {e}")
+
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
                     'step': 'device',
                     'form_device': DeviceWizardForm(),
-                    'dispositivi_esistenti': Device.objects.all().order_by('produttore', 'nome'),
+                    'dispositivi_esistenti': dispositivi_esistenti,
+                    'db_error': db_error,
                 })
             else:
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
@@ -363,54 +373,87 @@ def configurazione_sistema(request):
                 })
 
         elif 'add_device' in request.POST:  # Aggiungere nuovo dispositivo
-            form_device = DeviceWizardForm(request.POST)
-            if form_device.is_valid():
-                device = form_device.save()
-                messages.success(request, f'Dispositivo "{device.get_display_completo()}" aggiunto con successo.')
-                # Ricarica pagina con lista aggiornata
+            try:
+                form_device = DeviceWizardForm(request.POST)
+                if form_device.is_valid():
+                    device = form_device.save()
+                    messages.success(request, f'Dispositivo "{device.get_display_completo()}" aggiunto con successo.')
+                    # Ricarica pagina con lista aggiornata
+                    dispositivi_esistenti = list(Device.objects.all().order_by('produttore', 'nome'))
+                    return render(request, 'prenotazioni/configurazione_sistema.html', {
+                        'step': 'device',
+                        'form_device': DeviceWizardForm(),
+                        'dispositivi_esistenti': dispositivi_esistenti,
+                    })
+                else:
+                    dispositivi_esistenti = list(Device.objects.all().order_by('produttore', 'nome'))
+                    return render(request, 'prenotazioni/configurazione_sistema.html', {
+                        'step': 'device',
+                        'form_device': form_device,
+                        'dispositivi_esistenti': dispositivi_esistenti,
+                    })
+            except Exception as e:
+                messages.error(request, f'Impossibile salvare dispositivo: {e}. Le migrazioni del database potrebbero non essere state applicate.')
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
                     'step': 'device',
-                    'form_device': DeviceWizardForm(),
-                    'dispositivi_esistenti': Device.objects.all().order_by('produttore', 'nome'),
-                })
-            else:
-                return render(request, 'prenotazioni/configurazione_sistema.html', {
-                    'step': 'device',
-                    'form_device': form_device,
-                    'dispositivi_esistenti': Device.objects.all().order_by('produttore', 'nome'),
+                    'form_device': DeviceWizardForm(request.POST),
+                    'dispositivi_esistenti': [],
+                    'db_error': True,
+                    'error_message': str(e),
                 })
 
         elif 'remove_device' in request.POST:  # Rimuovere dispositivo esistente
-            device_id = request.POST.get('device_id')
             try:
+                device_id = request.POST.get('device_id')
                 device = Device.objects.get(id=device_id)
                 nome_device = device.get_display_completo()
                 device.delete()
                 messages.success(request, f'Dispositivo "{nome_device}" rimosso con successo.')
-            except Device.DoesNotExist:
-                messages.error(request, 'Dispositivo non trovato.')
+            except Exception as e:
+                if "Device matching query does not exist" in str(e):
+                    messages.error(request, 'Dispositivo non trovato.')
+                else:
+                    messages.error(request, f'Errore rimozione dispositivo: {e}. Le migrazioni del database potrebbero non essere state applicate.')
+
+            try:
+                dispositivi_esistenti = list(Device.objects.all().order_by('produttore', 'nome'))
+            except Exception as e:
+                dispositivi_esistenti = []
+                messages.warning('Impossibile caricare lista dispositivi aggiornata.')
 
             return render(request, 'prenotazioni/configurazione_sistema.html', {
                 'step': 'device',
                 'form_device': DeviceWizardForm(),
-                'dispositivi_esistenti': Device.objects.all().order_by('produttore', 'nome'),
+                'dispositivi_esistenti': dispositivi_esistenti,
             })
 
         elif 'step_device_continue' in request.POST:  # Continua dal passo device
-            if not Device.objects.exists():
-                messages.error(request, 'Devi catalogare almeno un dispositivo prima di continuare.')
+            dispositivi_esistenti = []
+            try:
+                dispositivi_esistenti = list(Device.objects.all().order_by('produttore', 'nome'))
+                if not dispositivi_esistenti:
+                    messages.error(request, 'Devi catalogare almeno un dispositivo prima di continuare.')
+                    return render(request, 'prenotazioni/configurazione_sistema.html', {
+                        'step': 'device',
+                        'form_device': DeviceWizardForm(),
+                        'dispositivi_esistenti': dispositivi_esistenti,  # sarà vuota ma non crasha
+                    })
+
+                # Passa al passo risorse (numero risorse)
+                return render(request, 'prenotazioni/configurazione_sistema.html', {
+                    'step': 2,
+                    'form_num': ConfigurazioneSistemaForm(),
+                    'dispositivi_disponibili': dispositivi_esistenti,
+                })
+            except Exception as e:
+                messages.error(request, f'Errore database dispositivi: {e}. La migrazione del database potrebbe non essere stata applicata correttamente.')
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
                     'step': 'device',
                     'form_device': DeviceWizardForm(),
-                    'dispositivi_esistenti': Device.objects.all().order_by('produttore', 'nome'),
+                    'dispositivi_esistenti': [],  # lista vuota sicura
+                    'db_error': True,
+                    'error_message': str(e),
                 })
-
-            # Passa al passo risorse (numero risorse)
-            return render(request, 'prenotazioni/configurazione_sistema.html', {
-                'step': 2,
-                'form_num': ConfigurazioneSistemaForm(),
-                'dispositivi_disponibili': Device.objects.all().order_by('produttore', 'nome'),
-            })
 
         elif 'step2' in request.POST:  # Numero risorse
             form_num = ConfigurazioneSistemaForm(request.POST)
@@ -419,8 +462,14 @@ def configurazione_sistema(request):
                 request.session['num_risorse'] = num_risorse
 
                 # Carica dispositivi disponibili e passa a passo 3
-                dispositivi_disponibili = Device.objects.all().order_by('produttore', 'nome')
-                form_dettagli = RisorseConfigurazioneForm(num_risorse=num_risorse, dispositivi_disponibili=dispositivi_disponibili)
+                try:
+                    dispositivi_disponibili = list(Device.objects.all().order_by('produttore', 'nome'))
+                    form_dettagli = RisorseConfigurazioneForm(num_risorse=num_risorse, dispositivi_disponibili=dispositivi_disponibili)
+                except Exception as e:
+                    logger.warning(f"Tabella Device non disponibile nel passo risorse: {e}")
+                    dispositivi_disponibili = []
+                    form_dettagli = None
+                    messages.warning('Attenzione: il catalogo dispositivi non è ancora disponibile a causa di migrazioni del database non applicate.')
 
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
                     'step': 3,
