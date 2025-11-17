@@ -218,8 +218,11 @@ SCHOOL_EMAIL_DOMAIN = os.environ.get("SCHOOL_EMAIL_DOMAIN", "isufol.it")
 # =========================
 # Admin emails
 # =========================
-# Lista email che hanno accesso come amministratore
-ADMINS_EMAIL_LIST = os.environ.get("ADMINS_EMAIL_LIST", "n.cantalupo@isufol.it").split(",")
+# Lista email che hanno accesso come amministratore (vuota di default)
+# Gli amministratori vengono creati solo tramite il wizard di configurazione
+ADMINS_EMAIL_LIST = os.environ.get("ADMINS_EMAIL_LIST", "").split(",")
+# Rimuovi eventuali stringhe vuote dalla lista
+ADMINS_EMAIL_LIST = [email.strip() for email in ADMINS_EMAIL_LIST if email.strip()]
 
 # =========================
 # Risorse disponibili
