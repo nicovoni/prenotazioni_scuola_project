@@ -269,15 +269,15 @@ def configurazione_sistema(request):
     primo_accesso = not Utente.objects.exists()
 
     if not primo_accesso:
-        # Richiede login se utenti esistono ma non loggato
-        if not request.user.is_authenticated:
-            messages.error(request, 'Devi accedere per riconfigurare il sistema.')
-            return redirect(reverse('login'))
-        if not request.user.is_staff:
-            messages.error(request, 'Solo amministratori possono riconfigurare il sistema.')
-            return redirect(reverse('home'))
-        # Se già configurato, mostra pagina esistente
+        # Se il sistema ha risorse = configurazione completata, richiedi login
         if Risorsa.objects.exists():
+            if not request.user.is_authenticated:
+                messages.error(request, 'Devi accedere per riconfigurare il sistema.')
+                return redirect(reverse('login'))
+            if not request.user.is_staff:
+                messages.error(request, 'Solo amministratori possono riconfigurare il sistema.')
+                return redirect(reverse('home'))
+            # Mostra pagina configurazione già completata
             risorse = Risorsa.objects.all().order_by('nome')
             return render(request, 'prenotazioni/configurazione_gia_eseguita.html', {'risorse': risorse})
 

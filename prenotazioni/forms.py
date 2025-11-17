@@ -147,11 +147,33 @@ class AdminUserForm(forms.Form):
     """
     Form per la creazione del primo utente amministratore con verifica PIN via email.
     """
+    from django.conf import settings
+
     email = forms.EmailField(
         widget=forms.EmailInput(attrs={'class': 'form-control'}),
         label="Email amministratore",
-        help_text="Email per la verifica PIN e comunicazioni elettroniche"
+        help_text=f"Email per la verifica PIN - deve essere del dominio @{settings.SCHOOL_EMAIL_DOMAIN}"
     )
+
+    def clean_email(self):
+        """Valida che l'email sia del dominio scolastico corretto."""
+        email = self.cleaned_data['email']
+        from django.conf import settings
+
+        # Split email per controllare dominio
+        try:
+            local_part, domain_part = email.split('@')
+        except ValueError:
+            raise forms.ValidationError("Email non valida.")
+
+        # Controlla dominio
+        if domain_part.lower() != settings.SCHOOL_EMAIL_DOMAIN.lower():
+            raise forms.ValidationError(
+                f"Sono accettate solo email del dominio @{settings.SCHOOL_EMAIL_DOMAIN}. "
+                f"Questo è necessario per garantire la sicurezza del sistema scolastico."
+            )
+
+        return email
 
 
 class ConfigurazioneSistemaForm(forms.Form):
