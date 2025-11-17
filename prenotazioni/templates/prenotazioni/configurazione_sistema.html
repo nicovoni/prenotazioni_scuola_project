@@ -232,6 +232,14 @@
             <form method="post">
                 {% csrf_token %}
 
+                <!-- Display all form fields for debugging -->
+                <div class="mb-4">
+                    <h6>Debug: All form fields:</h6>
+                    {% for field in form_dettagli %}
+                        <div>Field: {{ field.name }} - {{ field }}</div>
+                    {% endfor %}
+                </div>
+
                 {% for resource_num in num_risorse %}
                     <div class="card mb-4">
                         <div class="card-header bg-primary text-white">
@@ -241,26 +249,19 @@
                             <div class="row">
                                 <!-- Campo nome -->
                                 <div class="col-md-6 mb-3">
-                                    {% for field in form_dettagli %}
-                                        {% if field.name == 'nome_'|add:resource_num|stringformat:"s" %}
-                                            {{ field }}
-                                            {% if field.errors %}
-                                                <div class="text-danger small">
-                                                    {% for error in field.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        {% endif %}
-                                    {% endfor %}
+                                    <label for="id_nome_{{ resource_num }}">Nome risorsa</label>
+                                    <input type="text" name="nome_{{ resource_num }}" id="id_nome_{{ resource_num }}" class="form-control" required>
                                 </div>
 
                                 <!-- Campo tipo -->
                                 <div class="col-md-6 mb-3">
-                                    {% for field in form_dettagli %}
-                                        {% if field.name == 'tipo_'|add:resource_num|stringformat:"s" %}
-                                            {{ field }}
-                                            <div class="form-text">Laboratorio: prenotabile solo per intero. Carrello: prenotabile parzialmente.</div>
-                                        {% endif %}
-                                    {% endfor %}
+                                    <label for="id_tipo_{{ resource_num }}">Tipo risorsa</label>
+                                    <select name="tipo_{{ resource_num }}" id="id_tipo_{{ resource_num }}" class="form-control" required>
+                                        <option value="">---------</option>
+                                        <option value="lab">Laboratorio</option>
+                                        <option value="carrello">Carrello</option>
+                                    </select>
+                                    <div class="form-text">Laboratorio: prenotabile solo per intero. Carrello: prenotabile parzialmente.</div>
                                 </div>
                             </div>
 
@@ -270,16 +271,8 @@
                                     <h6><i class="bi bi-cart"></i> Configurazione carrello</h6>
                                     <div class="row">
                                         <div class="col-md-8">
-                                            {% for field in form_dettagli %}
-                                                {% if field.name == 'quantita_'|add:resource_num|stringformat:"s" %}
-                                                    {{ field }}
-                                                    {% if field.errors %}
-                                                        <div class="text-danger small">
-                                                            {% for error in field.errors %}{{ error }}{% endfor %}
-                                                        </div>
-                                                    {% endif %}
-                                                {% endif %}
-                                            {% endfor %}
+                                            <label for="id_quantita_{{ resource_num }}">Numero dispositivi</label>
+                                            <input type="number" name="quantita_{{ resource_num }}" id="id_quantita_{{ resource_num }}" class="form-control" min="1" max="100">
                                         </div>
                                     </div>
                                 </div>
