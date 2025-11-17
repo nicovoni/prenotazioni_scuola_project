@@ -48,25 +48,8 @@ elif EMAIL_HOST == 'smtp.gmail.com':
 
 
 
-# Support reading SMTP password from a secret file (e.g. Docker secret)
-secret_path = os.environ.get('EMAIL_HOST_PASSWORD_FILE')
-if secret_path:
-    if os.path.exists(secret_path):
-        try:
-            # Read password from file
-            with open(secret_path, 'r', encoding='utf-8') as f:
-                EMAIL_HOST_PASSWORD = f.read().strip()
-        except Exception as e:
-            # If reading fails, try environment variable as fallback
-            EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-    else:
-        # File doesn't exist, try environment variable
-        EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-else:
-    # No file path set, use environment variable directly
-    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-
-# Email configuration loaded
+# SMTP password - simplified for Render.com deployment
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'supersegreto123')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
