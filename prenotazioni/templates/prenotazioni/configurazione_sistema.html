@@ -229,16 +229,8 @@
                 <p>Puoi creare dispositivi separatamente dalla sezione "Database Viewer" nel menu amministratore, e poi assegnarli ai carrelli quando saranno più strutturati nel sistema.</p>
             </div>
 
-            <form method="post">
-                {% csrf_token %}
-
-                <!-- Display all form fields for debugging -->
-                <div class="mb-4">
-                    <h6>Debug: All form fields:</h6>
-                    {% for field in form_dettagli %}
-                        <div>Field: {{ field.name }} - {{ field }}</div>
-                    {% endfor %}
-                </div>
+            <form method="post" action="">
+                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 
                 {% for resource_num in num_risorse %}
                     <div class="card mb-4">
@@ -249,30 +241,31 @@
                             <div class="row">
                                 <!-- Campo nome -->
                                 <div class="col-md-6 mb-3">
-                                    <label for="id_nome_{{ resource_num }}">Nome risorsa</label>
-                                    <input type="text" name="nome_{{ resource_num }}" id="id_nome_{{ resource_num }}" class="form-control" required>
+                                    <label for="id_nome_{{ resource_num }}" class="form-label fw-bold">Nome risorsa</label>
+                                    <input type="text" name="nome_{{ resource_num }}" id="id_nome_{{ resource_num }}" class="form-control" placeholder="Es: Laboratorio Informatica" required>
                                 </div>
 
                                 <!-- Campo tipo -->
                                 <div class="col-md-6 mb-3">
-                                    <label for="id_tipo_{{ resource_num }}">Tipo risorsa</label>
+                                    <label for="id_tipo_{{ resource_num }}" class="form-label fw-bold">Tipo risorsa</label>
                                     <select name="tipo_{{ resource_num }}" id="id_tipo_{{ resource_num }}" class="form-control" required>
-                                        <option value="">---------</option>
-                                        <option value="lab">Laboratorio</option>
-                                        <option value="carrello">Carrello</option>
+                                        <option value="">Seleziona il tipo</option>
+                                        <option value="lab">🏫 Laboratorio</option>
+                                        <option value="carrello">🛒 Carrello</option>
                                     </select>
                                     <div class="form-text">Laboratorio: prenotabile solo per intero. Carrello: prenotabile parzialmente.</div>
                                 </div>
                             </div>
 
                             <!-- Campo quantità per carrelli -->
-                            <div class="quantita-field d-none" id="quantita-{{ resource_num }}">
-                                <div class="alert alert-secondary">
+                            <div class="quantita-field d-none mb-3" id="quantita-{{ resource_num }}">
+                                <div class="alert alert-light border">
                                     <h6><i class="bi bi-cart"></i> Configurazione carrello</h6>
                                     <div class="row">
-                                        <div class="col-md-8">
-                                            <label for="id_quantita_{{ resource_num }}">Numero dispositivi</label>
-                                            <input type="number" name="quantita_{{ resource_num }}" id="id_quantita_{{ resource_num }}" class="form-control" min="1" max="100">
+                                        <div class="col-md-6">
+                                            <label for="id_quantita_{{ resource_num }}" class="form-label">Numero dispositivi nel carrello</label>
+                                            <input type="number" name="quantita_{{ resource_num }}" id="id_quantita_{{ resource_num }}" class="form-control" min="1" max="100" placeholder="30">
+                                            <div class="form-text">Quanti dispositivi contiene questo carrello?</div>
                                         </div>
                                     </div>
                                 </div>
@@ -281,14 +274,17 @@
                     </div>
                 {% endfor %}
 
-                <div class="text-center">
-                    <button type="submit" name="step3" class="btn btn-success btn-lg">
-                        🚀 Salva Configurazione e Avvia Sistema
+                <div class="text-center mt-4">
+                    <button type="submit" name="step3" class="btn btn-success btn-lg px-5">
+                        <i class="bi bi-rocket"></i> 🚀 Salva Configurazione e Avvia Sistema
                     </button>
                     <div class="mt-2">
                         <small class="text-muted">Dopo aver salvato, il sistema sarà pronto per l'uso!</small>
                     </div>
                 </div>
+
+                <!-- Required form fields that Django expects -->
+                <input type="hidden" name="num_risorse" value="{{ num_risorse|length }}">
             </form>
 
             <script>
