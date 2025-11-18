@@ -1,97 +1,233 @@
 {% extends "base.html" %}
 
-{% block title %}Prenota Risorsa - Sistema di Prenotazioni{% endblock %}
+{% block title %}
+{% if is_edit %}
+Modifica Prenotazione - Sistema Prenotazioni
+{% else %}
+Nuova Prenotazione - Sistema Prenotazioni
+{% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">📅 Prenota una Risorsa</h1>
-    <p class="page-subtitle">Seleziona la risorsa, data e ora per la tua prenotazione</p>
+    {% if is_edit %}
+    <h1 class="page-title">✏️ Modifica Prenotazione</h1>
+    <p class="page-subtitle">Modifica i dettagli della tua prenotazione</p>
+    {% else %}
+    <h1 class="page-title">📅 Nuova Prenotazione</h1>
+    <p class="page-subtitle">Prenota una risorsa per le tue attività</p>
+    {% endif %}
 </div>
 
 <div class="content-card">
-    <form method="post" style="max-width: 500px; margin: 0 auto;">
+    <form method="post" id="prenotazione-form">
         {% csrf_token %}
-
-        <div style="margin-bottom: 1.5rem;">
-            <label for="id_risorsa" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">Risorsa:</label>
-            {{ form.risorsa }}
-            <div id="resource-info" class="resource-info"></div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="id_risorsa" class="form-label">Risorsa *</label>
+                    {{ form.risora }}
+                    {% if form.risora.errors %}
+                    <div class="text-danger">
+                        {{ form.risora.errors }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="id_quantita" class="form-label">Quantità *</label>
+                    {{ form.quantita }}
+                    {% if form.quantita.errors %}
+                    <div class="text-danger">
+                        {{ form.quantita.errors }}
+                    </div>
+                    {% endif %}
+                    <small class="form-text text-muted">
+                        Numero di postazioni/dispositivi richiesti
+                    </small>
+                </div>
+            </div>
         </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-            <div>
-                <label for="id_data" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">Data:</label>
-                {{ form.data }}
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="id_data" class="form-label">Data *</label>
+                    {{ form.data }}
+                    {% if form.data.errors %}
+                    <div class="text-danger">
+                        {{ form.data.errors }}
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            <div>
-                <label for="id_ora_inizio" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">Ora inizio:</label>
-                {{ form.ora_inizio }}
+            
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="id_ora_inizio" class="form-label">Ora Inizio *</label>
+                    {{ form.ora_inizio }}
+                    {% if form.ora_inizio.errors %}
+                    <div class="text-danger">
+                        {{ form.ora_inizio.errors }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="id_ora_fine" class="form-label">Ora Fine *</label>
+                    {{ form.ora_fine }}
+                    {% if form.ora_fine.errors %}
+                    <div class="text-danger">
+                        {{ form.ora_fine.errors }}
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-            <div>
-                <label for="id_ora_fine" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">Ora fine:</label>
-                {{ form.ora_fine }}
+        
+        <div class="form-group">
+            <h5>📋 Informazioni Risorse Disponibili</h5>
+            {% if risorse %}
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Risorsa</th>
+                            <th>Tipo</th>
+                            <th>Capacità</th>
+                            <th>Dispositivi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for risorsa in risorse %}
+                        <tr>
+                            <td>{{ risorsa.nome }}</td>
+                            <td>
+                                {% if risorsa.tipo == 'lab' %}
+                                🏢 Laboratorio
+                                {% else %}
+                                📱 Carrello
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if risorsa.capacita_massima %}
+                                {{ risorsa.capacita_massima }} dispositivi
+                                {% else %}
+                                Spazio completo
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if risorsa.tipo == 'carrello' %}
+                                {{ risorsa.get_dispositivi_riassunto }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            <div>
-                <label for="id_quantita" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">Quantità:</label>
-                {{ form.quantita }}
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+                Nessuna risorsa disponibile. Contatta l'amministratore per la configurazione.
             </div>
+            {% endif %}
         </div>
-
-        <button type="submit" style="width: 100%; padding: 14px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 1rem;">
-            ✅ Conferma Prenotazione
-        </button>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                {% if is_edit %}
+                <i class="bi bi-check-circle"></i> Aggiorna Prenotazione
+                {% else %}
+                <i class="bi bi-plus-circle"></i> Crea Prenotazione
+                {% endif %}
+            </button>
+            
+            <a href="{% url 'prenotazioni:lista_prenotazioni' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Annulla
+            </a>
+        </div>
     </form>
+</div>
+
+<div class="content-card">
+    <h5>📋 Note Importanti</h5>
+    <ul>
+        <li>Le prenotazioni devono essere effettuate almeno 2 giorni prima</li>
+        <li>Orari consentiti: 08:00 - 18:00</li>
+        <li>Durata minima: 30 minuti, massima: 3 ore</li>
+        <li>I laboratori si prenotano per l'intero spazio (quantità = 1)</li>
+        <li>I carrelli permettono prenotazioni parziali di dispositivi</li>
+    </ul>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Funzione semplificata per aggiornare il campo quantità
-    function updateQuantityField() {
-        const risorsaSelect = document.getElementById('id_risorsa');
-        const quantitaInput = document.getElementById('id_quantita');
-        const infoDiv = document.getElementById('resource-info');
-        const selectedOption = risorsaSelect.options[risorsaSelect.selectedIndex];
-
-        if (selectedOption && selectedOption.value) {
-            const tipo = selectedOption.textContent.toLowerCase();
-
-            if (tipo.includes('laboratorio')) {
-                // Laboratori: prenotazione fissa dell'intero spazio
-                quantitaInput.value = 1;
-                quantitaInput.readOnly = true;
-                infoDiv.textContent = 'Prenotazione dell\'intero laboratorio (spazio fisso)';
-            } else if (tipo.includes('carrello')) {
-                // Carrelli: prenotazione parziale possibile
-                quantitaInput.readOnly = false;
-                // Estrai il numero dal nome (es. "Carrello 25 iPad" -> 25)
-                const match = selectedOption.textContent.match(/(\d+)/);
-                if (match) {
-                    const maxQty = parseInt(match[1]);
-                    quantitaInput.max = maxQty;
-                    if (parseInt(quantitaInput.value) > maxQty) {
-                        quantitaInput.value = maxQty;
-                    }
-                    infoDiv.textContent = `Prenotazione parziale possibile (max ${maxQty} unità)`;
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-calcola durata quando cambiano gli orari
+    const oraInizio = document.getElementById('id_ora_inizio');
+    const oraFine = document.getElementById('id_ora_fine');
+    
+    function calcolaDurata() {
+        if (oraInizio && oraFine && oraInizio.value && oraFine.value) {
+            const inizio = new Date(`1970-01-01T${oraInizio.value}:00`);
+            const fine = new Date(`1970-01-01T${oraFine.value}:00`);
+            
+            if (fine > inizio) {
+                const diffMs = fine - inizio;
+                const diffMin = Math.round(diffMs / 60000);
+                const ore = Math.floor(diffMin / 60);
+                const min = diffMin % 60;
+                
+                // Mostra durata se c'è un elemento apposito
+                const durataElement = document.getElementById('durata-calcolata');
+                if (durataElement) {
+                    durataElement.textContent = `${ore}h ${min}m`;
                 }
             }
-        } else {
-            // Nessuna risorsa selezionata
-            quantitaInput.readOnly = false;
-            infoDiv.textContent = '';
         }
     }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const risorsaSelect = document.getElementById('id_risorsa');
-        if (risorsaSelect) {
-            risorsaSelect.addEventListener('change', updateQuantityField);
-            // Piccola pausa per assicurarsi che il DOM sia pronto
-            setTimeout(updateQuantityField, 100);
-        }
-    });
+    
+    if (oraInizio) oraInizio.addEventListener('change', calcolaDurata);
+    if (oraFine) oraFine.addEventListener('change', calcolaDurata);
+    
+    // Validazione client-side
+    const form = document.getElementById('prenotazione-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const oraInizio = document.getElementById('id_ora_inizio').value;
+            const oraFine = document.getElementById('id_ora_fine').value;
+            const data = document.getElementById('id_data').value;
+            
+            if (!oraInizio || !oraFine || !data) {
+                e.preventDefault();
+                alert('Compila tutti i campi obbligatori');
+                return false;
+            }
+            
+            // Validazione orari
+            if (oraInizio >= oraFine) {
+                e.preventDefault();
+                alert('L\\'ora di fine deve essere successiva all\\'ora di inizio');
+                return false;
+            }
+            
+            // Validazione orario consentito
+            if (oraInizio < '08:00' || oraFine > '18:00') {
+                e.preventDefault();
+                alert('Le prenotazioni sono consentite solo tra le 08:00 e le 18:00');
+                return false;
+            }
+        });
+    }
+});
 </script>
 {% endblock %}

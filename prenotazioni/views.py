@@ -2,13 +2,22 @@ from django.views.generic.edit import TemplateResponseMixin, View
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.contrib import messages
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
 from django.db import transaction
-from .models import Utente, Risorsa, Device, SchoolInfo
-from .forms import AdminUserForm, DeviceWizardForm, SchoolInfoForm, ConfigurazioneSistemaForm, RisorseConfigurazioneForm
-from .services import EmailService
+from django.http import JsonResponse
+from django.core.paginator import Paginator
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from .models import Utente, Risorsa, Device, SchoolInfo, Prenotazione
+from .forms import (
+    AdminUserForm, DeviceWizardForm, SchoolInfoForm, ConfigurazioneSistemaForm, 
+    RisorseConfigurazioneForm, PrenotazioneForm, ConfirmDeleteForm
+)
+from .services import EmailService, BookingService
+from .serializers import PrenotazioneSerializer
 
 
 class ConfigurazioneSistema(View):
@@ -338,6 +347,271 @@ class ConfigurazioneSistema(View):
                 break
 
         return dispositivi_validi, errori
+
+
+# =====================================================
+# VISTE PRENOTAZIONI
+# =====================================================
+
+class PrenotazioneViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet per API REST prenotazioni.
+    """
+    queryset = Prenotazione.objects.all().select_related('utente', 'risorsa')
+    serializer_class = PrenotazioneSerializer
+    
+    def get_queryset(self):
+        """Restituisce solo le prenotazioni dell'utente autenticato."""
+        if self.request.user.is_authenticated:
+            if self.request.user.is_admin():
+                return Prenotazione.objects.all().select_related('utente', 'risorsa')
+            else:
+                return Prenotazione.objects.filter(utente=self.request.user).select_related('utente', 'risorsa')
+        return Prenotazione.objects.none()
+    
+    def perform_create(self, serializer):
+        """Crea una nuova prenotazione associandola all'utente."""
+        serializer.save(utente=self.request.user)
+    
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        """Annulla una prenotazione."""
+        prenotazione = self.get_object()
+        
+        # Controllo permessi
+        if not request.user.is_admin() and prenotazione.utente != request.user:
+            return Response({'error': 'Non hai i permessi per annullare questa prenotazione.'}, 
+                          status=status.HTTP_403_FORBIDDEN)
+        
+        prenotazione.delete()
+        return Response({'message': 'Prenotazione annullata con successo.'}, 
+                       status=status.HTTP_200_OK)
+
+
+@login_required
+def prenota_laboratorio(request):
+    """
+    Vista per creare una nuova prenotazione.
+    """
+    if request.method == 'POST':
+        form = PrenotazioneForm(request.POST, user=request.user)
+        if form.is_valid():
+            # Creazione prenotazione tramite service
+            success, result = BookingService.create_booking(
+                utente=request.user,
+                risorsa_id=form.cleaned_data['risorsa'].id,
+                quantita=form.cleaned_data['quantita'],
+                inizio=form.cleaned_data['inizio'],
+                fine=form.cleaned_data['fine']
+            )
+            
+            if success:
+                messages.success(request, 'Prenotazione creata con successo!')
+                return redirect('prenotazioni:lista_prenotazioni')
+            else:
+                messages.error(request, f'Errore nella prenotazione: {result}')
+    else:
+        form = PrenotazioneForm(user=request.user)
+    
+    # Passa le risorse disponibili al template
+    risorse = Risorsa.objects.filter(attiva=True).order_by('tipo', 'nome')
+    
+    context = {
+        'form': form,
+        'risorse': risorse,
+        'is_edit': False
+    }
+    return render(request, 'prenotazioni/prenota.html', context)
+
+
+@login_required
+def lista_prenotazioni(request):
+    """
+    Vista per visualizzare le prenotazioni dell'utente.
+    """
+    # Ottieni prenotazioni dell'utente
+    if request.user.is_admin():
+        prenotazioni = Prenotazione.objects.all().select_related('utente', 'risorsa').order_by('-inizio')
+        is_admin_view = True
+    else:
+        prenotazioni = Prenotazione.objects.filter(utente=request.user).select_related('utente', 'risorsa').order_by('-inizio')
+        is_admin_view = False
+    
+    # Filtri opzionali
+    filtro_stato = request.GET.get('stato', 'tutte')
+    if filtro_stato == 'future':
+        prenotazioni = prenotazioni.filter(fine__gte=timezone.now())
+    elif filtro_stato == 'passate':
+        prenotazioni = prenotazioni.filter(fine__lt=timezone.now())
+    
+    # Paginazione
+    paginator = Paginator(prenotazioni, 20)  # 20 prenotazioni per pagina
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'prenotazioni': page_obj.object_list,
+        'is_admin_view': is_admin_view,
+        'filtro_stato': filtro_stato,
+        'stati_disponibili': [
+            ('tutte', 'Tutte'),
+            ('future', 'Future'),
+            ('passate', 'Passate')
+        ]
+    }
+    return render(request, 'prenotazioni/lista.html', context)
+
+
+@login_required
+def edit_prenotazione(request, pk):
+    """
+    Vista per modificare una prenotazione esistente.
+    """
+    prenotazione = get_object_or_404(Prenotazione, pk=pk)
+    
+    # Controllo permessi
+    if not request.user.is_admin() and prenotazione.utente != request.user:
+        messages.error(request, 'Non hai i permessi per modificare questa prenotazione.')
+        return redirect('prenotazioni:lista_prenotazioni')
+    
+    # Controllo che la prenotazione sia nel futuro
+    if prenotazione.is_passata():
+        messages.error(request, 'Non è possibile modificare prenotazioni passate.')
+        return redirect('prenotazioni:lista_prenotazioni')
+    
+    if request.method == 'POST':
+        form = PrenotazioneForm(request.POST, user=request.user, prenotazione_id=pk)
+        if form.is_valid():
+            # Aggiornamento prenotazione tramite service
+            success, result = BookingService.update_booking(
+                prenotazione_id=pk,
+                utente=request.user,
+                inizio=form.cleaned_data['inizio'],
+                fine=form.cleaned_data['fine'],
+                quantita=form.cleaned_data['quantita']
+            )
+            
+            if success:
+                messages.success(request, 'Prenotazione aggiornata con successo!')
+                return redirect('prenotazioni:lista_prenotazioni')
+            else:
+                messages.error(request, f'Errore nell\'aggiornamento: {result}')
+    else:
+        # Pre-compila il form con i dati esistenti
+        initial_data = {
+            'risorsa': prenotazione.risorsa,
+            'data': prenotazione.inizio.date(),
+            'ora_inizio': prenotazione.inizio.time(),
+            'ora_fine': prenotazione.fine.time(),
+            'quantita': prenotazione.quantita
+        }
+        form = PrenotazioneForm(initial=initial_data, user=request.user, prenotazione_id=pk)
+    
+    context = {
+        'form': form,
+        'prenotazione': prenotazione,
+        'is_edit': True
+    }
+    return render(request, 'prenotazioni/prenota.html', context)
+
+
+@login_required
+def delete_prenotazione(request, pk):
+    """
+    Vista per eliminare una prenotazione.
+    """
+    prenotazione = get_object_or_404(Prenotazione, pk=pk)
+    
+    # Controllo permessi
+    if not request.user.is_admin() and prenotazione.utente != request.user:
+        messages.error(request, 'Non hai i permessi per eliminare questa prenotazione.')
+        return redirect('prenotazioni:lista_prenotazioni')
+    
+    if request.method == 'POST':
+        form = ConfirmDeleteForm(request.POST)
+        if form.is_valid():
+            # Eliminazione prenotazione tramite service
+            success, result = BookingService.delete_booking(prenotazione_id=pk, utente=request.user)
+            
+            if success:
+                messages.success(request, 'Prenotazione eliminata con successo!')
+            else:
+                messages.error(request, f'Errore nell\'eliminazione: {result}')
+            
+            return redirect('prenotazioni:lista_prenotazioni')
+    else:
+        form = ConfirmDeleteForm()
+    
+    context = {
+        'form': form,
+        'prenotazione': prenotazione
+    }
+    return render(request, 'prenotazioni/delete_confirm.html', context)
+
+
+@login_required
+def database_viewer(request):
+    """
+    Vista per visualizzare tutto il database (solo admin).
+    """
+    if not request.user.is_admin():
+        messages.error(request, 'Accesso negato. Solo gli amministratori possono visualizzare il database.')
+        return redirect('home')
+    
+    # Statistiche generali
+    stats = {
+        'utenti_totali': Utente.objects.count(),
+        'utenti_attivi': Utente.objects.filter(is_active=True).count(),
+        'risorse_totali': Risorsa.objects.count(),
+        'risorse_attive': Risorsa.objects.filter(attiva=True).count(),
+        'dispositivi_totali': Device.objects.count(),
+        'dispositivi_attivi': Device.objects.filter(attivo=True).count(),
+        'prenotazioni_totali': Prenotazione.objects.count(),
+        'prenotazioni_attive': Prenotazione.objects.filter(attiva=True).count(),
+    }
+    
+    # Dati per visualizzazione
+    utenti = Utente.objects.all().order_by('username')
+    risorse = Risorsa.objects.all().select_related()
+    dispositivi = Device.objects.all().order_by('produttore', 'nome')
+    prenotazioni = Prenotazione.objects.all().select_related('utente', 'risorsa').order_by('-inizio')[:100]  # Ultime 100
+    
+    context = {
+        'stats': stats,
+        'utenti': utenti,
+        'risorse': risorse,
+        'dispositivi': dispositivi,
+        'prenotazioni': prenotazioni,
+        'is_admin_view': True
+    }
+    return render(request, 'prenotazioni/database_viewer.html', context)
+
+
+@login_required
+def admin_operazioni(request):
+    """
+    Vista per operazioni amministrative.
+    """
+    if not request.user.is_admin():
+        messages.error(request, 'Accesso negato. Solo gli amministratori possono accedere a questa sezione.')
+        return redirect('home')
+    
+    # Statistiche rapide
+    stats = {
+        'utenti_totali': Utente.objects.count(),
+        'prenotazioni_oggi': Prenotazione.objects.filter(
+            inizio__date=timezone.now().date()
+        ).count(),
+        'prenotazioni_settimana': Prenotazione.objects.filter(
+            inizio__gte=timezone.now() - timezone.timedelta(days=7)
+        ).count(),
+    }
+    
+    context = {
+        'stats': stats
+    }
+    return render(request, 'prenotazioni/admin_operazioni.html', context)
 
 
 # View wrapper per compatibilità

@@ -1,23 +1,66 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <title>Conferma eliminazione</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f7f7f7; }
-        .container { max-width: 480px; margin: 40px auto; background: #fff; padding: 24px; border-radius: 8px; }
-        button { padding:10px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Conferma eliminazione</h1>
-        <p>Sei sicuro di voler eliminare la prenotazione per <strong>{{ prenotazione.risorsa.nome }}</strong> del {{ prenotazione.inizio.date }}?</p>
-        <form method="post">
-            {% csrf_token %}
-            <button type="submit">Sì, elimina</button>
-            <a href="{% url 'prenotazioni:lista_prenotazioni' %}">Annulla</a>
-        </form>
+{% extends "base.html" %}
+
+{% block title %}
+Conferma Eliminazione - Sistema Prenotazioni
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">⚠️ Conferma Eliminazione</h1>
+    <p class="page-subtitle">Sei sicuro di voler eliminare questa prenotazione?</p>
+</div>
+
+<div class="content-card">
+    <div class="alert alert-danger">
+        <h5><i class="bi bi-exclamation-triangle"></i> Attenzione</h5>
+        <p>Stai per eliminare la seguente prenotazione:</p>
+        
+        <div class="border p-3 bg-light">
+            <strong>👤 Utente:</strong> {{ prenotazione.utente.username }}<br>
+            <strong>🏢 Risorsa:</strong> {{ prenotazione.risorsa.nome }}<br>
+            <strong>📅 Data:</strong> {{ prenotazione.inizio|date:"d/m/Y" }}<br>
+            <strong>⏰ Orario:</strong> {{ prenotazione.inizio|time:"H:i" }} - {{ prenotazione.fine|time:"H:i" }}<br>
+            <strong>📱 Quantità:</strong> {{ prenotazione.quantita }}
+        </div>
+        
+        <p class="mt-3"><strong>⚠️ Questa operazione è irreversibile!</strong></p>
     </div>
-</body>
-</html>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <div class="form-check">
+                {{ form.confirm }}
+                <label class="form-check-label" for="id_confirm">
+                    Confermo di voler eliminare definitivamente questa prenotazione
+                </label>
+                {% if form.confirm.errors %}
+                <div class="text-danger">
+                    {{ form.confirm.errors }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Elimina Definitivamente
+            </button>
+            
+            <a href="{% url 'prenotazioni:lista_prenotazioni' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Annulla
+            </a>
+        </div>
+    </form>
+</div>
+
+<div class="content-card">
+    <h6>💡 Alternative</h6>
+    <p>Invece di eliminare la prenotazione, potresti:</p>
+    <ul>
+        <li><a href="{% url 'prenotazioni:edit_prenotazione' prenotazione.id %}">Modificare la prenotazione</a> per cambiarne data, orario o quantità</li>
+        <li>Lasciare la prenotazione così com'è se non è più necessaria</li>
+    </ul>
+</div>
+{% endblock %}
