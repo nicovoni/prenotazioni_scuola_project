@@ -392,30 +392,18 @@ class SchoolInfoForm(forms.ModelForm):
     """
     class Meta:
         model = SchoolInfo
-        fields = ['nome_scuola', 'codice_scuola', 'email_scuola', 'telefono', 'sito_web', 'indirizzo']
+        fields = ['nome_scuola', 'email_scuola']
         widgets = {
             'nome_scuola': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome completo della scuola'}),
-            'codice_scuola': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Codice meccanografico (es. ISUF001A)'}),
             'email_scuola': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'segreteria@scuola.it'}),
-            'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+39 0586 123456'}),
-            'sito_web': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://www.scuola.edu.it'}),
-            'indirizzo': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Via Roma 123, 57128 Livorno (LI)'}),
         }
         labels = {
             'nome_scuola': 'Nome della scuola *',
-            'codice_scuola': 'Codice meccanografico',
             'email_scuola': 'Email della scuola',
-            'telefono': 'Telefono della scuola',
-            'sito_web': 'Sito web della scuola',
-            'indirizzo': 'Indirizzo completo',
         }
         help_texts = {
             'nome_scuola': 'Nome completo e ufficiale della scuola',
-            'codice_scuola': 'Codice meccanografico identificativo della scuola',
             'email_scuola': 'Indirizzo email principale della scuola',
-            'telefono': 'Numero di telefono della segreteria',
-            'sito_web': 'URL del sito web istituzionale',
-            'indirizzo': 'Indirizzo completo con CAP e provincia',
         }
 
     def __init__(self, *args, **kwargs):
