@@ -50,9 +50,15 @@ elif EMAIL_HOST == 'smtp.gmail.com':
 # SMTP password - simplified for Render.com deployment
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'supersegreto123')
+# Use environment variable with secure fallback only for development
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'dev-secret-key-change-in-production-12345678901234567890'
+    else:
+        raise ValueError('DJANGO_SECRET_KEY environment variable is required in production')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -228,7 +234,8 @@ if os.environ.get('RENDER_FREE_TIER', 'false').lower() == 'true':
     # Logging ridotto per risparmiare memoria
     LOGGING['root']['level'] = 'WARNING'
     LOGGING['root']['handlers'] = ['console']  # Solo console, no file logging
-    del LOGGING['handlers']['file']  # Rimuovi file handler
+    # Rimuovi file handler se presente
+    LOGGING['handlers'].pop('file', None)
 
     # Cache semplice per ridurre database load
     CACHES = {
