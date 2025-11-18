@@ -78,6 +78,34 @@ MIDDLEWARE = [
     'django.middleware.gzip.GZipMiddleware',
 ]
 
+# Security settings
+if not DEBUG:
+    # Production security settings
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+    # Cookie security
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_HTTPONLY = True
+
+    # Content Security Policy (basic)
+    CSP_DEFAULT_SRC = ("'self'",)
+    CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
+    CSP_SCRIPT_SRC = ("'self'",)
+    CSP_IMG_SRC = ("'self'", "data:", "https:")
+    CSP_FONT_SRC = ("'self'", "https:")
+
+    # SSL redirection
+    SECURE_SSL_REDIRECT = True
+    SECURE_REDIRECT_EXEMPT = []
+
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
@@ -141,14 +169,12 @@ LOGGING = {
             'format': '{levelname} {message}',
             'style': '{',
         },
+        'json': {
+            'format': '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "module": "%(module)s", "message": "%(message)s"}',
+            'style': '{',
+        },
     },
     'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'prenotazioni.log'),
-            'formatter': 'verbose',
-        },
         'console': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
@@ -156,17 +182,49 @@ LOGGING = {
         },
     },
     'root': {
-        'handlers': ['console', 'file'],
+        'handlers': ['console'],
         'level': 'INFO',
     },
     'loggers': {
         'prenotazioni': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'INFO',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
             'propagate': False,
         },
     },
 }
+
+# File logging for production
+if not os.environ.get('RENDER_FREE_TIER', 'false').lower() == 'true':
+    LOGGING['handlers']['file'] = {
+        'level': 'WARNING',
+        'class': 'logging.FileHandler',
+        'filename': os.path.join(BASE_DIR, 'django_errors.log'),
+        'formatter': 'verbose',
+    }
+    LOGGING['handlers']['booking_file'] = {
+        'level': 'INFO',
+        'class': 'logging.FileHandler',
+        'filename': os.path.join(BASE_DIR, 'booking.log'),
+        'formatter': 'verbose',
+    }
+    LOGGING['root']['handlers'].append('file')
+    LOGGING['loggers']['prenotazioni']['handlers'].append('booking_file')
 
 # =========================
 # Ottimizzazioni per FREE TIER Render (512MB RAM)

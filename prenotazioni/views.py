@@ -1,671 +1,347 @@
-"""
-Views per il sistema di prenotazioni scolastiche.
-
-Gestisce le operazioni CRUD per le prenotazioni e l'interfaccia utente.
-"""
-import logging
-from rest_framework import viewsets
-from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse
+from django.views.generic.edit import TemplateResponseMixin, View
 from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
 from django.contrib import messages
+from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
+from django.db import transaction
+from .models import Utente, Risorsa, Device, SchoolInfo
+from .forms import AdminUserForm, DeviceWizardForm, SchoolInfoForm, ConfigurazioneSistemaForm, RisorseConfigurazioneForm
+from .services import EmailService
 
-from .models import Prenotazione, Risorsa, Utente, SchoolInfo
-from .serializers import PrenotazioneSerializer
-from .services import BookingService, EmailService
-from .forms import PrenotazioneForm, ConfirmDeleteForm, ConfigurazioneSistemaForm, AdminUserForm, SchoolInfoForm, DeviceWizardForm, DeviceForm, RisorseConfigurazioneForm
-from .models import Device, Risorsa
 
-logger = logging.getLogger(__name__)
-
-class PrenotazioneViewSet(viewsets.ModelViewSet):
-    queryset = Prenotazione.objects.all()
-    serializer_class = PrenotazioneSerializer
-
-@login_required
-def prenota_laboratorio(request):
+class ConfigurazioneSistema(View):
     """
-    View per la prenotazione di risorse (laboratori e carrelli).
+    Class-based view per la configurazione iniziale del sistema.
 
-    Utilizza i servizi di business per validazione e creazione prenotazione.
+    Gestisce il wizard multi-step per setup iniziale e riconfigurazione.
     """
-    # Controllo configurazione sistema
-    if not Risorsa.objects.exists():
-        if request.user.is_admin():
-            messages.warning(request, 'Il sistema non è ancora configurato. Vai alla configurazione per impostarlo.')
-        else:
-            messages.error(request, 'Il sistema non è ancora stato configurato dall\'amministratore.')
-            return redirect(reverse('prenotazioni:lista_prenotazioni'))
 
-    risorse = Risorsa.objects.all().order_by('tipo', 'nome')
-    messaggio = None
-    success = False
+    @method_decorator(login_required)
+    def dispatch(self, request, *args, **kwargs):
+        # Se primo accesso (no utenti), procedi senza auth
+        primo_accesso = not Utente.objects.exists()
 
-    if request.method == 'POST':
-        # Crea form con i dati POST
-        form = PrenotazioneForm(request.POST, user=request.user)
+        if not primo_accesso and not request.user.is_authenticated:
+            messages.error(request, 'Devi accedere per riconfigurare il sistema.')
+            return redirect(reverse('login'))
 
-        if form.is_valid():
-            try:
-                # Crea la prenotazione utilizzando il servizio
-                success, result = BookingService.create_booking(
-                    utente=request.user,
-                    risorsa_id=form.cleaned_data['risorsa'].id,
-                    quantita=form.cleaned_data['quantita'],
-                    inizio=form.cleaned_data['inizio'],
-                    fine=form.cleaned_data['fine']
-                )
+        if not primo_accesso and not request.user.is_admin():
+            messages.error(request, 'Solo amministratori possono riconfigurare il sistema.')
+            return redirect(reverse('home'))
 
-                if success:
-                    messages.success(request, "Prenotazione effettuata con successo! Ti abbiamo inviato una mail di conferma.")
-                    logger.info(f"Prenotazione creata dall'utente {request.user}: {result}")
-                    return redirect(reverse('prenotazioni:lista_prenotazioni'))
-                else:
-                    messaggio = "<br>".join(result)
-                    logger.warning(f"Errore creazione prenotazione per utente {request.user}: {result}")
-
-            except Exception as e:
-                messaggio = f"Errore durante la creazione della prenotazione: {str(e)}"
-                logger.error(f"Errore creazione prenotazione per utente {request.user}: {e}")
-        else:
-            # Il form ha errori di validazione
-            messaggio = "<br>".join([str(error) for error in form.non_field_errors()])
-            logger.warning(f"Errore validazione form per utente {request.user}: {form.errors}")
-
-    else:
-        # GET request - inizializza form vuoto
-        form = PrenotazioneForm()
-
-    return render(request, 'prenotazioni/prenota.html', {
-        'risorse': risorse,
-        'messaggio': messaggio,
-        'form': form,
-        'success': success
-    })
-
-
-@login_required
-def lista_prenotazioni(request):
-    """
-    View per visualizzare l'elenco delle prenotazioni dell'utente.
-
-    Amministratore: mostra tutte le prenotazioni.
-    Docente/altro: mostra solo le proprie prenotazioni.
-    """
-    if request.user.is_admin():
-        prenotazioni = Prenotazione.objects.all().order_by('-inizio')
-    else:
-        prenotazioni = Prenotazione.objects.filter(utente=request.user).order_by('-inizio')
-
-    logger.info(f"Elenco prenotazioni richiesto dall'utente {request.user}: {prenotazioni.count()} prenotazioni")
-    return render(request, 'prenotazioni/lista.html', {'prenotazioni': prenotazioni, 'is_admin_view': request.user.is_admin()})
-
-
-@login_required
-def edit_prenotazione(request, pk):
-    """
-    View per la modifica di una prenotazione esistente.
-
-    Utilizza i servizi di business per validazione e aggiornamento.
-    """
-    prenotazione = get_object_or_404(Prenotazione, pk=pk)
-
-    # Controllo autorizzazioni: admin può modificare qualsiasi prenotazione, altri solo le proprie
-    if not request.user.is_admin() and prenotazione.utente != request.user:
-        messages.error(request, 'Non hai i permessi per modificare questa prenotazione.')
-        logger.warning(f"Utente {request.user} ha tentato di modificare prenotazione {pk} di altro utente")
-        return redirect(reverse('prenotazioni:lista_prenotazioni'))
-
-    if request.method == 'POST':
-        # Crea form con i dati POST e prenotazione esistente
-        form = PrenotazioneForm(request.POST, user=request.user, prenotazione_id=pk)
-
-        if form.is_valid():
-            try:
-                # Aggiorna la prenotazione utilizzando il servizio
-                success, result = BookingService.update_booking(
-                    prenotazione_id=pk,
-                    utente=request.user,
-                    inizio=form.cleaned_data['inizio'],
-                    fine=form.cleaned_data['fine'],
-                    quantita=form.cleaned_data['quantita']
-                )
-
-                if success:
-                    messages.success(request, 'Prenotazione aggiornata con successo.')
-                    logger.info(f"Prenotazione {pk} aggiornata dall'utente {request.user}")
-                    return redirect(reverse('prenotazioni:lista_prenotazioni'))
-                else:
-                    # Mostra errori dal servizio
-                    for error in result:
-                        messages.error(request, error)
-                    logger.warning(f"Errore aggiornamento prenotazione {pk} per utente {request.user}: {result}")
-
-            except Exception as e:
-                messages.error(request, f'Errore durante l\'aggiornamento: {str(e)}')
-                logger.error(f"Errore aggiornamento prenotazione {pk} per utente {request.user}: {e}")
-        else:
-            # Il form ha errori di validazione
-            for field, errors in form.errors.items():
-                for error in errors:
-                    if field == '__all__':
-                        messages.error(request, error)
-                    else:
-                        messages.error(request, f'{field}: {error}')
-            logger.warning(f"Errore validazione form modifica prenotazione {pk} per utente {request.user}: {form.errors}")
-
-    else:
-        # GET request - inizializza form con dati esistenti
-        initial_data = {
-            'risorsa': prenotazione.risorsa,
-            'data': prenotazione.inizio.date(),
-            'ora_inizio': prenotazione.inizio.time(),
-            'ora_fine': prenotazione.fine.time(),
-            'quantita': prenotazione.quantita
-        }
-        form = PrenotazioneForm(initial=initial_data, user=request.user, prenotazione_id=pk)
-
-    risorse = Risorsa.objects.all().order_by('tipo', 'nome')
-    return render(request, 'prenotazioni/edit.html', {
-        'prenotazione': prenotazione,
-        'form': form,
-        'risorse': risorse
-    })
-
-
-@login_required
-def database_viewer(request):
-    """
-    View riservata all'amministratore per visualizzare il contenuto grezzo del database.
-
-    Mostra tutte le tabelle principali in formato tabulare semplice.
-    """
-    if not request.user.is_admin():
-        messages.error(request, 'Accesso riservato agli amministratori.')
-        return redirect(reverse('prenotazioni:lista_prenotazioni'))
-
-    # Recupera i dati da tutte le tabelle principali
-    try:
-        tables_data = {
-            'school_info': {
-                'name': 'Informazioni Scuola',
-                'data': list(SchoolInfo.objects.all()),
-                'fields': ['nome_scuola', 'indirizzo', 'telefono', 'email_scuola', 'sito_web', 'codice_scuola']
-            },
-            'utenti': {
-                'name': 'Utenti',
-                'data': list(Utente.objects.all().order_by('username')),
-                'fields': ['username', 'first_name', 'last_name', 'email', 'ruolo', 'telefono', 'classe', 'is_active']
-            },
-            'risorse': {
-                'name': 'Risorse',
-                'data': list(Risorsa.objects.all().order_by('nome')),
-                'fields': ['nome', 'tipo', 'quantita_totale']
-            },
-            'prenotazioni': {
-                'name': 'Prenotazioni',
-                'data': list(Prenotazione.objects.all().select_related('utente', 'risorsa').order_by('-inizio')),
-                'fields': ['id', 'Utente', 'Risorsa', 'quantita', 'inizio', 'fine']
-            }
-        }
-    except Exception as e:
-        logger.error(f"Errore nel caricamento dati database viewer: {e}")
-        messages.error(request, 'Errore nel caricamento dei dati del database.')
-        return redirect(reverse('prenotazioni:lista_prenotazioni'))
-
-    return render(request, 'prenotazioni/database_viewer.html', {
-        'tables_data': tables_data
-    })
-
-
-@login_required
-def delete_prenotazione(request, pk):
-    """
-    View per l'eliminazione di una prenotazione.
-
-    Utilizza i servizi di business per l'eliminazione sicura.
-    """
-    prenotazione = get_object_or_404(Prenotazione, pk=pk)
-
-    # Controllo autorizzazioni: admin può eliminare qualsiasi prenotazione, altri solo le proprie
-    if not request.user.is_admin() and prenotazione.utente != request.user:
-        messages.error(request, 'Non hai i permessi per eliminare questa prenotazione.')
-        logger.warning(f"Utente {request.user} ha tentato di eliminare prenotazione {pk} di altro utente")
-        return redirect(reverse('prenotazioni:lista_prenotazioni'))
-
-    if request.method == 'POST':
-        try:
-            # Elimina la prenotazione utilizzando il servizio
-            success, errors = BookingService.delete_booking(
-                prenotazione_id=pk,
-                utente=request.user
-            )
-
-            if success:
-                messages.success(request, 'Prenotazione eliminata con successo.')
-                logger.info(f"Prenotazione {pk} eliminata dall'utente {request.user}")
-                return redirect(reverse('prenotazioni:lista_prenotazioni'))
-            else:
-                # Mostra errori dal servizio
-                for error in errors:
-                    messages.error(request, error)
-                logger.warning(f"Errore eliminazione prenotazione {pk} per utente {request.user}: {errors}")
-
-        except Exception as e:
-            messages.error(request, f'Errore durante l\'eliminazione: {str(e)}')
-            logger.error(f"Errore eliminazione prenotazione {pk} per utente {request.user}: {e}")
-
-    return render(request, 'prenotazioni/delete_confirm.html', {'prenotazione': prenotazione})
-
-
-def configurazione_sistema(request):
-    """
-    Wizard per la configurazione iniziale del sistema.
-
-    Prima accesso: crea admin + risorse.
-    Successivi: solo risorse (se admin connesso).
-    """
-    # Se primo accesso (no utenti), procedi senza auth
-    primo_accesso = not Utente.objects.exists()
-
-    if not primo_accesso:
-        # Se il sistema ha risorse = configurazione completata, richiedi login
+        # Se configurazione già completata, mostra pagina info
         if Risorsa.objects.exists():
-            if not request.user.is_authenticated:
-                messages.error(request, 'Devi accedere per riconfigurare il sistema.')
-                return redirect(reverse('login'))
-            if not request.user.is_staff:
-                messages.error(request, 'Solo amministratori possono riconfigurare il sistema.')
-                return redirect(reverse('home'))
-            # Mostra pagina configurazione già completata
             risorse = Risorsa.objects.all().order_by('nome')
             return render(request, 'prenotazioni/configurazione_gia_eseguita.html', {'risorse': risorse})
 
-    if request.method == 'POST':
-        if 'step1' in request.POST:  # Creazione admin (solo primo accesso)
-            form_admin = AdminUserForm(request.POST)
-            if form_admin.is_valid():
-                email = form_admin.cleaned_data['email']
-                # Controlla se utente già esiste
-                if Utente.objects.filter(email=email).exists():
-                    messages.error(request, 'Un utente con questa email esiste già.')
-                    return render(request, 'prenotazioni/configurazione_sistema.html', {
-                        'step': primo_accesso and 1 or 'admin',
-                        'form_admin': form_admin,
-                    })
+        return super().dispatch(request, *args, **kwargs)
 
-                # Crea admin user con password temporanea
-                admin_user = Utente.objects.create_user(
-                    username=email,  # usa email come username temporaneamente
-                    email=email,
-                    password=None,  # password verrà settata dopo verifica PIN
-                    ruolo='admin'
-                )
-                admin_user.is_active = False  # disattivato fino a verifica PIN
-                admin_user.save()
+    def get(self, request):
+        """Gestisce richieste GET determinando il passo appropriato."""
+        passo = self._determina_passo(request)
 
-                # Usa lo stesso sistema di invio PIN del login normale
-                from config.views_email_login import send_pin_email_async
-                import time as time_module
+        if passo == 'admin':
+            return self.render_step('admin', form_admin=AdminUserForm())
+        elif passo == 'school':
+            school_info, _ = SchoolInfo.objects.get_or_create(id=1)
+            return self.render_step('school', form_school=SchoolInfoForm(instance=school_info))
+        elif passo == 'device':
+            dispositivi = self.get_dispositivi_safely()
+            return self.render_step('device', form_device=DeviceWizardForm(),
+                                  dispositivi_esistenti=dispositivi[0], db_error=dispositivi[1])
+        else:
+            return self.render_step(1, form_admin=AdminUserForm())
 
-                # Genera PIN monouso usando lo stesso metodo del login
-                import random
-                import string
-                pin = ''.join(random.choices(string.digits, k=6))
+    def post(self, request):
+        """Gestisce richieste POST delegando al metodo appropriato."""
+        step_handlers = {
+            'step1': self.handle_admin_creation,
+            'step_school': self.handle_school_info,
+            'add_device': self.handle_add_device,
+            'remove_device': self.handle_remove_device,
+            'step_device_continue': self.handle_device_continue,
+            'step2': self.handle_numero_risorse,
+            'step3': self.handle_dettagli_risorse,
+        }
 
-                # Salva in sessione come per il login normale
-                request.session['admin_setup_email'] = email
-                request.session['admin_setup_pin'] = pin
-                request.session['admin_setup_pin_time'] = timezone.now().isoformat()
+        for step_key, handler in step_handlers.items():
+            if step_key in request.POST:
+                return handler(request)
 
-                # Invia PIN con lo stesso sistema del login
-                send_pin_email_async(email, pin)
-
-                # Messaggio successo come per il login normale
-                admin_welcome_message = (
-                    f"Account amministratore creato con successo per {email}. "
-                    "Ti abbiamo inviato un PIN via email per completare l'accesso."
-                )
-                messages.success(request, admin_welcome_message)
-
-                # Se primo accesso, passa direttamente a passo scuola
-                return render(request, 'prenotazioni/configurazione_sistema.html', {
-                    'step': 'school',
-                    'form_school': SchoolInfoForm(),
-                    'admin_created': True,
-                    'admin_email': email,
-                })
-
-            else:
-                return render(request, 'prenotazioni/configurazione_sistema.html', {
-                    'step': primo_accesso and 1 or 'admin',
-                    'form_admin': form_admin,
-                })
-
-        elif 'step_school' in request.POST:  # Informazioni scuola
-            school_info, created = SchoolInfo.objects.get_or_create(id=1)
-            form_school = SchoolInfoForm(request.POST, instance=school_info)
-            if form_school.is_valid():
-                form_school.save()
-                messages.success(request, 'Informazioni scuola salvate con successo.')
-
-                # Nuovo flusso: dopo school info → passo device catalog
-                # Gestisci caso in cui tabella Device non esista ancora
-                dispositivi_esistenti = []
-                db_error = False
-                try:
-                    dispositivi_esistenti = list(Device.objects.all().order_by('produttore', 'nome'))
-                except Exception as e:
-                    if "prenotazioni_device" in str(e) and "does not exist" in str(e):
-                        # Tabella Device non ancora creata, possiamo procedere
-                        db_error = True
-                        logger.warning(f"Tabella Device non ancora disponibile (migration non applicata): {e}")
-                    else:
-                        # Altra eccezione, rilancia
-                        raise
-
-                return render(request, 'prenotazioni/configurazione_sistema.html', {
-                    'step': 'device',
-                    'form_device': DeviceWizardForm(),
-                    'dispositivi_esistenti': dispositivi_esistenti,
-                    'db_error': db_error,
-                })
-            else:
-                return render(request, 'prenotazioni/configurazione_sistema.html', {
-                    'step': 'school',
-                    'form_school': form_school,
-                })
-
-        elif 'add_device' in request.POST:  # Aggiungere nuovo dispositivo
-            try:
-                form_device = DeviceWizardForm(request.POST)
-                if form_device.is_valid():
-                    device = form_device.save()
-                    messages.success(request, f'Dispositivo "{device.get_display_completo()}" aggiunto con successo.')
-                    # Ricarica pagina con lista aggiornata
-                    dispositivi_esistenti = list(Device.objects.all().order_by('produttore', 'nome'))
-                    return render(request, 'prenotazioni/configurazione_sistema.html', {
-                        'step': 'device',
-                        'form_device': DeviceWizardForm(),
-                        'dispositivi_esistenti': dispositivi_esistenti,
-                    })
-                else:
-                    dispositivi_esistenti = list(Device.objects.all().order_by('produttore', 'nome'))
-                    return render(request, 'prenotazioni/configurazione_sistema.html', {
-                        'step': 'device',
-                        'form_device': form_device,
-                        'dispositivi_esistenti': dispositivi_esistenti,
-                    })
-            except Exception as e:
-                messages.error(request, f'Impossibile salvare dispositivo: {e}. Le migrazioni del database potrebbero non essere state applicate.')
-                return render(request, 'prenotazioni/configurazione_sistema.html', {
-                    'step': 'device',
-                    'form_device': DeviceWizardForm(request.POST),
-                    'dispositivi_esistenti': [],
-                    'db_error': True,
-                    'error_message': str(e),
-                })
-
-        elif 'remove_device' in request.POST:  # Rimuovere dispositivo esistente
-            try:
-                device_id = request.POST.get('device_id')
-                device = Device.objects.get(id=device_id)
-                nome_device = device.get_display_completo()
-                device.delete()
-                messages.success(request, f'Dispositivo "{nome_device}" rimosso con successo.')
-            except Exception as e:
-                if "Device matching query does not exist" in str(e):
-                    messages.error(request, 'Dispositivo non trovato.')
-                else:
-                    messages.error(request, f'Errore rimozione dispositivo: {e}. Le migrazioni del database potrebbero non essere state applicate.')
-
-            try:
-                dispositivi_esistenti = list(Device.objects.all().order_by('produttore', 'nome'))
-            except Exception as e:
-                dispositivi_esistenti = []
-                messages.warning('Impossibile caricare lista dispositivi aggiornata.')
-
-            return render(request, 'prenotazioni/configurazione_sistema.html', {
-                'step': 'device',
-                'form_device': DeviceWizardForm(),
-                'dispositivi_esistenti': dispositivi_esistenti,
-            })
-
-        elif 'step_device_continue' in request.POST:  # Continua dal passo device
-            dispositivi_esistenti = []
-            try:
-                dispositivi_esistenti = list(Device.objects.all().order_by('produttore', 'nome'))
-                if not dispositivi_esistenti:
-                    messages.error(request, 'Devi catalogare almeno un dispositivo prima di continuare.')
-                    return render(request, 'prenotazioni/configurazione_sistema.html', {
-                        'step': 'device',
-                        'form_device': DeviceWizardForm(),
-                        'dispositivi_esistenti': dispositivi_esistenti,  # sarà vuota ma non crasha
-                    })
-
-                # Passa al passo risorse (numero risorse)
-                return render(request, 'prenotazioni/configurazione_sistema.html', {
-                    'step': 2,
-                    'form_num': ConfigurazioneSistemaForm(),
-                    'dispositivi_disponibili': dispositivi_esistenti,
-                })
-            except Exception as e:
-                messages.error(request, f'Errore database dispositivi: {e}. La migrazione del database potrebbe non essere stata applicata correttamente.')
-                return render(request, 'prenotazioni/configurazione_sistema.html', {
-                    'step': 'device',
-                    'form_device': DeviceWizardForm(),
-                    'dispositivi_esistenti': [],  # lista vuota sicura
-                    'db_error': True,
-                    'error_message': str(e),
-                })
-
-        elif 'step2' in request.POST:  # Numero risorse
-            form_num = ConfigurazioneSistemaForm(request.POST)
-            if form_num.is_valid():
-                num_risorse = form_num.cleaned_data['num_risorse']
-                request.session['num_risorse'] = num_risorse
-
-                # Carica dispositivi disponibili e passa a passo 3
-                try:
-                    dispositivi_disponibili = list(Device.objects.all().order_by('produttore', 'nome'))
-                    form_dettagli = RisorseConfigurazioneForm(num_risorse=num_risorse, dispositivi_disponibili=dispositivi_disponibili)
-                except Exception as e:
-                    logger.warning(f"Tabella Device non disponibile nel passo risorse: {e}")
-                    dispositivi_disponibili = []
-                    form_dettagli = None
-                    messages.warning('Attenzione: il catalogo dispositivi non è ancora disponibile a causa di migrazioni del database non applicate.')
-
-                return render(request, 'prenotazioni/configurazione_sistema.html', {
-                    'step': 3,
-                    'form_num': form_num,
-                    'form_dettagli': form_dettagli,
-                    'num_risorse': num_risorse,
-                    'dispositivi_disponibili': dispositivi_disponibili,
-                    'num_risorse_range': list(range(1, num_risorse + 1)),
-                })
-            else:
-                return render(request, 'prenotazioni/configurazione_sistema.html', {
-                    'step': 2,
-                    'form_num': form_num,
-                })
-
-        elif 'step3' in request.POST:  # Dettagli risorse con selezione dispositivi
-            num_risorse = request.session.get('num_risorse')
-            if not num_risorse:
-                messages.error(request, 'Sessione scaduta. Ricomincia.')
-                return redirect(reverse('prenotazioni:configurazione_sistema'))
-
-            # Carica dispositivi disponibili per validazione
-            dispositivi_disponibili = {d.id: d for d in Device.objects.all()}
-            risorse_create = []
-            associazioni_dispositivi = {}  # {risorsa_index: [device_ids]}
-            errori = []
-
-            for i in range(1, num_risorse + 1):
-                nome_key = f'nome_{i}'
-                tipo_key = f'tipo_{i}'
-                dispositivi_key = f'dispositivi_{i}'
-
-                nome = request.POST.get(nome_key, '').strip()
-                tipo = request.POST.get(tipo_key, '').strip()
-                dispositivi_selezionati = request.POST.getlist(dispositivi_key)
-
-                # Validazioni base
-                if not nome:
-                    errori.append(f'Nome richiesto per la risorsa {i}')
-                    continue
-                if not tipo:
-                    errori.append(f'Tipo richiesto per la risorsa {i}')
-                    continue
-                if tipo not in ['lab', 'carrello']:
-                    errori.append(f'Tipo non valido per la risorsa {i}')
-                    continue
-
-                # Per carrelli, calcola capacità automaticamente basata sui dispositivi selezionati
-                if tipo == 'carrello':
-                    if not dispositivi_selezionati:
-                        errori.append(f'Devono essere selezionati dispositivi per il carrello {i}')
-                        continue
-
-                    # Valida che tutti i dispositivi selezionati esistano
-                    dispositivi_validi = []
-                    for device_id in dispositivi_selezionati:
-                        try:
-                            device_id_int = int(device_id)
-                            if device_id_int not in dispositivi_disponibili:
-                                errori.append(f'Dispositivo non trovato nel carrello {nome}')
-                                break
-                            dispositivi_validi.append(dispositivi_disponibili[device_id_int])
-                        except (ValueError, TypeError):
-                            errori.append(f'Dispositivo non valido nel carrello {nome}')
-                            break
-                    else:
-                        # Tutti i dispositivi sono validi
-                        capacita = len(dispositivi_validi)
-                        risorse_create.append(Risorsa(
-                            nome=nome,
-                            tipo=tipo,
-                            capacita_massima=capacita
-                        ))
-                        associazioni_dispositivi[i] = dispositivi_validi
-                else:
-                    # Laboratori
-                    risorse_create.append(Risorsa(
-                        nome=nome,
-                        tipo=tipo,
-                        capacita_massima=None
-                    ))
-                    associazioni_dispositivi[i] = []
-
-            # Se ci sono errori, torna indietro
-            if errori:
-                for errore in errori:
-                    messages.error(request, errore)
-                dispositivi_disponibili_list = list(dispositivi_disponibili.values())
-                return render(request, 'prenotazioni/configurazione_sistema.html', {
-                    'step': 3,
-                    'num_risorse': num_risorse,
-                    'num_risorse_range': list(range(1, num_risorse + 1)),
-                    'dispositivi_disponibili': dispositivi_disponibili_list,
-                })
-
-            # Valida nomi unici
-            nomi = [r.nome for r in risorse_create]
-            if len(nomi) != len(set(nomi)):
-                messages.error(request, 'Nomi risorse devono essere unici.')
-                dispositivi_disponibili_list = list(dispositivi_disponibili.values())
-                return render(request, 'prenotazioni/configurazione_sistema.html', {
-                    'step': 3,
-                    'num_risorse': num_risorse,
-                    'num_risorse_range': list(range(1, num_risorse + 1)),
-                    'dispositivi_disponibili': dispositivi_disponibili_list,
-                })
-
-            # Salva risorse e associazioni dispositivi
-            risorse_salvate = []
-            risorse_indices = list(range(1, num_risorse + 1))
-
-            for risorsa_obj, indice in zip(risorse_create, risorse_indices):
-                risorsa = Risorsa.objects.create(
-                    nome=risorsa_obj.nome,
-                    tipo=risorsa_obj.tipo,
-                    capacita_massima=risorsa_obj.capacita_massima
-                )
-                risorse_salvate.append(risorsa)
-
-                # Associa dispositivi per i carrelli
-                dispositivi_da_associare = associazioni_dispositivi.get(indice, [])
-                if dispositivi_da_associare:
-                    risorsa.dispositivi.set(dispositivi_da_associare)
-                    logger.info(f'Associati {len(dispositivi_da_associare)} dispositivi alla risorsa {risorsa.nome}')
-
-            if 'num_risorse' in request.session:
-                del request.session['num_risorse']
-
-            messages.success(request, f'Configurazione completata! {len(risorse_salvate)} risorse create.')
-            if primo_accesso:
-                messages.info(request, 'Ora puoi accedere con l\'account amministratore creato.')
-                return redirect(reverse('login'))
-            else:
-                return redirect(reverse('home'))
-
-    # GET: determina passo
-    if primo_accesso:
-        return render(request, 'prenotazioni/configurazione_sistema.html', {
-            'step': 1,
-            'form_admin': AdminUserForm(),
-        })
-    else:
-        # Reconfigurazione: inizia con informazioni scuola
-        school_info, created = SchoolInfo.objects.get_or_create(id=1)
-        return render(request, 'prenotazioni/configurazione_sistema.html', {
-            'step': 'school',
-            'form_school': SchoolInfoForm(instance=school_info),
-        })
-
-
-@login_required
-def admin_operazioni(request):
-    """
-    View per le operazioni amministrative avanzate, come reset completo.
-
-    Accesso riservato agli amministratori.
-    """
-    if not request.user.is_admin():
-        messages.error(request, 'Accesso riservato agli amministratori.')
-        return redirect(reverse('prenotazioni:lista_prenotazioni'))
-
-    if request.method == 'POST' and request.POST.get('action') == 'reset':
-        # Memorizza info admin corrente prima del reset
-        current_admin_username = request.user.username
-        current_admin_email = request.user.email
-
-        # Reset completo: elimina TUTTI i dati tranne lasciar completare la richiesta all'admin corrente
-        deleted_school_info = SchoolInfo.objects.all().delete()[0]
-
-        # Elimina tutte le prenotazioni e risorse prima degli utenti
-        deleted_prenotazioni = Prenotazione.objects.all().delete()[0]
-        deleted_risorse = Risorsa.objects.all().delete()[0]
-
-        # Crea lista di tutti gli utenti per statistica
-        all_users = list(Utente.objects.all())
-        total_users = len(all_users)
-
-        # Elimina tutti gli utenti
-        Utente.objects.all().delete()
-
-        # Logout forzato dell'admin corrente (se ancora esistente)
-        from django.contrib.auth import logout
-        logout(request)
-
-        messages.success(request, 'Reset completo effettuato con successo! '
-                         f'Eliminati {deleted_school_info} record scuola, {total_users} utenti, {deleted_prenotazioni} prenotazioni e {deleted_risorse} risorse. '
-                         'La tua sessione è stata terminata e il sistema è stato riportato allo stato iniziale. Ricarica la pagina per accedere nuovamente alla configurazione.')
-        logger.info(f"Reset completo di tutti i dati effettuato da admin {current_admin_username} ({current_admin_email}): "
-                   f"{deleted_school_info} school info, {total_users} utenti, {deleted_prenotazioni} prenotazioni, {deleted_risorse} risorse eliminati")
-
-        # Reindirizza alla pagina di configurazione dopo reset
+        # Step non riconosciuto
+        messages.error(request, 'Passo configurazione non valido.')
         return redirect(reverse('prenotazioni:configurazione_sistema'))
 
-    return render(request, 'prenotazioni/admin_operazioni.html')
+    def handle_admin_creation(self, request):
+        """Gestisce creazione utente amministratore."""
+        form_admin = AdminUserForm(request.POST)
+        if not form_admin.is_valid():
+            return self.render_step(1, form_admin=form_admin)
+
+        email = form_admin.cleaned_data['email']
+
+        # Controlla duplicati
+        if Utente.objects.filter(email=email).exists():
+            messages.error(request, 'Un utente con questa email esiste già.')
+            return self.render_step(1, form_admin=form_admin)
+
+        # Crea admin con sistema PIN
+        admin_user = Utente.objects.create_user(
+            username=email, email=email, password=None, ruolo='admin'
+        )
+        admin_user.is_active = False
+        admin_user.save()
+
+        # Genera e invia PIN
+        pin = self._generate_pin()
+        self._save_pin_session(request, email, pin)
+        self._send_pin_email(email, pin)
+
+        messages.success(request,
+            f"Account amministratore creato per {email}. Ti abbiamo inviato un PIN via email."
+        )
+
+        return self.render_step('school', form_school=SchoolInfoForm(), admin_created=True, admin_email=email)
+
+    def handle_school_info(self, request):
+        """Gestisce salvataggio informazioni scuola."""
+        school_info, _ = SchoolInfo.objects.get_or_create(id=1)
+        form_school = SchoolInfoForm(request.POST, instance=school_info)
+
+        if not form_school.is_valid():
+            return self.render_step('school', form_school=form_school)
+
+        form_school.save()
+        messages.success(request, 'Informazioni scuola salvate.')
+
+        # Vai al passo dispositivi
+        dispositivi = self.get_dispositivi_safely()
+        return self.render_step('device', form_device=DeviceWizardForm(),
+                              dispositivi_esistenti=dispositivi[0], db_error=dispositivi[1])
+
+    def handle_add_device(self, request):
+        """Gestisce aggiunta nuovo dispositivo."""
+        try:
+            form_device = DeviceWizardForm(request.POST)
+            if form_device.is_valid():
+                device = form_device.save()
+                messages.success(request, f'Dispositivo "{device.get_display_completo()}" aggiunto.')
+
+            dispositivi = self.get_dispositivi_safely()
+            return self.render_step('device', form_device=DeviceWizardForm(),
+                                  dispositivi_esistenti=dispositivi[0])
+
+        except Exception as e:
+            messages.error(request, f'Errore salvataggio dispositivo: {e}')
+            return self.render_step('device', form_device=DeviceWizardForm(request.POST),
+                                  dispositivi_esistenti=[], db_error=True, error_message=str(e))
+
+    def handle_remove_device(self, request):
+        """Gestisce rimozione dispositivo."""
+        try:
+            device_id = request.POST.get('device_id')
+            device = Device.objects.get(id=device_id)
+            nome = device.get_display_completo()
+            device.delete()
+            messages.success(request, f'Dispositivo "{nome}" rimosso.')
+        except Exception as e:
+            messages.error(request, f'Errore rimozione dispositivo: {e}')
+
+        dispositivi = self.get_dispositivi_safely()
+        return self.render_step('device', form_device=DeviceWizardForm(),
+                              dispositivi_esistenti=dispositivi[0][0] if dispositivi[0] else [])
+
+    def handle_device_continue(self, request):
+        """Gestisce passaggio al passo successivo dopo dispositivi."""
+        try:
+            dispositivi = Device.objects.all().order_by('produttore', 'nome')
+            if not dispositivi:
+                messages.error(request, 'Devi catalogare almeno un dispositivo.')
+                return self.render_step('device', form_device=DeviceWizardForm(),
+                                      dispositivi_esistenti=Device.objects.all().order_by('produttore', 'nome'))
+
+            return self.render_step(2, form_num=ConfigurazioneSistemaForm(),
+                                  dispositivi_disponibili=list(dispositivi))
+
+        except Exception as e:
+            messages.error(request, f'Errore caricamento dispositivi: {e}')
+            return self.render_step('device', form_device=DeviceWizardForm(),
+                                  dispositivi_esistenti=[], db_error=True, error_message=str(e))
+
+    def handle_numero_risorse(self, request):
+        """Gestisce selezione numero risorse."""
+        form_num = ConfigurazioneSistemaForm(request.POST)
+        if not form_num.is_valid():
+            return self.render_step(2, form_num=form_num)
+
+        num_risorse = form_num.cleaned_data['num_risorse']
+        request.session['num_risorse'] = num_risorse
+
+        dispositivi = self.get_dispositivi_safely()
+        if dispositivi[1]:  # db_error
+            messages.warning(request, 'Catalogo dispositivi non disponibile.')
+
+        return self.render_step(3, form_num=form_num, form_dettagli=self._get_risorse_form(num_risorse, dispositivi[0]),
+                              num_risorse=num_risorse, dispositivi_disponibili=dispositivi[0],
+                              num_risorse_range=list(range(1, num_risorse + 1)))
+
+    def handle_dettagli_risorse(self, request):
+        """Gestisce configurazione dettagliata risorse."""
+        num_risorse = request.session.get('num_risorse')
+        if not num_risorse:
+            messages.error(request, 'Sessione scaduta. Ricomincia.')
+            return redirect(reverse('prenotazioni:configurazione_sistema'))
+
+        # Processa risorse
+        dispositivi_disponibili = {d.id: d for d in Device.objects.all()}
+        risorse_data, associazioni, errori = self._process_risorse_data(request, num_risorse, dispositivi_disponibili)
+
+        if errori:
+            for errore in errori:
+                messages.error(request, errore)
+            dispositivi_list = list(dispositivi_disponibili.values())
+            return self.render_step(3, num_risorse=num_risorse, num_risorse_range=list(range(1, num_risorse + 1)),
+                                  dispositivi_disponibili=dispositivi_list)
+
+        # Salva tutto in una transazione
+        try:
+            with transaction.atomic():
+                risorse_salvate = []
+                for risorsa_obj, indice in zip(risorse_data, range(1, num_risorse + 1)):
+                    risorsa = Risorsa.objects.create(**risorsa_obj)
+                    risorse_salvate.append(risorsa)
+
+                    # Associa dispositivi se presenti
+                    dispositivi = associazioni.get(indice, [])
+                    if dispositivi:
+                        risorsa.dispositivi.set(dispositivi)
+
+                if 'num_risorse' in request.session:
+                    del request.session['num_risorse']
+
+                messages.success(request, f'Configurazione completata! {len(risorse_salvate)} risorse create.')
+                primo_accesso = not Utente.objects.exists()
+                if primo_accesso:
+                    messages.info(request, 'Ora puoi accedere con l\'account amministratore creato.')
+                    return redirect(reverse('login'))
+                else:
+                    return redirect(reverse('home'))
+
+        except Exception as e:
+            messages.error(request, f'Errore salvataggio risorse: {e}')
+            dispositivi_list = list(dispositivi_disponibili.values())
+            return self.render_step(3, num_risorse=num_risorse, num_risorse_range=list(range(1, num_risorse + 1)),
+                                  dispositivi_disponibili=dispositivi_list)
+
+    def render_step(self, step, **context):
+        """Rendering helper per i vari passi."""
+        base_context = {'step': step}
+        base_context.update(context)
+        return render(self.request, 'prenotazioni/configurazione_sistema.html', base_context)
+
+    def _determina_passo(self, request):
+        """Determina il passo iniziale della configurazione."""
+        if not Utente.objects.exists():
+            return 'admin'  # Primo accesso
+        if not SchoolInfo.objects.filter(nome__isnull=False).exists():
+            return 'school'  # Informazioni scuola mancanti
+        return 'device'  # Configurazione dispositivi
+
+    def get_dispositivi_safely(self):
+        """Carica dispositivi gestendo errori database."""
+        try:
+            dispositivi = list(Device.objects.all().order_by('produttore', 'nome'))
+            return dispositivi, False
+        except Exception as e:
+            return [], True
+
+    def _generate_pin(self):
+        """Genera PIN monouso."""
+        import random, string
+        return ''.join(random.choices(string.digits, k=6))
+
+    def _save_pin_session(self, request, email, pin):
+        """Salva PIN in sessione."""
+        request.session['admin_setup_email'] = email
+        request.session['admin_setup_pin'] = pin
+        request.session['admin_setup_pin_time'] = timezone.now().isoformat()
+
+    def _send_pin_email(self, email, pin):
+        """Invia PIN via email."""
+        from config.views_email_login import send_pin_email_async
+        send_pin_email_async(email, pin)
+
+    def _get_risorse_form(self, num_risorse, dispositivi):
+        """Crea form per configurazione risorse."""
+        try:
+            return RisorseConfigurazioneForm(num_risorse=num_risorse, dispositivi_disponibili=dispositivi)
+        except Exception:
+            return None
+
+    def _process_risorse_data(self, request, num_risorse, dispositivi_disponibili):
+        """Processa i dati delle risorse dal form."""
+        risorse_data = []
+        associazioni = {}
+        errori = []
+
+        for i in range(1, num_risorse + 1):
+            nome = request.POST.get(f'nome_{i}', '').strip()
+            tipo = request.POST.get(f'tipo_{i}', '').strip()
+            dispositivi_selezionati = request.POST.getlist(f'dispositivi_{i}')
+
+            # Validazioni base
+            if not nome:
+                errori.append(f'Nome richiesto per la risorsa {i}')
+                continue
+            if not tipo or tipo not in ['lab', 'carrello']:
+                errori.append(f'Tipo non valido per la risorsa {i}')
+                continue
+
+            if tipo == 'carrello':
+                if not dispositivi_selezionati:
+                    errori.append(f'Dispositivi richiesti per il carrello {nome}')
+                    continue
+
+                dispositivi_validi, errs = self._validate_device_selection(dispositivi_selezionati, dispositivi_disponibili, nome)
+                if errs:
+                    errori.extend(errs)
+                    continue
+
+                risorse_data.append({
+                    'nome': nome, 'tipo': tipo, 'capacita_massima': len(dispositivi_validi)
+                })
+                associazioni[i] = dispositivi_validi
+            else:
+                risorse_data.append({
+                    'nome': nome, 'tipo': tipo, 'capacita_massima': None
+                })
+                associazioni[i] = []
+
+        return risorse_data, associazioni, errori
+
+    def _validate_device_selection(self, dispositivi_ids, dispositivi_disponibili, nome_risorsa):
+        """Valida selezione dispositivi."""
+        dispositivi_validi = []
+        errori = []
+
+        for device_id in dispositivi_ids:
+            try:
+                device_id_int = int(device_id)
+                if device_id_int not in dispositivi_disponibili:
+                    errori.append(f'Dispositivo non trovato nel carrello {nome_risorsa}')
+                    break
+                dispositivi_validi.append(dispositivi_disponibili[device_id_int])
+            except (ValueError, TypeError):
+                errori.append(f'Dispositivo non valido nel carrello {nome_risorsa}')
+                break
+
+        return dispositivi_validi, errori
+
+
+# View wrapper per compatibilità
+def configurazione_sistema(request):
+    """Wrapper view per compatibilità backward."""
+    view = ConfigurazioneSistema.as_view()
+    return view(request)

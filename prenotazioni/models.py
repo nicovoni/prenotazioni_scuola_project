@@ -102,7 +102,26 @@ class Device(models.Model):
         verbose_name = 'Dispositivo'
         verbose_name_plural = 'Dispositivi'
         ordering = ['produttore', 'nome']
-        unique_together = ['nome', 'modello']  # Evita duplicati identici
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nome', 'modello'],
+                name='unique_device_name_model',
+                condition=models.Q(modello__isnull=False, modello__gt='')
+            ),
+            models.CheckConstraint(
+                check=models.Q(nome__regex=r'^[A-Za-z0-9\s\-\.]+$'),
+                name='device_name_valid_chars'
+            ),
+            models.CheckConstraint(
+                check=models.Q(produttore__regex=r'^[A-Za-z0-9\s\-\.]+$'),
+                name='device_produttore_valid_chars'
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['produttore', 'nome']),  # Ricerca dispositivi per produttore
+            models.Index(fields=['tipo', 'attivo']),  # Dispositivi attivi per tipo
+            models.Index(fields=['nome']),  # Ricerca per nome
+        ]
 
     def __str__(self):
         """Rappresentazione stringa del dispositivo."""
@@ -405,6 +424,19 @@ class Prenotazione(models.Model):
         if self.quantita <= 0:
             raise ValidationError("La quantità deve essere positiva.")
 
+        # Validazione specifica per tipo di risorsa
+        if self.risorsa.tipo == 'lab':
+            # Laboratori: deve essere prenotato l'intero spazio (quantità = 1)
+            if self.quantita != 1:
+                raise ValidationError("Per i laboratori è possibile prenotare solo l'intero spazio.")
+        elif self.risorsa.tipo == 'carrello':
+            # Carrelli: controllo che la quantità non superi la capacità massima
+            if self.risorsa.capacita_massima and self.quantita > self.risorsa.capacita_massima:
+                raise ValidationError(
+                    f"Quantità richiesta ({self.quantita}) supera la capacità massima del carrello "
+                    f"({self.risorsa.capacita_massima})."
+                )
+
         # Controllo che non ci siano prenotazioni sovrapposte per la stessa risorsa
         # (escludendo se stessa in caso di modifica)
         overlapping = Prenotazione.objects.filter(
@@ -417,4 +449,14 @@ class Prenotazione(models.Model):
             overlapping = overlapping.exclude(pk=self.pk)
 
         if overlapping.exists():
-            raise ValidationError("Esistono già prenotazioni sovrapposte per questa risorsa.")
+            # Per capire meglio il messaggio, calcoliamo la disponibilità attuale
+            quantita_occupata = overlapping.aggregate(Sum('quantita'))['quantita__sum'] or 0
+            disponibile = (self.risorsa.capacita_massima or 1) - quantita_occupata
+
+            if self.risorsa.is_carrello():
+                raise ValidationError(
+                    f"Esistono già prenotazioni sovrapposte per questa risorsa. "
+                    f"Disponibilità attuale: {disponibile} unità."
+                )
+            else:
+                raise ValidationError("Esistono già prenotazioni sovrapposte per questa risorsa.")
