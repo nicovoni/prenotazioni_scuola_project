@@ -162,7 +162,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'format': '{levelname} {asctime} {module} {process} {thread} {message}',
             'style': '{',
         },
         'simple': {
@@ -170,7 +170,7 @@ LOGGING = {
             'style': '{',
         },
         'json': {
-            'format': '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "module": "%(module)s", "message": "%(message)s"}',
+            'format': '{"timestamp": "{asctime}", "level": "{levelname}", "module": "{module}", "message": "{message}"}',
             'style': '{',
         },
     },
