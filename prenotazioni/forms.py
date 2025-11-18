@@ -392,23 +392,36 @@ class SchoolInfoForm(forms.ModelForm):
     """
     class Meta:
         model = SchoolInfo
-        fields = ['nome_scuola', 'email_scuola']
+        fields = ['nome', 'codice_meccanografico', 'sito_web', 'indirizzo']
         widgets = {
-            'nome_scuola': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome completo della scuola'}),
-            'email_scuola': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'segreteria@scuola.it'}),
+            'nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome completo della scuola'}),
+            'codice_meccanografico': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ME123456'}),
+            'sito_web': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://www.scuola.it'}),
+            'indirizzo': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Via Roma, 123, 00100 Roma, Italia'}),
         }
         labels = {
-            'nome_scuola': 'Nome della scuola *',
-            'email_scuola': 'Email della scuola',
+            'nome': 'Nome completo scuola *',
+            'codice_meccanografico': 'Codice meccanografico',
+            'sito_web': 'URL sito web',
+            'indirizzo': 'Indirizzo completo',
         }
         help_texts = {
-            'nome_scuola': 'Nome completo e ufficiale della scuola',
-            'email_scuola': 'Indirizzo email principale della scuola',
+            'nome': 'Nome completo e formale della scuola',
+            'codice_meccanografico': 'Codice meccanografico di identificazione (10 caratteri)',
+            'sito_web': 'URL completo del sito web della scuola',
+            'indirizzo': 'Indirizzo completo della scuola secondo lo standard di Google Maps',
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Solo nome_scuola è obbligatorio
-        for field_name in self.fields:
-            if field_name != 'nome_scuola':
-                self.fields[field_name].required = False
+        # Solo nome è obbligatorio
+        self.fields['nome'].required = True
+        self.fields['codice_meccanografico'].required = False
+        self.fields['sito_web'].required = False
+        self.fields['indirizzo'].required = True
+
+    def clean_codice_meccanografico(self):
+        codice = self.cleaned_data.get('codice_meccanografico')
+        if codice and len(codice) != 10:
+            raise forms.ValidationError("Il codice meccanografico deve essere di esattamente 10 caratteri.")
+        return codice

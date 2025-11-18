@@ -15,16 +15,23 @@ class SchoolInfo(models.Model):
 
     Singola istanza (singleton) per configurazione generale.
     """
-    nome_scuola = models.CharField(
+    nome = models.CharField(
         max_length=200,
-        verbose_name='Nome della scuola',
-        help_text='Nome completo della scuola'
+        verbose_name='Nome completo scuola',
+        help_text='Nome completo e formale della scuola'
     )
-    email_scuola = models.EmailField(
-        blank=True,
-        null=True,
-        verbose_name='Email della scuola',
-        help_text='Indirizzo email principale della scuola'
+    codice_meccanografico = models.CharField(
+        max_length=10,
+        verbose_name='Codice meccanografico',
+        help_text='Codice meccanografico di identificazione della scuola'
+    )
+    sito_web = models.URLField(
+        verbose_name='URL sito web',
+        help_text='URL completo del sito web della scuola'
+    )
+    indirizzo = models.TextField(
+        verbose_name='Indirizzo completo',
+        help_text='Indirizzo completo della scuola secondo lo standard di Google Maps'
     )
 
     class Meta:
@@ -33,7 +40,7 @@ class SchoolInfo(models.Model):
 
     def __str__(self):
         """Rappresentazione stringa delle informazioni scuola."""
-        return self.nome_scuola
+        return self.nome
 
     @classmethod
     def get_instance(cls):
