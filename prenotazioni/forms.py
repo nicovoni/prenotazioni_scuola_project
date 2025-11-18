@@ -299,21 +299,18 @@ class DeviceWizardForm(forms.ModelForm):
     """
     class Meta:
         model = Device
-        fields = ['nome', 'tipo', 'produttore', 'modello', 'sistema_operativo',
-                  'tipo_display', 'processore', 'storage', 'schermo', 'caratteristiche_extra']
+        fields = ['nome', 'tipo', 'produttore', 'modello']
         widgets = {
             'nome': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'ej: iPad Pro 12.9'}),
-            'produttore': forms.Select(attrs={'class': 'form-control mb-2'}),
+            'tipo': forms.Select(attrs={'class': 'form-control mb-2'}),
+            'produttore': forms.TextInput(attrs={'class': 'form-control mb-2'}),
             'modello': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'ej: A2343'}),
-            'sistema_operativo': forms.Select(attrs={'class': 'form-control mb-2'}),
-            'processore': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'ej: Apple M2, 8GB RAM'}),
-            'storage': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'ej: 256GB SSD'}),
-            'schermo': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'ej: 12.9" Liquid Retina XDR'}),
-            'caratteristiche_extra': forms.Textarea(attrs={
-                'class': 'form-control mb-2',
-                'rows': 2,
-                'placeholder': 'ej: Apple Pencil support, USB-C, etc.'
-            }),
+        }
+        labels = {
+            'nome': 'Nome dispositivo',
+            'tipo': 'Tipo',
+            'produttore': 'Produttore',
+            'modello': 'Modello',
         }
 
     def __init__(self, *args, **kwargs):
@@ -321,8 +318,6 @@ class DeviceWizardForm(forms.ModelForm):
         # Campo attivo non mostrato (sempre True nei wizard)
         if 'attivo' in self.fields:
             del self.fields['attivo']
-        if 'tipo' in self.fields:
-            del self.fields['tipo']  # Determinato automaticamente da produttore/sistema
 
     def validate_unique(self):
         """
@@ -338,25 +333,6 @@ class DeviceWizardForm(forms.ModelForm):
             # Ri-lancia altre eccezioni
             raise
 
-    def clean(self):
-        cleaned_data = super().clean()
-        # Determina tipo automatico basato su produttore/sistema
-        produttore = cleaned_data.get('produttore')
-        sistema = cleaned_data.get('sistema_operativo')
-
-        if produttore == 'apple' and sistema in ['ios', 'macos']:
-            cleaned_data['tipo'] = 'notebook' if sistema == 'macos' else 'tablet'
-        elif sistema == 'chromeos':
-            cleaned_data['tipo'] = 'chromebook'
-        elif sistema in ['windows', 'linux']:
-            cleaned_data['tipo'] = 'notebook'
-        elif sistema == 'android':
-            cleaned_data['tipo'] = 'tablet'
-        else:
-            cleaned_data['tipo'] = 'altro'
-
-        return cleaned_data
-
 
 class DeviceForm(forms.ModelForm):
     """
@@ -364,56 +340,27 @@ class DeviceForm(forms.ModelForm):
     """
     class Meta:
         model = Device
-        fields = ['nome', 'tipo', 'produttore', 'modello', 'sistema_operativo',
-                  'tipo_display', 'processore', 'storage', 'schermo', 'caratteristiche_extra']
+        fields = ['nome', 'tipo', 'produttore', 'modello', 'attivo']
         widgets = {
             'nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'iPad Pro 12.9'}),
             'tipo': forms.Select(attrs={'class': 'form-control'}),
-            'produttore': forms.Select(attrs={'class': 'form-control'}),
+            'produttore': forms.TextInput(attrs={'class': 'form-control'}),
             'modello': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'A2343'}),
-            'sistema_operativo': forms.Select(attrs={'class': 'form-control'}),
-            'tipo_display': forms.Select(attrs={'class': 'form-control'}),
-            'processore': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Apple M2, 8GB RAM'
-            }),
-            'storage': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': '256GB SSD'
-            }),
-            'schermo': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': '12.9" Liquid Retina XDR'
-            }),
-            'caratteristiche_extra': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Apple Pencil support, USB-C, etc.'
-            }),
+            'attivo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         labels = {
             'nome': 'Nome commerciale',
             'tipo': 'Tipo dispositivo',
             'produttore': 'Produttore',
             'modello': 'Modello',
-            'sistema_operativo': 'Sistema operativo',
-            'tipo_display': 'Tipo display',
-            'processore': 'CPU/RAM',
-            'storage': 'Memoria',
-            'schermo': 'Schermo',
-            'caratteristiche_extra': 'Caratteristiche aggiuntive',
+            'attivo': 'Attivo',
         }
         help_texts = {
             'nome': 'Nome commerciale del dispositivo (es. "iPad Pro 12.9")',
             'tipo': 'Categoria generale: notebook, tablet, chromebook',
             'produttore': 'Azienda produttrice (Apple, Dell, etc.)',
             'modello': 'Codice modello specifico',
-            'sistema_operativo': 'OS installato sul dispositivo',
-            'tipo_display': 'Tipo di display/interazione',
-            'processore': 'CPU e quantità RAM (es. "Intel Core i5, 16GB RAM")',
-            'storage': 'Capacità e tipo di storage (es. "512GB NVMe SSD")',
-            'schermo': 'Dimensioni e caratteristiche display',
-            'caratteristiche_extra': 'Porte, accessori, funzionalità speciali',
+            'attivo': 'Il dispositivo è disponibile per l\'uso nei carrelli',
         }
 
     def clean(self):
