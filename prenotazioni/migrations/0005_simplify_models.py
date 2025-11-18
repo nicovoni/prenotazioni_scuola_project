@@ -10,22 +10,42 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Remove fields from SchoolInfo
-        migrations.RemoveField(
+        # Update fields from SchoolInfo
+        migrations.RenameField(
             model_name='schoolinfo',
-            name='indirizzo',
+            old_name='nome_scuola',
+            new_name='nome',
         ),
         migrations.RemoveField(
             model_name='schoolinfo',
-            name='telefono',
+            name='email_scuola',
         ),
-        migrations.RemoveField(
+        migrations.AddField(
+            model_name='schoolinfo',
+            name='codice_meccanografico',
+            field=models.CharField(
+                blank=True,
+                max_length=10,
+                null=True,
+                verbose_name='Codice meccanografico',
+                help_text='Codice meccanografico di identificazione della scuola'
+            ),
+        ),
+        migrations.AddField(
             model_name='schoolinfo',
             name='sito_web',
+            field=models.URLField(
+                help_text='URL del sito web della scuola',
+                verbose_name='Sito web'
+            ),
         ),
-        migrations.RemoveField(
+        migrations.AddField(
             model_name='schoolinfo',
-            name='codice_scuola',
+            name='indirizzo',
+            field=models.TextField(
+                help_text='Indirizzo completo della scuola',
+                verbose_name='Indirizzo'
+            ),
         ),
 
         # Remove fields from Device

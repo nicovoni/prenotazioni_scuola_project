@@ -66,46 +66,24 @@
 
                         <!-- Campo obbligatorio: Nome scuola -->
                         <div class="form-group mb-4">
-                            <label for="{{ form_school.nome_scuola.id_for_label }}" class="form-label">
-                                {{ form_school.nome_scuola.label }} <span class="text-danger">*</span>
+                            <label for="{{ form_school.nome.id_for_label }}" class="form-label">
+                                {{ form_school.nome.label }} <span class="text-danger">*</span>
                             </label>
-                            {{ form_school.nome_scuola }}
-                            {% if form_school.nome_scuola.errors %}
+                            {{ form_school.nome }}
+                            {% if form_school.nome.errors %}
                                 <div class="text-danger small">
-                                    {% for error in form_school.nome_scuola.errors %}{{ error }}{% endfor %}
+                                    {% for error in form_school.nome.errors %}{{ error }}{% endfor %}
                                 </div>
                             {% endif %}
                         </div>
 
                         <!-- Codice meccanografico -->
                         <div class="form-group mb-3">
-                            <label for="{{ form_school.codice_scuola.id_for_label }}" class="form-label">{{ form_school.codice_scuola.label }}</label>
-                            {{ form_school.codice_scuola }}
-                            {% if form_school.codice_scuola.errors %}
+                            <label for="{{ form_school.codice_meccanografico.id_for_label }}" class="form-label">{{ form_school.codice_meccanografico.label }}</label>
+                            {{ form_school.codice_meccanografico }}
+                            {% if form_school.codice_meccanografico.errors %}
                                 <div class="text-danger small">
-                                    {% for error in form_school.codice_scuola.errors %}{{ error }}{% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Email scuola -->
-                        <div class="form-group mb-3">
-                            <label for="{{ form_school.email_scuola.id_for_label }}" class="form-label">{{ form_school.email_scuola.label }}</label>
-                            {{ form_school.email_scuola }}
-                            {% if form_school.email_scuola.errors %}
-                                <div class="text-danger small">
-                                    {% for error in form_school.email_scuola.errors %}{{ error }}{% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Telefono scuola -->
-                        <div class="form-group mb-3">
-                            <label for="{{ form_school.telefono.id_for_label }}" class="form-label">{{ form_school.telefono.label }}</label>
-                            {{ form_school.telefono }}
-                            {% if form_school.telefono.errors %}
-                                <div class="text-danger small">
-                                    {% for error in form_school.telefono.errors %}{{ error }}{% endfor %}
+                                    {% for error in form_school.codice_meccanografico.errors %}{{ error }}{% endfor %}
                                 </div>
                             {% endif %}
                         </div>
@@ -123,7 +101,7 @@
 
                         <!-- Indirizzo completo -->
                         <div class="form-group mb-4">
-                            <label for="{{ form_school.indirizzo.id_for_label }}" class="form-label">{{ form_school.indirizzo.label }}</label>
+                            <label for="{{ form_school.indirizzo.id_for_label }}" class="form-label">{{ form_school.indirizzo.label }} <span class="text-danger">*</span></label>
                             {{ form_school.indirizzo }}
                             {% if form_school.indirizzo.errors %}
                                 <div class="text-danger small">
@@ -164,29 +142,40 @@
             <script>
                 // Simple preview update (optional enhancement)
                 document.addEventListener('DOMContentLoaded', function() {
-                    const nomeInput = document.querySelector('#id_nome_scuola');
+                    const nomeInput = document.querySelector('#{{ form_school.nome.id_for_label }}');
+                    const codiceInput = document.querySelector('#{{ form_school.codice_meccanografico.id_for_label }}');
+                    const sitoInput = document.querySelector('#{{ form_school.sito_web.id_for_label }}');
+                    const indirizzoInput = document.querySelector('#{{ form_school.indirizzo.id_for_label }}');
                     const previewDiv = document.querySelector('#school-preview');
 
-                    if (nomeInput && previewDiv) {
-                        nomeInput.addEventListener('input', function() {
-                            const nome = this.value.trim();
-                            if (nome) {
-                                previewDiv.innerHTML = `
-                                    <h6>${nome}</h6>
-                                    <p class="small text-muted mb-1">Codice: --</p>
-                                    <p class="small text-muted mb-1">📧 --</p>
-                                    <p class="small text-muted">📍 --</p>
-                                `;
-                            } else {
-                                previewDiv.innerHTML = `
-                                    <p class="text-muted mb-2">Compila il form per vedere l'anteprima</p>
-                                    <div class="text-center">
-                                        <i class="fas fa-school fa-3x text-muted mb-3"></i>
-                                    </div>
-                                `;
-                            }
-                        });
+                    function updatePreview() {
+                        const nome = nomeInput ? nomeInput.value.trim() : '';
+                        const codice = codiceInput ? codiceInput.value.trim() : '';
+                        const sito = sitoInput ? sitoInput.value.trim() : '';
+                        const indirizzo = indirizzoInput ? indirizzoInput.value.trim() : '';
+
+                        if (nome) {
+                            previewDiv.innerHTML = `
+                                <h6>${nome}</h6>
+                                <p class="small text-muted mb-1">Codice: ${codice || '--'}</p>
+                                <p class="small text-muted mb-1">🌐 ${sito || '--'}</p>
+                                <p class="small text-muted">📍 ${indirizzo || '--'}</p>
+                            `;
+                        } else {
+                            previewDiv.innerHTML = `
+                                <p class="text-muted mb-2">Compila il form per vedere l'anteprima</p>
+                                <div class="text-center">
+                                    <i class="fas fa-school fa-3x text-muted mb-3"></i>
+                                </div>
+                            `;
+                        }
                     }
+
+                    [nomeInput, codiceInput, sitoInput, indirizzoInput].forEach(input => {
+                        if (input) {
+                            input.addEventListener('input', updatePreview);
+                        }
+                    });
                 });
             </script>
 
