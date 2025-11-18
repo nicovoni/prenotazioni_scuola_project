@@ -86,25 +86,6 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_filter = ('attivo', 'verificato', 'sesso', 'preferenze_lingua')
     search_fields = ('nome', 'cognome', 'user__username', 'user__email', 'classe', 'dipartimento')
     readonly_fields = ('creato_il', 'modificato_il', 'nome_completo', 'eta')
-    
-    fieldsets = (
-        ('User Link', {'fields': ('user',)}),
-        ('Informazioni Personali', {
-            'fields': ('nome', 'cognome', 'sesso', 'data_nascita', 'codice_fiscale')
-        }),
-        ('Contatti', {
-            'fields': ('telefono', 'email_personale')
-        }),
-        ('Informazioni Istituzionali', {
-            'fields': ('numero_matricola', 'classe', 'dipartimento', 'materia_insegnamento')
-        }),
-        ('Preferenze', {
-            'fields': ('preferenze_notifica', 'preferenze_lingua', 'fuso_orario')
-        }),
-        ('Status', {
-            'fields': ('attivo', 'verificato', 'data_verifica', 'ultimo_accesso')
-        }),
-    )
 
 
 # =====================================================
@@ -119,15 +100,6 @@ class ConfigurationAdmin(admin.ModelAdmin):
     list_filter = ('tipo', 'modificabile')
     search_fields = ('chiave', 'descrizione')
     readonly_fields = ('creato_il', 'modificato_il')
-    
-    fieldsets = (
-        ('Configurazione', {
-            'fields': ('chiave', 'valore', 'tipo', 'descrizione')
-        }),
-        ('Controllo', {
-            'fields': ('modificabile', 'creato_il', 'modificato_il')
-        }),
-    )
     
     def valore_preview(self, obj):
         """Mostra anteprima del valore."""
@@ -172,7 +144,6 @@ class UserSessionAdmin(admin.ModelAdmin):
     list_filter = ('tipo', 'stato', 'created_at')
     search_fields = ('user__username', 'email_destinazione')
     readonly_fields = ('token', 'created_at', 'expires_at', 'verified_at', 'is_expired', 'is_valid')
-    filter_horizontal = ('metadata',) if admin.site.enable_thumbnails else ()
     
     def is_expired(self, obj):
         return obj.is_expired
@@ -211,30 +182,6 @@ class DeviceAdmin(admin.ModelAdmin):
     list_filter = ('tipo', 'stato', 'categoria', 'attivo', 'data_acquisto')
     search_fields = ('nome', 'marca', 'modello', 'serie', 'codice_inventario')
     readonly_fields = ('creato_il', 'modificato_il', 'display_name', 'is_available', 'needs_maintenance')
-    
-    fieldsets = (
-        ('Identificazione', {
-            'fields': ('nome', 'modello', 'marca', 'serie', 'codice_inventario')
-        }),
-        ('Classificazione', {
-            'fields': ('tipo', 'categoria')
-        }),
-        ('Specifiche Tecniche', {
-            'fields': ('specifiche',)
-        }),
-        ('Stato', {
-            'fields': ('stato', 'attivo')
-        }),
-        ('Localizzazione', {
-            'fields': ('edificio', 'piano', 'aula', 'armadio')
-        }),
-        ('Acquisto', {
-            'fields': ('data_acquisto', 'data_scadenza_garanzia', 'valore_acquisto')
-        }),
-        ('Manutenzione', {
-            'fields': ('note', 'ultimo_controllo', 'prossima_manutenzione')
-        }),
-    )
 
 
 # =====================================================
@@ -251,39 +198,6 @@ class ResourceAdmin(admin.ModelAdmin):
     readonly_fields = ('creato_il', 'modificato_il', 'is_laboratorio', 'is_carrello', 'is_aula', 'is_available_for_booking')
     
     filter_horizontal = ('dispositivi',)
-    
-    fieldsets = (
-        ('Identificazione', {
-            'fields': ('nome', 'codice', 'descrizione')
-        }),
-        ('Classificazione', {
-            'fields': ('tipo', 'categoria')
-        }),
-        ('Localizzazione', {
-            'fields': ('localizzazione',)
-        }),
-        ('Capacità', {
-            'fields': ('capacita_massima', 'postazioni_disponibili')
-        }),
-        ('Dispositivi', {
-            'fields': ('dispositivi',)
-        }),
-        ('Orari', {
-            'fields': ('orari_apertura', 'feriali_disponibile', 'weekend_disponibile', 'festivo_disponibile')
-        }),
-        ('Stato', {
-            'fields': ('attivo', 'manutenzione', 'bloccato')
-        }),
-        ('Preferenze Prenotazione', {
-            'fields': ('prenotazione_anticipo_minimo', 'prenotazione_anticipo_massimo', 'durata_minima_minuti', 'durata_massima_minuti')
-        }),
-        ('Gestione Conflitti', {
-            'fields': ('allow_overbooking', 'overbooking_limite')
-        }),
-        ('Note', {
-            'fields': ('note_amministrative', 'note_utenti')
-        }),
-    )
 
 
 # =====================================================
@@ -310,33 +224,6 @@ class BookingAdmin(admin.ModelAdmin):
     readonly_fields = ('creato_il', 'modificato_il', 'durata_minuti', 'durata_ore', 'is_passata', 'is_futura', 'is_in_corso')
     
     filter_horizontal = ('dispositivi_selezionati',)
-    
-    fieldsets = (
-        ('Relazioni', {
-            'fields': ('utente', 'risorsa')
-        }),
-        ('Dettagli Prenotazione', {
-            'fields': ('inizio', 'fine', 'quantita', 'priorita')
-        }),
-        ('Dispositivi Specifici', {
-            'fields': ('dispositivi_selezionati',)
-        }),
-        ('Informazioni', {
-            'fields': ('scopo', 'note')
-        }),
-        ('Configurazione Speciale', {
-            'fields': ('setup_needed', 'cleanup_needed')
-        }),
-        ('Stato e Workflow', {
-            'fields': ('stato', 'approvazione_richiesta', 'approvato_da', 'data_approvazione')
-        }),
-        ('Note Amministrative', {
-            'fields': ('note_amministrative',)
-        }),
-        ('Cancellazione', {
-            'fields': ('cancellato_il',)
-        }),
-    )
     
     def get_readonly_fields(self, request, obj=None):
         """Campi readonly per prenotazioni passate."""
@@ -420,15 +307,12 @@ class FileUploadAdmin(admin.ModelAdmin):
 # =====================================================
 
 # Personalizzazione header admin
-admin.site.site_header = f"Sistema Prenotazioni Scolastiche - Amministrazione"
+admin.site.site_header = "Sistema Prenotazioni Scolastiche - Amministrazione"
 admin.site.site_title = "Admin Sistema Prenotazioni"
 admin.site.index_title = "Pannello di Controllo"
-
-# Configurazione media admin
-admin.site.enable_thumbnails = True
 
 # Personalizzazione look admin
 admin.site.site_url = '/'
 
-# Filtri personalizzati
-admin.site.register_action = True
+# Configurazione di base completa
+admin.site.site_header = "Sistema Prenotazioni Scolastiche - Amministrazione"
