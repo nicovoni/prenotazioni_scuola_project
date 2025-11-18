@@ -12,10 +12,9 @@ def home(request):
 def health_check(request):
     """Health check endpoint for Render deployment monitoring"""
     try:
-        # Test database connection
-        cursor = connection.cursor()
-        cursor.execute("SELECT 1")
-        cursor.fetchone()
+        # Test database connection using Django ORM
+        from prenotazioni.models import Utente
+        Utente.objects.count()
         return HttpResponse("OK", status=200)
     except Exception as e:
-        return HttpResponse("Database Error", status=500)
+        return HttpResponse(f"Database Error: {str(e)}", status=500)

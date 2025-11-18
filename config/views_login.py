@@ -6,7 +6,6 @@ from django.contrib import messages
 def custom_login(request):
     # Redirect GET requests to the email-based PIN login page (single email field)
     if request.method == 'GET':
-        from django.shortcuts import redirect
         return redirect('email_login')
     # If someone POSTs username/password here, keep legacy behavior (allow admin login via standard auth)
     if request.method == 'POST':

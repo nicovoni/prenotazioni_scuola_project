@@ -901,10 +901,7 @@ class Booking(models.Model):
         BookingStatus,
         on_delete=models.SET_NULL,
         null=True,
-        default=lambda: BookingStatus.objects.get_or_create(
-            nome='pending',
-            defaults={'descrizione': 'In Attesa', 'colore': '#ffc107'}
-        )[0]
+        blank=True
     )
     
     # Informazioni aggiuntive
