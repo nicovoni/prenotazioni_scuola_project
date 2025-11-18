@@ -357,8 +357,13 @@ def configurazione_sistema(request):
                 try:
                     dispositivi_esistenti = list(Device.objects.all().order_by('produttore', 'nome'))
                 except Exception as e:
-                    db_error = True
-                    logger.warning(f"Tabella Device non ancora disponibile: {e}")
+                    if "prenotazioni_device" in str(e) and "does not exist" in str(e):
+                        # Tabella Device non ancora creata, possiamo procedere
+                        db_error = True
+                        logger.warning(f"Tabella Device non ancora disponibile (migration non applicata): {e}")
+                    else:
+                        # Altra eccezione, rilancia
+                        raise
 
                 return render(request, 'prenotazioni/configurazione_sistema.html', {
                     'step': 'device',

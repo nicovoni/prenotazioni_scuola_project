@@ -324,6 +324,20 @@ class DeviceWizardForm(forms.ModelForm):
         if 'tipo' in self.fields:
             del self.fields['tipo']  # Determinato automaticamente da produttore/sistema
 
+    def validate_unique(self):
+        """
+        Override per gestire caso in cui la tabella Device non esista ancora.
+        """
+        try:
+            super().validate_unique()
+        except Exception as e:
+            # Se la tabella non esiste, salta la validazione unica
+            if "prenotazioni_device" in str(e) and "does not exist" in str(e):
+                # Tabella non ancora creata, salta validazione
+                return
+            # Ri-lancia altre eccezioni
+            raise
+
     def clean(self):
         cleaned_data = super().clean()
         # Determina tipo automatico basato su produttore/sistema
