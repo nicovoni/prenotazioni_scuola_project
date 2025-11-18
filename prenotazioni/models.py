@@ -20,37 +20,11 @@ class SchoolInfo(models.Model):
         verbose_name='Nome della scuola',
         help_text='Nome completo della scuola'
     )
-    indirizzo = models.TextField(
-        blank=True,
-        null=True,
-        verbose_name='Indirizzo',
-        help_text='Indirizzo completo della scuola'
-    )
-    telefono = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True,
-        verbose_name='Telefono',
-        help_text='Numero di telefono della scuola'
-    )
     email_scuola = models.EmailField(
         blank=True,
         null=True,
         verbose_name='Email della scuola',
         help_text='Indirizzo email principale della scuola'
-    )
-    sito_web = models.URLField(
-        blank=True,
-        null=True,
-        verbose_name='Sito web',
-        help_text='URL del sito web della scuola'
-    )
-    codice_scuola = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True,
-        verbose_name='Codice scuola',
-        help_text='Codice identificativo della scuola (es. codice meccanografico)'
     )
 
     class Meta:
@@ -83,36 +57,7 @@ class Device(models.Model):
         ('altro', 'Altro'),
     ]
 
-    # Produttori principali
-    PRODUTTORE_CHOICES = [
-        ('apple', 'Apple'),
-        ('microsoft', 'Microsoft'),
-        ('google', 'Google'),
-        ('acer', 'Acer'),
-        ('asus', 'Asus'),
-        ('dell', 'Dell'),
-        ('hp', 'HP'),
-        ('lenovo', 'Lenovo'),
-        ('samsung', 'Samsung'),
-        ('altro', 'Altro'),
-    ]
 
-    # Sistemi operativi
-    SISTEMA_OPERATIVO_CHOICES = [
-        ('ios', 'iOS/iPadOS'),
-        ('macos', 'macOS'),
-        ('windows', 'Windows'),
-        ('chromeos', 'ChromeOS'),
-        ('linux', 'Linux'),
-        ('android', 'Android'),
-        ('altro', 'Altro'),
-    ]
-
-    # Tipo display
-    TIPO_DISPLAY_CHOICES = [
-        ('mobile', 'Mobile/Tablet'),
-        ('desktop', 'Desktop/Notebook'),
-    ]
 
     nome = models.CharField(
         max_length=100,
@@ -128,8 +73,7 @@ class Device(models.Model):
     )
 
     produttore = models.CharField(
-        max_length=20,
-        choices=PRODUTTORE_CHOICES,
+        max_length=100,
         verbose_name='Produttore',
         help_text='Azienda produttrice del dispositivo'
     )
@@ -139,47 +83,6 @@ class Device(models.Model):
         blank=True,
         verbose_name='Modello',
         help_text='Modello specifico del dispositivo'
-    )
-
-    sistema_operativo = models.CharField(
-        max_length=20,
-        choices=SISTEMA_OPERATIVO_CHOICES,
-        verbose_name='Sistema operativo',
-        help_text='Sistema operativo installato'
-    )
-
-    tipo_display = models.CharField(
-        max_length=10,
-        choices=TIPO_DISPLAY_CHOICES,
-        verbose_name='Tipo display',
-        help_text='Mobile (tablet) o Desktop (notebook/portatile)'
-    )
-
-    processore = models.CharField(
-        max_length=100,
-        blank=True,
-        verbose_name='Processore',
-        help_text='CPU/RAM (es. "Apple M2, 8GB RAM" o "Intel Core i5, 16GB RAM")'
-    )
-
-    storage = models.CharField(
-        max_length=50,
-        blank=True,
-        verbose_name='Storage',
-        help_text='Capacità disco (es. "256GB SSD" o "512GB NVMe")'
-    )
-
-    schermo = models.CharField(
-        max_length=50,
-        blank=True,
-        verbose_name='Schermo',
-        help_text='Dimensioni e risoluzione (es. "13.3" 2560x1600" o "11" 2388x1668")'
-    )
-
-    caratteristiche_extra = models.TextField(
-        blank=True,
-        verbose_name='Caratteristiche aggiuntive',
-        help_text='Altre specifiche tecniche importanti (camere, porte, batteria, etc.)'
     )
 
     attivo = models.BooleanField(
@@ -196,40 +99,14 @@ class Device(models.Model):
 
     def __str__(self):
         """Rappresentazione stringa del dispositivo."""
-        produttore_display = dict(self.PRODUTTORE_CHOICES).get(self.produttore, self.produttore)
-        return f"{produttore_display} {self.nome}"
+        return f"{self.produttore} {self.nome}"
 
     def get_display_completo(self):
         """Restituisce una descrizione completa formattata."""
         parts = [self.__str__()]
         if self.modello:
             parts.append(f"({self.modello})")
-        if self.processore:
-            parts.append(f"• {self.processore}")
         return " ".join(parts)
-
-    def get_specifiche_tecniche(self):
-        """Restituisce un dizionario con le specifiche tecniche."""
-        specs = {}
-        if self.processore:
-            specs['Processore'] = self.processore
-        if self.storage:
-            specs['Storage'] = self.storage
-        if self.schermo:
-            specs['Schermo'] = self.schermo
-        if self.caratteristiche_extra:
-            specs['Extra'] = self.caratteristiche_extra
-        return specs
-
-    @property
-    def is_mobile(self):
-        """Verifica se è un dispositivo mobile."""
-        return self.tipo_display == 'mobile'
-
-    @property
-    def is_desktop_type(self):
-        """Verifica se è un dispositivo desktop-type."""
-        return self.tipo_display == 'desktop'
 
     @property
     def categoria_display(self):
@@ -257,22 +134,6 @@ class Utente(AbstractUser):
         default='studente',
         verbose_name='Ruolo',
         help_text='Ruolo dell\'utente nel sistema scolastico'
-    )
-
-    # Campi extra
-    telefono = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True,
-        verbose_name='Telefono',
-        help_text='Numero di telefono dell\'utente'
-    )
-    classe = models.CharField(
-        max_length=10,
-        blank=True,
-        null=True,
-        verbose_name='Classe',
-        help_text='Classe di appartenenza (per studenti)'
     )
 
     class Meta:
