@@ -24,7 +24,7 @@ User = get_user_model()
 # SERIALIZERS CONFIGURAZIONE E SETTINGS
 # =====================================================
 
-class ConfigurationSerializer(serializers.ModelSerializer):
+class ConfigurazioneSistemaSerializer(serializers.ModelSerializer):
     """Serializer per configurazioni di sistema."""
 
     class Meta:
@@ -57,7 +57,7 @@ class SchoolInfoSerializer(serializers.ModelSerializer):
 # SERIALIZERS UTENTI E PROFILI
 # =====================================================
 
-class UserProfileSerializer(serializers.ModelSerializer):
+class ProfiloUtenteSerializer(serializers.ModelSerializer):
     """Serializer per profilo utente esteso."""
 
     nome_completo = serializers.CharField(read_only=True)
@@ -79,7 +79,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class UtenteSerializer(serializers.ModelSerializer):
     """Serializer per utenti di sistema."""
 
-    profile = UserProfileSerializer(read_only=True)
+    profile = ProfiloUtenteSerializer(read_only=True)
     nome_completo = serializers.CharField(read_only=True)
 
     class Meta:
@@ -156,7 +156,7 @@ class ResourceLocationSerializer(serializers.ModelSerializer):
         ]
 
 
-class DeviceSerializer(serializers.ModelSerializer):
+class Dispositivoserializer(serializers.ModelSerializer):
     """Serializer per dispositivi."""
 
     categoria = DeviceCategorySerializer(read_only=True)
@@ -180,11 +180,11 @@ class DeviceSerializer(serializers.ModelSerializer):
         ]
 
 
-class ResourceSerializer(serializers.ModelSerializer):
+class RisorsaSerializer(serializers.ModelSerializer):
     """Serializer per risorse prenotabili."""
 
     localizzazione = ResourceLocationSerializer(read_only=True)
-    dispositivi = DeviceSerializer(many=True, read_only=True)
+    dispositivi = Dispositivoserializer(many=True, read_only=True)
 
     # Metodi di utilità
     is_laboratorio = serializers.BooleanField(read_only=True)
@@ -242,13 +242,13 @@ class BookingStatusSerializer(serializers.ModelSerializer):
         fields = ['id', 'nome', 'descrizione', 'colore', 'icon', 'ordine']
 
 
-class BookingSerializer(serializers.ModelSerializer):
+class PrenotazioneSerializer(serializers.ModelSerializer):
     """Serializer per prenotazioni."""
 
     utente = UtenteSerializer(read_only=True)
-    risorsa = ResourceSerializer(read_only=True)
+    risorsa = RisorsaSerializer(read_only=True)
     stato = BookingStatusSerializer(read_only=True)
-    dispositivi_selezionati = DeviceSerializer(many=True, read_only=True)
+    dispositivi_selezionati = Dispositivoserializer(many=True, read_only=True)
 
     # Proprietà calcolate
     durata_minuti = serializers.IntegerField(read_only=True)
@@ -347,7 +347,7 @@ class BookingCreateSerializer(serializers.ModelSerializer):
 # SERIALIZERS SISTEMA E LOG
 # =====================================================
 
-class SystemLogSerializer(serializers.ModelSerializer):
+class LogSistemaSerializer(serializers.ModelSerializer):
     """Serializer per log di sistema."""
 
     utente = UtenteSerializer(read_only=True)
@@ -376,12 +376,12 @@ class NotificationTemplateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'creato_il', 'modificato_il']
 
 
-class NotificationSerializer(serializers.ModelSerializer):
+class NotificaUtenteSerializer(serializers.ModelSerializer):
     """Serializer per notifiche."""
 
     utente = UtenteSerializer(read_only=True)
     template = NotificationTemplateSerializer(read_only=True)
-    related_booking = BookingSerializer(read_only=True)
+    related_booking = PrenotazioneSerializer(read_only=True)
     related_user = UtenteSerializer(read_only=True)
 
     is_pending = serializers.BooleanField(read_only=True)
@@ -418,8 +418,8 @@ class SystemStatsSerializer(serializers.Serializer):
 
 class ResourceUtilizationSerializer(serializers.Serializer):
     """Serializer per statistiche utilizzo risorse."""
-    
-    resource = ResourceSerializer(read_only=True)
+
+    resource = RisorsaSerializer(read_only=True)
     total_bookings = serializers.IntegerField()
     total_hours = serializers.DecimalField(max_digits=8, decimal_places=2)
     average_duration = serializers.DecimalField(max_digits=6, decimal_places=2)
@@ -429,8 +429,8 @@ class ResourceUtilizationSerializer(serializers.Serializer):
 
 class DeviceUsageStatsSerializer(serializers.Serializer):
     """Serializer per statistiche utilizzo dispositivi."""
-    
-    device = DeviceSerializer(read_only=True)
+
+    device = Dispositivoserializer(read_only=True)
     total_bookings = serializers.IntegerField()
     total_hours = serializers.DecimalField(max_digits=8, decimal_places=2)
     average_duration = serializers.DecimalField(max_digits=6, decimal_places=2)
