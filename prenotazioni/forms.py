@@ -11,9 +11,9 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 
 from .models import (
-    Risorsa, Dispositivo, Prenotazione, ConfigurazioneSistema,
-    ProfiloUtente, InformazioniScuola, SessioneUtente, StatoPrenotazione,
-    UbicazioneRisorsa, CategoriaDispositivo, TemplateNotifica, CaricamentoFile
+    Risorsa as Resource, Dispositivo as Device, Prenotazione as Booking, ConfigurazioneSistema,
+    ProfiloUtente, InformazioniScuola, SessioneUtente as UserSession, StatoPrenotazione as BookingStatus,
+    UbicazioneRisorsa as ResourceLocation, CategoriaDispositivo as DeviceCategory, TemplateNotifica as NotificationTemplate, CaricamentoFile as FileUpload
 )
 
 User = get_user_model()
@@ -95,34 +95,34 @@ class SchoolInfoForm(forms.ModelForm):
 
 class UserProfileForm(forms.ModelForm):
     """Form per profilo utente esteso."""
-    
+
     class Meta:
         model = ProfiloUtente
         fields = [
-            'nome', 'cognome', 'sesso', 'data_nascita', 'codice_fiscale',
-            'telefono', 'email_personale', 'numero_matricola', 'classe',
-            'dipartimento', 'materia_insegnamento', 'preferenze_notifica',
-            'preferenze_lingua', 'fuso_orario'
+            'nome_utente', 'cognome_utente', 'sesso_utente', 'data_nascita_utente', 'codice_fiscale_utente',
+            'telefono_utente', 'email_personale_utente', 'numero_matricola_utente', 'classe_utente',
+            'dipartimento_utente', 'materia_insegnamento_utente', 'preferenze_notifica_utente',
+            'preferenze_lingua_utente', 'fuso_orario_utente'
         ]
         widgets = {
-            'nome': forms.TextInput(attrs={'class': 'form-control'}),
-            'cognome': forms.TextInput(attrs={'class': 'form-control'}),
-            'sesso': forms.Select(attrs={'class': 'form-select'}),
-            'data_nascita': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'codice_fiscale': forms.TextInput(attrs={'class': 'form-control'}),
-            'telefono': forms.TextInput(attrs={'class': 'form-control'}),
-            'email_personale': forms.EmailInput(attrs={'class': 'form-control'}),
-            'numero_matricola': forms.TextInput(attrs={'class': 'form-control'}),
-            'classe': forms.TextInput(attrs={'class': 'form-control'}),
-            'dipartimento': forms.TextInput(attrs={'class': 'form-control'}),
-            'materia_insegnamento': forms.TextInput(attrs={'class': 'form-control'}),
-            'preferenze_notifica': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'preferenze_lingua': forms.Select(attrs={'class': 'form-select'}),
-            'fuso_orario': forms.TextInput(attrs={'class': 'form-control'}),
+            'nome_utente': forms.TextInput(attrs={'class': 'form-control'}),
+            'cognome_utente': forms.TextInput(attrs={'class': 'form-control'}),
+            'sesso_utente': forms.Select(attrs={'class': 'form-select'}),
+            'data_nascita_utente': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'codice_fiscale_utente': forms.TextInput(attrs={'class': 'form-control'}),
+            'telefono_utente': forms.TextInput(attrs={'class': 'form-control'}),
+            'email_personale_utente': forms.EmailInput(attrs={'class': 'form-control'}),
+            'numero_matricola_utente': forms.TextInput(attrs={'class': 'form-control'}),
+            'classe_utente': forms.TextInput(attrs={'class': 'form-control'}),
+            'dipartimento_utente': forms.TextInput(attrs={'class': 'form-control'}),
+            'materia_insegnamento_utente': forms.TextInput(attrs={'class': 'form-control'}),
+            'preferenze_notifica_utente': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'preferenze_lingua_utente': forms.Select(attrs={'class': 'form-select'}),
+            'fuso_orario_utente': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
-    def clean_codice_fiscale(self):
-        cf = self.cleaned_data['codice_fiscale'].upper()
+    def clean_codice_fiscale_utente(self):
+        cf = self.cleaned_data['codice_fiscale_utente'].upper()
         if cf and len(cf) != 16:
             raise ValidationError("Il codice fiscale deve essere di 16 caratteri.")
         return cf
