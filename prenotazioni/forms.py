@@ -97,7 +97,7 @@ class UserProfileForm(forms.ModelForm):
     """Form per profilo utente esteso."""
     
     class Meta:
-        model = UserProfile
+        model = ProfiloUtente
         fields = [
             'nome', 'cognome', 'sesso', 'data_nascita', 'codice_fiscale',
             'telefono', 'email_personale', 'numero_matricola', 'classe',
