@@ -12,7 +12,7 @@ Ristrutturazione completa del database con miglioramenti architetturali:
 """
 
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, User
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 import uuid
@@ -219,7 +219,7 @@ class UserProfile(models.Model):
     
     # Relazione 1:1 con User
     user = models.OneToOneField(
-        'prenotazioni.Utente',
+        User,
         on_delete=models.CASCADE,
         related_name='profile'
     )
@@ -342,94 +342,8 @@ class UserProfile(models.Model):
         return None
 
 
-class Utente(AbstractUser):
-    """
-    Utente esteso del sistema.
-    
-    Mantiene compatibilità con Django auth aggiungendo ruoli e funzionalità.
-    """
-    RUOLI = [
-        ('studente', 'Studente'),
-        ('docente', 'Docente'),
-        ('assistente', 'Assistente Tecnico'),
-        ('coordinatore', 'Coordinatore'),
-        ('amministrativo', 'Personale Amministrativo'),
-        ('admin', 'Amministratore'),
-    ]
-    
-    ruolo = models.CharField(
-        max_length=20,
-        choices=RUOLI,
-        default='studente',
-        verbose_name='Ruolo',
-        help_text='Ruolo principale nel sistema scolastico'
-    )
-    
-    # Campo email deve essere unico
-    email = models.EmailField(unique=True)
-    
-    # Stato account
-    email_verificato = models.BooleanField(default=False)
-    telefono_verificato = models.BooleanField(default=False)
-    account_attivo = models.BooleanField(default=True)
-    
-    # Gestione PIN e sessioni
-    pin_tentativi = models.PositiveIntegerField(default=0)
-    ultimo_pin_tentativo = models.DateTimeField(null=True, blank=True)
-    pin_bloccato_fino = models.DateTimeField(null=True, blank=True)
-    
-    # Audit
-    ultimo_login_ip = models.GenericIPAddressField(null=True, blank=True)
-    data_creazione = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        verbose_name = 'Utente'
-        verbose_name_plural = 'Utenti'
-        indexes = [
-            models.Index(fields=['ruolo']),
-            models.Index(fields=['email_verificato']),
-            models.Index(fields=['account_attivo']),
-        ]
-    
-    def __str__(self):
-        return self.username
-    
-    def is_docente(self):
-        return self.ruolo == 'docente'
-    
-    def is_studente(self):
-        return self.ruolo == 'studente'
-    
-    def is_assistente(self):
-        return self.ruolo == 'assistente'
-    
-    def is_coordinatore(self):
-        return self.ruolo == 'coordinatore'
-    
-    def is_amministrativo(self):
-        return self.ruolo == 'amministrativo'
-    
-    def is_admin(self):
-        return self.ruolo == 'admin'
-    
-    def can_book(self):
-        """Verifica se l'utente può effettuare prenotazioni."""
-        return self.account_attivo and self.email_verificato and self.is_authenticated
-    
-    def is_blocked(self):
-        """Verifica se l'account è temporaneamente bloccato."""
-        if self.pin_bloccato_fino:
-            return timezone.now() < self.pin_bloccato_fino
-        return False
-    
-    def increment_pin_attempts(self):
-        """Incrementa i tentativi PIN e applica blocco se necessario."""
-        self.pin_tentativi += 1
-        if self.pin_tentativi >= 5:  # Massimo 5 tentativi
-            from django.utils import timezone as tz
-            self.pin_bloccato_fino = tz.now() + timezone.timedelta(hours=1)
-        self.ultimo_pin_tentativo = timezone.now()
-        self.save()
+# Nota: Rimuovendo il modello custom Utente per usare auth.User standard
+# Tutti i campi aggiuntivi (ruolo, email_verificato, etc.) vengono spostati nel UserProfile
 
 
 # =====================================================

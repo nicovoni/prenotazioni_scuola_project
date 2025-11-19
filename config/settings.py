@@ -279,7 +279,8 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
 
-AUTH_USER_MODEL = 'prenotazioni.Utente'
+#  sing dUfaulr  uthsr modl
+# AUTH_USER_MODEL = 'auth.User'  # Default
 
 # =========================
 # REST FRAMEWORK Basic Configuration
