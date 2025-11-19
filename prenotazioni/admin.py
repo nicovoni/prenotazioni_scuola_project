@@ -139,10 +139,16 @@ class AmministrazioneUbicazioneRisorsa(admin.ModelAdmin):
 class AmministrazioneDispositivo(admin.ModelAdmin):
     """Admin per dispositivi."""
 
-    list_display = ('display_name', 'tipo', 'categoria', 'stato', 'edificio', 'attivo')
+    list_display = ('nome', 'tipo', 'categoria', 'stato', 'disponibile', 'edificio', 'attivo')
     list_filter = ('tipo', 'stato', 'categoria', 'attivo', 'data_acquisto')
     search_fields = ('nome', 'marca', 'modello', 'serie', 'codice_inventario')
-    readonly_fields = ('creato_il', 'modificato_il', 'display_name', 'is_available', 'needs_maintenance')
+    readonly_fields = ('creato_il', 'modificato_il', 'disponibile')
+
+    def disponibile(self, obj):
+        """Mostra se il dispositivo è disponibile."""
+        return obj.is_available()
+    disponibile.boolean = True
+    disponibile.short_description = 'Disponibile'
 
 
 # =====================================================
@@ -156,7 +162,7 @@ class AmministrazioneRisorsa(admin.ModelAdmin):
     list_display = ('nome', 'codice', 'tipo', 'localizzazione', 'capacita_massima', 'attivo')
     list_filter = ('tipo', 'categoria', 'attivo', 'manutenzione', 'feriali_disponibile', 'weekend_disponibile')
     search_fields = ('nome', 'codice', 'descrizione')
-    readonly_fields = ('creato_il', 'modificato_il', 'is_laboratorio', 'is_carrello', 'is_aula', 'is_available_for_booking')
+    readonly_fields = ('creato_il', 'modificato_il')
 
     filter_horizontal = ('dispositivi',)
 
@@ -177,21 +183,121 @@ class AmministrazioneStatoPrenotazione(admin.ModelAdmin):
 
 @admin.register(Prenotazione)
 class AmministrazionePrenotazione(admin.ModelAdmin):
-    """Admin per prenotazioni."""
+    """Admin per prenotazioni - Controllo MINUZIOSO e completo."""
 
-    list_display = ('utente', 'risorsa', 'stato', 'quantita', 'inizio', 'fine', 'priorita')
-    list_filter = ('stato', 'priorita', 'setup_needed', 'cleanup_needed', 'inizio', 'fine')
-    search_fields = ('utente__username', 'utente__email', 'risorsa__nome', 'scopo')
-    readonly_fields = ('creato_il', 'modificato_il')
+    list_display = ('utente', 'risorsa', 'stato', 'quantita', 'inizio', 'fine', 'priorita', 'durata_ore', 'stato_temporale', 'con_approvazione', 'modificabile', 'dispositivi_richiesti')
+    list_filter = ('stato', 'priorita', 'setup_needed', 'cleanup_needed', 'inizio', 'fine', 'approvazione_richiesta')
+    search_fields = ('utente__username', 'utente__email', 'risorsa__nome', 'scopo', 'dispositivi_selezionati__nome')
+    readonly_fields = ('creato_il', 'modificato_il', 'durata_minuti', 'durata_ore', 'stato_temporale', 'con_approvazione', 'modificabile', 'cancellabile', 'conflitti', 'dispositivi_richiesti', 'data_approvazione')
 
     filter_horizontal = ('dispositivi_selezionati',)
 
+    # Filtri avanzati per controllo minuzioso
+    list_filter = (
+        'stato',
+        'priorita',
+        'setup_needed',
+        'cleanup_needed',
+        'approvazione_richiesta',
+        ('risorsa', admin.RelatedOnlyFieldListFilter),
+        ('inizio', admin.DateFieldListFilter),
+        ('fine', admin.DateFieldListFilter),
+    )
+
+    def durata_minuti(self, obj):
+        """Mostra durata in minuti."""
+        return obj.durata_minuti if hasattr(obj, 'durata_minuti') else 0
+    durata_minuti.short_description = 'Durata (minuti)'
+
+    def durata_ore(self, obj):
+        """Mostra durata in ore."""
+        return obj.durata_ore if hasattr(obj, 'durata_ore') else 0
+    durata_ore.short_description = 'Durata (ore)'
+
+    def stato_temporale(self, obj):
+        """Mostra stato temporale della prenotazione."""
+        if hasattr(obj, 'is_passata') and hasattr(obj, 'is_in_corso'):
+            if obj.is_passata():
+                return "Passata"
+            elif obj.is_in_corso():
+                return "In Corso"
+            else:
+                return "Futura"
+        return "Sconosciuto"
+    stato_temporale.short_description = 'Stato Temporale'
+
+    def con_approvazione(self, obj):
+        """Mostra se la prenotazione richiede/è stata approvata."""
+        if obj.approvazione_richiesta:
+            if obj.data_approvazione:
+                return f"Approvata ({obj.approvato_da})" if obj.approvato_da else "Approvata"
+            else:
+                return "Da Approvare"
+        return "Auto-Approvata"
+    con_approvazione.short_description = 'Approvazione'
+    con_approvazione.admin_order_field = 'approvazione_richiesta'
+
+    def modificabile(self, obj):
+        """Verifica se la prenotazione può essere modificata."""
+        # Logica di controllo minuziosa
+        if hasattr(obj, 'is_passata') and obj.is_passata():
+            return "No - Passata"
+        if obj.stato and obj.stato.nome == 'cancelled':
+            return "No - Cancellata"
+        return "Sì"
+    modificabile.short_description = 'Modificabile'
+
+    def cancellabile(self, obj):
+        """Verifica se la prenotazione può essere cancellata."""
+        if hasattr(obj, 'is_passata') and obj.is_passata():
+            return "No - Passata"
+        if obj.stato and obj.stato.nome == 'cancelled':
+            return "Già Cancellata"
+        return "Sì"
+    cancellabile.short_description = 'Cancellabile'
+
+    def conflitti(self, obj):
+        """Rileva possibili conflitti di prenotazione."""
+        # Controllo semplificato di sovrapposizioni
+        conflitti_count = Prenotazione.objects.filter(
+            risorsa=obj.risorsa,
+            inizio__lt=obj.fine,
+            fine__gt=obj.inizio
+        ).exclude(pk=obj.pk).count()
+
+        if conflitti_count > 0:
+            return f"⚠️ {conflitti_count} conflitti"
+        return "✅ Nessun conflitto"
+    conflitti.short_description = 'Conflitti'
+
+    def dispositivi_richiesti(self, obj):
+        """Mostra i dispositivi richiesti per questa prenotazione."""
+        dispositivi = obj.dispositivi_selezionati.all()
+        if dispositivi:
+            return ", ".join([d.nome for d in dispositivi[:3]]) + (f" +{dispositivi.count()-3}" if dispositivi.count() > 3 else "")
+        return "Nessuno"
+    dispositivi_richiesti.short_description = 'Dispositivi'
+
+    def get_queryset(self, request):
+        """Ottimizza le query per controlli minuziosi."""
+        return super().get_queryset(request).select_related(
+            'utente', 'risorsa', 'stato', 'approvato_da'
+        ).prefetch_related('dispositivi_selezionati')
+
     def get_readonly_fields(self, request, obj=None):
-        """Campi readonly per prenotazioni passate."""
-        readonly = self.readonly_fields
-        if obj and obj.is_passata():
-            readonly += ('inizio', 'fine', 'stato')
-        return readonly
+        """Campi readonly basati su logica minuziosa."""
+        readonly = list(self.readonly_fields)
+
+        if obj:
+            # Prenotazioni passate diventano in sola lettura completamente
+            if hasattr(obj, 'is_passata') and obj.is_passata():
+                readonly.extend(['inizio', 'fine', 'stato', 'quantita'])
+
+            # Prenotazioni cancellate bloccano le modifiche
+            if obj.stato and obj.stato.nome == 'cancelled':
+                readonly.extend(['inizio', 'fine', 'quantita'])
+
+        return tuple(readonly)
 
 
 # =====================================================
@@ -231,7 +337,6 @@ class AmministrazioneTemplateNotifica(admin.ModelAdmin):
     readonly_fields = ('creato_il', 'modificato_il')
 
 
-# Fix the import - NotificaUtente is not the model name, let's check what it actually is
 @admin.register(NotificaUtente)
 class AmministrazioneNotifica(admin.ModelAdmin):
     """Admin per notifiche."""
@@ -254,13 +359,10 @@ class AmministrazioneNotifica(admin.ModelAdmin):
 class AmministrazioneCaricamentoFile(admin.ModelAdmin):
     """Admin per file caricati."""
 
-    list_display = ('nome_originale', 'tipo_file', 'dimensione_formattata', 'caricato_da', 'pubblico', 'creato_il')
+    list_display = ('nome_originale', 'tipo_file', 'dimensione', 'caricato_da', 'pubblico', 'creato_il')
     list_filter = ('tipo_file', 'pubblico', 'attivo', 'virus_scanned', 'creato_il')
     search_fields = ('nome_originale', 'titolo', 'descrizione')
     readonly_fields = ('creato_il', 'modificato_il')
-
-    def dimensione_formattata(self, obj):
-        return obj.dimensione_formattata
 
 
 # =====================================================
