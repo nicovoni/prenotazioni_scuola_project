@@ -8,11 +8,15 @@ from django import forms
 from django.utils import timezone
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
+
 from .models import (
-    Utente, Resource, Device, SchoolInfo, Booking, Configuration,
-    UserProfile, ResourceLocation, DeviceCategory, BookingStatus,
-    UserSession, NotificationTemplate, FileUpload
+    Risorsa, Dispositivo, Prenotazione, ConfigurazioneSistema,
+    ProfiloUtente, InformazioniScuola, SessioneUtente, StatoPrenotazione,
+    UbicazioneRisorsa, CategoriaDispositivo, TemplateNotifica, CaricamentoFile
 )
+
+User = get_user_model()
 
 
 # =====================================================
@@ -21,9 +25,9 @@ from .models import (
 
 class ConfigurationForm(forms.ModelForm):
     """Form per gestire configurazioni di sistema."""
-    
+
     class Meta:
-        model = Configuration
+        model = ConfigurazioneSistema
         fields = ['chiave', 'valore', 'tipo', 'descrizione', 'modificabile']
         widgets = {
             'chiave': forms.TextInput(attrs={'class': 'form-control'}),
@@ -126,19 +130,18 @@ class UserProfileForm(forms.ModelForm):
 
 class UtenteForm(forms.ModelForm):
     """Form per utente di sistema."""
-    
+
     password_confirm = forms.CharField(
         widget=forms.PasswordInput(attrs={'class': 'form-control'}),
         label='Conferma Password'
     )
-    
+
     class Meta:
-        model = Utente
-        fields = ['username', 'email', 'ruolo', 'first_name', 'last_name']
+        model = User
+        fields = ['username', 'email', 'first_name', 'last_name']
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
-            'ruolo': forms.Select(attrs={'class': 'form-select'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
         }

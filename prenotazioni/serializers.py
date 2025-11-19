@@ -8,12 +8,10 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import (
-    Utente, Resource, Device, Booking, Configuration, UserSession,
-    SystemLog, NotificationTemplate, Notification, UserProfile,
-    ResourceLocation, DeviceCategory, BookingStatus, FileUpload, SchoolInfo
+    Risorsa, Dispositivo, Prenotazione, ConfigurazioneSistema, SessioneUtente,
+    LogSistema, TemplateNotifica, NotificaUtente, ProfiloUtente,
+    UbicazioneRisorsa, CategoriaDispositivo, StatoPrenotazione, CaricamentoFile, InformazioniScuola
 )
-
-Utente = get_user_model()
 
 
 # =====================================================
