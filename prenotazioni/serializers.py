@@ -515,22 +515,22 @@ class SystemHealthSerializer(serializers.Serializer):
 # NESTED SERIALIZERS PER API AVANZATE
 # =====================================================
 
-class BookingWithDetailsSerializer(BookingSerializer):
+class BookingWithDetailsSerializer(PrenotazioneSerializer):
     """Serializer esteso per prenotazioni con dettagli."""
-    
-    resource_details = ResourceSerializer(source='risorsa', read_only=True)
+
+    resource_details = RisorsaSerializer(source='risorsa', read_only=True)
     user_details = UtenteSerializer(source='utente', read_only=True)
     related_notifications = serializers.SerializerMethodField()
-    
-    class Meta(BookingSerializer.Meta):
-        fields = BookingSerializer.Meta.fields + [
+
+    class Meta(PrenotazioneSerializer.Meta):
+        fields = PrenotazioneSerializer.Meta.fields + [
             'resource_details', 'user_details', 'related_notifications'
         ]
-    
+
     def get_related_notifications(self, obj):
         """Notifiche correlate alla prenotazione."""
-        notifications = obj.notification_set.all()[:5]
-        return NotificationSerializer(notifications, many=True, context=self.context).data
+        notifications = obj.notificautente_set.all()[:5]  # Changed from notification_set to notificautente_set
+        return NotificaUtenteSerializer(notifications, many=True, context=self.context).data
 
 
 class UserWithStatsSerializer(UtenteSerializer):

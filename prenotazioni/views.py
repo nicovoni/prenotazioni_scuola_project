@@ -62,7 +62,7 @@ class HomeView(LoginRequiredMixin, View):
         if user.is_admin():
             # Dashboard admin
             stats = SystemService.get_system_stats()
-            recent_bookings = Booking.objects.filter(
+            recent_bookings = Prenotazione.objects.filter(
                 cancellato_il__isnull=True
             ).select_related('utente', 'risorsa', 'stato').order_by('-inizio')[:10]
             recent_logs = SystemLog.objects.order_by('-timestamp')[:20]
@@ -76,7 +76,7 @@ class HomeView(LoginRequiredMixin, View):
             
         elif user.is_docente() or user.is_studente():
             # Dashboard utente normale
-            my_bookings = Booking.objects.filter(
+            my_bookings = Prenotazione.objects.filter(
                 utente=user,
                 cancellato_il__isnull=True
             ).select_related('risorsa', 'stato').order_by('-inizio')[:5]
@@ -104,7 +104,7 @@ def health_check(request):
     """Endpoint health check per monitoring."""
     try:
         # Test database connection
-        Booking.objects.count()
+        Prenotazione.objects.count()
         
         # Test configuration
         config_status = ConfigurationService.get_config('SYSTEM_VERSION', 'unknown')
@@ -746,8 +746,8 @@ class DeviceListView(LoginRequiredMixin, View):
 
 class BookingViewSet(viewsets.ModelViewSet):
     """API REST per prenotazioni."""
-    queryset = Booking.objects.all().select_related('utente', 'risorsa', 'stato')
-    serializer_class = BookingSerializer
+    queryset = Prenotazione.objects.all().select_related('utente', 'risorsa', 'stato')
+    serializer_class = PrenotazioneSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['utente', 'risorsa', 'stato', 'inizio', 'fine']
@@ -757,9 +757,9 @@ class BookingViewSet(viewsets.ModelViewSet):
         """Filtra prenotazioni per utente."""
         user = self.request.user
         if user.is_admin():
-            return Booking.objects.all().select_related('utente', 'risorsa', 'stato')
+            return Prenotazione.objects.all().select_related('utente', 'risorsa', 'stato')
         else:
-            return Booking.objects.filter(utente=user).select_related('utente', 'risorsa', 'stato')
+            return Prenotazione.objects.filter(utente=user).select_related('utente', 'risorsa', 'stato')
     
     def perform_create(self, serializer):
         """Crea prenotazione associandola all'utente."""
