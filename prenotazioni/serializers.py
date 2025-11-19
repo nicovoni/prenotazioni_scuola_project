@@ -7,11 +7,14 @@ Supportano la nuova struttura database con tutti i campi aggiornati.
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+
 from .models import (
     Risorsa, Dispositivo, Prenotazione, ConfigurazioneSistema, SessioneUtente,
     LogSistema, TemplateNotifica, NotificaUtente, ProfiloUtente,
     UbicazioneRisorsa, CategoriaDispositivo, StatoPrenotazione, CaricamentoFile, InformazioniScuola
 )
+
+User = get_user_model()
 
 
 # =====================================================

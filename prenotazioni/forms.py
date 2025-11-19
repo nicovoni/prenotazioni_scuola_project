@@ -28,24 +28,24 @@ class ConfigurationForm(forms.ModelForm):
 
     class Meta:
         model = ConfigurazioneSistema
-        fields = ['chiave', 'valore', 'tipo', 'descrizione', 'modificabile']
+        fields = ['chiave_configurazione', 'valore_configurazione', 'tipo_configurazione', 'descrizione_configurazione', 'configurazione_modificabile']
         widgets = {
-            'chiave': forms.TextInput(attrs={'class': 'form-control'}),
-            'valore': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'tipo': forms.Select(attrs={'class': 'form-select'}),
-            'descrizione': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-            'modificabile': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'chiave_configurazione': forms.TextInput(attrs={'class': 'form-control'}),
+            'valore_configurazione': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'tipo_configurazione': forms.Select(attrs={'class': 'form-select'}),
+            'descrizione_configurazione': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'configurazione_modificabile': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         labels = {
-            'chiave': 'Chiave',
-            'valore': 'Valore',
-            'tipo': 'Tipo',
-            'descrizione': 'Descrizione',
-            'modificabile': 'Modificabile',
+            'chiave_configurazione': 'Chiave',
+            'valore_configurazione': 'Valore',
+            'tipo_configurazione': 'Tipo',
+            'descrizione_configurazione': 'Descrizione',
+            'configurazione_modificabile': 'Modificabile',
         }
 
-    def clean_chiave(self):
-        chiave = self.cleaned_data['chiave'].upper()
+    def clean_chiave_configurazione(self):
+        chiave = self.cleaned_data['chiave_configurazione'].upper()
         # Validazione formato chiave (solo lettere, numeri, underscore)
         if not chiave.replace('_', '').isalnum():
             raise ValidationError("La chiave può contenere solo lettere, numeri e underscore.")
@@ -56,7 +56,7 @@ class SchoolInfoForm(forms.ModelForm):
     """Form per informazioni complete della scuola."""
     
     class Meta:
-        model = SchoolInfo
+        model = InformazioniScuola
         fields = [
             'nome_completo', 'nome_breve', 'codice_meccanografico', 'partita_iva',
             'sito_web', 'email_istituzionale', 'telefono', 'fax',
