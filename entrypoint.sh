@@ -7,6 +7,7 @@ echo "🔧 Starting Django application..."
 # Database migration (runs silently, optimized migration handles all tables)
 echo "📊 Running database migrations..."
 python manage.py migrate --fake auth --settings=config.settings
+python manage.py migrate --fake prenotazioni --settings=config.settings
 python manage.py migrate --noinput --settings=config.settings
 
 # Create initial data if needed
