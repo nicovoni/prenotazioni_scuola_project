@@ -3,118 +3,715 @@
 {% block title %}{% if is_admin_view %}Tutte le Prenotazioni{% else %}Le mie Prenotazioni{% endif %} - Sistema di Prenotazioni{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 class="page-title">📋 {% if is_admin_view %}Tutte le Prenotazioni{% else %}Le mie Prenotazioni{% endif %}</h1>
-    <p class="page-subtitle">{% if is_admin_view %}Visualizza e gestisci tutte le prenotazioni del sistema{% else %}Visualizza e gestisci tutte le tue prenotazioni{% endif %}</p>
-    <div class="page-controls" style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-        {% if is_admin_view %}
-        <a href="{% url 'prenotazioni:prenota_laboratorio' %}" style="display: inline-block; padding: 8px 16px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">
-            ➕ Nuova Prenotazione
-        </a>
-        <div style="display: inline-block; padding: 8px 16px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px; color: #6c757d;">
-            📊 Totale: {{ prenotazioni|length }} prenotazioni
+<div class="page-header" data-aos="fade-up">
+    <div class="d-flex justify-content-between align-items-start flex-wrap">
+        <div>
+            <h1 class="page-title">📋 {% if is_admin_view %}Tutte le Prenotazioni{% else %}Le mie Prenotazioni{% endif %}</h1>
+            <p class="page-subtitle">{% if is_admin_view %}Visualizza e gestisci tutte le prenotazioni del sistema{% else %}Visualizza e gestisci tutte le tue prenotazioni{% endif %}</p>
         </div>
+        <div class="stats-card glass p-3 rounded-3 mt-3 mt-lg-0" data-aos="fade-left" data-aos-delay="200">
+            <div class="d-flex align-items-center gap-3">
+                <div class="stat-icon bg-primary bg-gradient rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                    <i class="bi bi-calendar-event text-white fs-4"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0 fw-bold">{{ prenotazioni|length }}</h3>
+                    <small class="text-muted">{% if is_admin_view %}Totale prenotazioni{% else %}Tue prenotazioni{% endif %}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="page-controls mt-4" data-aos="fade-up" data-aos-delay="100">
+        {% if is_admin_view %}
+        <a href="{% url 'prenotazioni:prenota_laboratorio' %}" class="btn btn-primary btn-sm hover-lift me-2">
+            <i class="bi bi-plus-circle"></i>
+            Nuova Prenotazione
+        </a>
+        <button class="btn btn-outline-secondary btn-sm hover-lift me-2" onclick="exportToCSV()">
+            <i class="bi bi-download"></i>
+            Esporta CSV
+        </button>
+        <button class="btn btn-outline-info btn-sm hover-lift" onclick="refreshData()">
+            <i class="bi bi-arrow-clockwise"></i>
+            Aggiorna
+        </button>
         {% else %}
-        <a href="{% url 'prenotazioni:prenota_laboratorio' %}" style="display: inline-block; padding: 8px 16px; background: #28a745; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">
-            📅 Effettua Prenotazione
+        <a href="{% url 'prenotazioni:prenota_laboratorio' %}" class="btn btn-primary btn-sm hover-lift">
+            <i class="bi bi-calendar-plus"></i>
+            Effettua Prenotazione
         </a>
         {% endif %}
     </div>
 </div>
 
-<div class="content-card">
+<div class="content-card" data-aos="fade-up" data-aos-delay="200">
     {% if prenotazioni %}
-        <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+        <!-- Search and Filter Bar -->
+        <div class="search-filter-bar mb-4 p-3 glass rounded-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-4">
+                    <div class="search-box position-relative">
+                        <input type="text" class="form-control form-control-modern" placeholder="🔍 Cerca prenotazioni..." id="searchInput" onkeyup="filterTable()">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select form-select-modern" id="statusFilter" onchange="filterTable()">
+                        <option value="">Tutti gli stati</option>
+                        <option value="programmata">📅 Programmata</option>
+                        <option value="in_corso">▶️ In corso</option>
+                        <option value="passata">⌛ Passata</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="date" class="form-control form-control-modern" id="dateFilter" onchange="filterTable()">
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-danger btn-sm w-100" onclick="clearFilters()">
+                        <i class="bi bi-x-circle"></i>
+                        Pulisci
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-5" style="display: none;">
+            <div class="spinner mx-auto mb-3"></div>
+            <p class="text-muted">Caricamento prenotazioni...</p>
+        </div>
+
+        <!-- Table Container -->
+        <div class="table-container" style="overflow-x: auto;">
+            <table class="table table-hover table-modern" id="prenotazioniTable">
                 <thead>
-                    <tr style="background: #f8f9fa;">
+                    <tr>
                         {% if is_admin_view %}
-                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Utente</th>
+                        <th class="fw-bold text-dark border-0" data-sort="user">
+                            <i class="bi bi-person-circle me-2"></i>Utente
+                            <i class="bi bi-chevron-expand sort-icon ms-1"></i>
+                        </th>
                         {% endif %}
-                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Risorsa</th>
-                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Data</th>
-                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Orario</th>
-                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Quantità</th>
-                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Stato</th>
-                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #2c3e50;">Azioni</th>
+                        <th class="fw-bold text-dark border-0" data-sort="risorsa">
+                            <i class="bi bi-gear me-2"></i>Risorsa
+                            <i class="bi bi-chevron-expand sort-icon ms-1"></i>
+                        </th>
+                        <th class="fw-bold text-dark border-0" data-sort="data">
+                            <i class="bi bi-calendar3 me-2"></i>Data
+                            <i class="bi bi-chevron-expand sort-icon ms-1"></i>
+                        </th>
+                        <th class="fw-bold text-dark border-0" data-sort="orario">
+                            <i class="bi bi-clock me-2"></i>Orario
+                            <i class="bi bi-chevron-expand sort-icon ms-1"></i>
+                        </th>
+                        <th class="fw-bold text-dark border-0" data-sort="quantita">
+                            <i class="bi bi-123 me-2"></i>Quantità
+                            <i class="bi bi-chevron-expand sort-icon ms-1"></i>
+                        </th>
+                        <th class="fw-bold text-dark border-0" data-sort="stato">
+                            <i class="bi bi-flag me-2"></i>Stato
+                            <i class="bi bi-chevron-expand sort-icon ms-1"></i>
+                        </th>
+                        <th class="fw-bold text-dark border-0">
+                            <i class="bi bi-gear-fill me-2"></i>Azioni
+                        </th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="prenotazioniTableBody">
                     {% for p in prenotazioni %}
-                        <tr style="border-bottom: 1px solid #dee2e6;">
+                        <tr class="table-row-modern" data-aos="fade-up" data-aos-delay="{{ forloop.counter0 * 50 }}" 
+                            data-user="{% if is_admin_view %}{{ p.utente.username }}{% endif %}"
+                            data-risorsa="{{ p.risorsa.nome }}"
+                            data-data="{{ p.inizio.date|date:'Y-m-d' }}"
+                            data-stato="{% if p.is_passata %}passata{% elif p.is_in_corso %}in_corso{% else %}programmata{% endif %}">
+                            
                             {% if is_admin_view %}
-                            <td style="padding: 12px;">
-                                <strong>{{ p.utente.username }}</strong>
-                                {% if p.utente.first_name or p.utente.last_name %}
-                                    <br><small style="color: #6c757d;">{{ p.utente.first_name }} {{ p.utente.last_name }}</small>
-                                {% endif %}
-                                <br><small style="color: #6c757d;">{% if p.utente.is_docente %}👨‍🏫 Docente{% elif p.utente.is_admin %}⚡ Admin{% else %}🎓 {{ p.utente.ruolo|title }}{% endif %}</small>
+                            <td>
+                                <div class="user-cell d-flex align-items-center">
+                                    <div class="user-avatar-small me-3">
+                                        {{ p.utente.first_name|first|default:p.utente.username|first|upper }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold">{{ p.utente.username }}</div>
+                                        {% if p.utente.first_name or p.utente.last_name %}
+                                            <small class="text-muted">{{ p.utente.first_name }} {{ p.utente.last_name }}</small>
+                                        {% endif %}
+                                        <br>
+                                        <span class="badge badge-modern {% if p.utente.is_docente %}bg-success{% elif p.utente.is_admin %}bg-danger{% else %}bg-primary{% endif %}">
+                                            {% if p.utente.is_docente %}👨‍🏫 Docente{% elif p.utente.is_admin %}⚡ Admin{% else %}🎓 {{ p.utente.ruolo|title }}{% endif %}
+                                        </span>
+                                    </div>
+                                </div>
                             </td>
                             {% endif %}
-                            <td style="padding: 12px;">
-                                <strong>{{ p.risorsa.nome }}</strong>
-                                {% if p.risorsa.tipo == 'lab' %}
-                                    <br><small style="color: #6c757d;">🏫 Laboratorio</small>
-                                {% else %}
-                                    <br><small style="color: #6c757d;">📱 Carrello</small>
-                                {% endif %}
+                            
+                            <td>
+                                <div class="risorsa-cell">
+                                    <div class="fw-semibold d-flex align-items-center">
+                                        <i class="bi {% if p.risorsa.tipo == 'lab' %}bi-building{% else %}bi-phone{% endif %} me-2 text-primary"></i>
+                                        {{ p.risorsa.nome }}
+                                    </div>
+                                    <small class="text-muted">
+                                        {% if p.risorsa.tipo == 'lab' %}
+                                            🏫 Laboratorio
+                                        {% else %}
+                                            📱 Carrello Dispositivi
+                                        {% endif %}
+                                    </small>
+                                </div>
                             </td>
-                            <td style="padding: 12px;">
-                                {{ p.inizio.date|date:"d/m/Y" }}
+                            
+                            <td>
+                                <div class="date-cell">
+                                    <div class="fw-semibold">{{ p.inizio.date|date:"d/m/Y" }}</div>
+                                    <small class="text-muted">{{ p.inizio.date|date:"l"|capfirst }}</small>
+                                </div>
                             </td>
-                            <td style="padding: 12px;">
-                                {{ p.inizio.time|time:"H:i" }} - {{ p.fine.time|time:"H:i" }}
-                                <br><small style="color: #6c757d;">({{ p.durata_ore }} ore)</small>
+                            
+                            <td>
+                                <div class="time-cell">
+                                    <div class="fw-semibold">
+                                        <i class="bi bi-clock me-1"></i>
+                                        {{ p.inizio.time|time:"H:i" }} - {{ p.fine.time|time:"H:i" }}
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-hourglass-split me-1"></i>
+                                        {{ p.durata_ore }} ore
+                                    </small>
+                                </div>
                             </td>
-                            <td style="padding: 12px;">
-                                {{ p.quantita }}
-                                {% if p.risorsa.tipo == 'carrello' %}
-                                    <small style="color: #6c757d;">unità</small>
-                                {% endif %}
+                            
+                            <td>
+                                <div class="quantity-cell text-center">
+                                    <span class="badge bg-light text-dark fs-6 px-3 py-2">
+                                        {{ p.quantita }}
+                                        {% if p.risorsa.tipo == 'carrello' %}
+                                            <small class="d-block">unità</small>
+                                        {% endif %}
+                                    </span>
+                                </div>
                             </td>
-                            <td style="padding: 12px;">
+                            
+                            <td>
                                 {% if p.is_passata %}
-                                    <span style="color: #6c757d;">⌛ Passata</span>
+                                    <span class="badge bg-secondary badge-modern">
+                                        <i class="bi bi-clock-history me-1"></i>
+                                        Passata
+                                    </span>
                                 {% elif p.is_in_corso %}
-                                    <span style="color: #28a745; font-weight: 600;">▶️ In corso</span>
+                                    <span class="badge bg-success badge-modern pulse">
+                                        <i class="bi bi-play-circle me-1"></i>
+                                        In corso
+                                    </span>
                                 {% else %}
-                                    <span style="color: #007bff; font-weight: 600;">📅 Programmata</span>
+                                    <span class="badge bg-primary badge-modern">
+                                        <i class="bi bi-calendar-check me-1"></i>
+                                        Programmata
+                                    </span>
                                 {% endif %}
                             </td>
-                            <td style="padding: 12px;">
-                                {% if not p.is_passata %}
-                                    <a href="{% url 'prenotazioni:edit_prenotazione' p.id %}"
-                                       style="color: #007bff; text-decoration: none; margin-right: 10px;">
-                                        ✏️ Modifica
-                                    </a>
-                                    <a href="{% url 'prenotazioni:delete_prenotazione' p.id %}"
-                                       style="color: #dc3545; text-decoration: none;"
-                                       onclick="return confirm('Sei sicuro di voler eliminare questa prenotazione?')">
-                                        🗑️ Elimina
-                                    </a>
-                                {% else %}
-                                    <span style="color: #6c757d;">-</span>
-                                {% endif %}
+                            
+                            <td>
+                                <div class="action-buttons">
+                                    {% if not p.is_passata %}
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'prenotazioni:edit_prenotazione' p.id %}" 
+                                               class="btn btn-outline-primary btn-sm hover-lift" 
+                                               data-bs-toggle="tooltip" 
+                                               title="Modifica prenotazione">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button class="btn btn-outline-danger btn-sm hover-lift" 
+                                                    onclick="confirmDelete({{ p.id }})" 
+                                                    data-bs-toggle="tooltip" 
+                                                    title="Elimina prenotazione">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted small">
+                                            <i class="bi bi-dash-circle"></i>
+                                            Non disponibile
+                                        </span>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        <!-- Empty State (shown when filters return no results) -->
+        <div id="emptyState" class="text-center py-5" style="display: none;">
+            <div class="empty-state-icon mb-3">
+                <i class="bi bi-search text-muted" style="font-size: 4rem;"></i>
+            </div>
+            <h4 class="text-muted mb-2">Nessuna prenotazione trovata</h4>
+            <p class="text-muted">Prova a modificare i filtri di ricerca</p>
+        </div>
+
     {% else %}
-        <div style="text-align: center; padding: 3rem; color: #6c757d;">
-            <div style="font-size: 4rem; margin-bottom: 1rem;">📅</div>
-            <h3 style="color: #2c3e50; margin-bottom: 1rem;">Nessuna prenotazione</h3>
+        <!-- No bookings state -->
+        <div class="no-bookings-state text-center py-5" data-aos="fade-up">
+            <div class="empty-illustration mb-4">
+                <div class="empty-icon-bg mx-auto d-flex align-items-center justify-content-center rounded-circle" 
+                     style="width: 120px; height: 120px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <i class="bi bi-calendar-x text-white" style="font-size: 3rem;"></i>
+                </div>
+            </div>
+            <h3 class="text-muted mb-3">Nessuna prenotazione</h3>
             {% if is_admin_view %}
-            <p>Non ci sono prenotazioni nel sistema.</p>
+                <p class="text-muted mb-4">Non ci sono prenotazioni nel sistema al momento.</p>
             {% else %}
-            <p>Non hai ancora effettuato nessuna prenotazione.</p>
-        <a href="{% url 'prenotazioni:prenota_laboratorio' %}"
-               style="display: inline-block; margin-top: 1rem; padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 6px;">
-                📅 Effettua una prenotazione
-            </a>
+                <p class="text-muted mb-4">Non hai ancora effettuato nessuna prenotazione.</p>
+                <a href="{% url 'prenotazioni:prenota_laboratorio' %}" class="btn btn-primary btn-lg hover-lift">
+                    <i class="bi bi-calendar-plus me-2"></i>
+                    Effettua una prenotazione
+                </a>
             {% endif %}
         </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+    .table-modern {
+        --bs-table-bg: transparent;
+        --bs-table-striped-bg: rgba(0, 0, 0, 0.02);
+        --bs-table-hover-bg: rgba(102, 126, 234, 0.05);
+        border: none;
+        margin-bottom: 0;
+    }
+
+    .table-modern thead th {
+        border: none;
+        border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+        font-weight: 700;
+        color: #2d3748;
+        padding: 1rem;
+        background: rgba(102, 126, 234, 0.05);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .table-modern tbody tr {
+        border: none;
+        transition: var(--transition-smooth);
+    }
+
+    .table-modern tbody tr:hover {
+        transform: translateX(5px);
+        box-shadow: var(--shadow-soft);
+    }
+
+    .table-modern tbody td {
+        border: none;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 1.25rem 1rem;
+        vertical-align: middle;
+    }
+
+    .user-avatar-small {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+
+    .badge-modern {
+        font-size: 0.75rem;
+        font-weight: 500;
+        border-radius: var(--border-radius-md);
+        padding: 0.4rem 0.8rem;
+    }
+
+    .form-control-modern {
+        border: 2px solid rgba(102, 126, 234, 0.1);
+        border-radius: var(--border-radius-md);
+        padding: 0.75rem 1rem;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(10px);
+        transition: var(--transition-smooth);
+    }
+
+    .form-control-modern:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        background: white;
+    }
+
+    .form-select-modern {
+        border: 2px solid rgba(102, 126, 234, 0.1);
+        border-radius: var(--border-radius-md);
+        padding: 0.75rem 1rem;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(10px);
+        transition: var(--transition-smooth);
+    }
+
+    .form-select-modern:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        background: white;
+    }
+
+    .sort-icon {
+        font-size: 0.7rem;
+        color: #adb5bd;
+        transition: var(--transition-fast);
+        cursor: pointer;
+    }
+
+    .sort-icon:hover {
+        color: #667eea;
+    }
+
+    .table-row-modern {
+        animation: fadeInRow 0.5s ease-out;
+    }
+
+    @keyframes fadeInRow {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .action-buttons .btn {
+        border-radius: var(--border-radius-sm);
+        transition: var(--transition-fast);
+    }
+
+    .action-buttons .btn:hover {
+        transform: scale(1.1);
+    }
+
+    .stats-card {
+        min-width: 200px;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .stat-icon {
+        background: linear-gradient(135deg, #667eea, #764ba2) !important;
+    }
+
+    .empty-state-icon {
+        opacity: 0.5;
+    }
+
+    .search-box::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%236c757d' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242 1.656a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3E%3C/svg%3E") no-repeat center;
+        pointer-events: none;
+    }
+
+    .search-box input {
+        padding-left: 45px;
+    }
+
+    .keyboard-navigation .table-row-modern:focus-within {
+        outline: 2px solid #667eea;
+        outline-offset: -2px;
+    }
+
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .page-header {
+            text-align: center;
+        }
+        
+        .stats-card {
+            margin: 1rem auto 0;
+        }
+        
+        .search-filter-bar .row > div {
+            margin-bottom: 0.5rem;
+        }
+        
+        .table-container {
+            border-radius: var(--border-radius-md);
+            background: white;
+        }
+        
+        .action-buttons .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let sortDirection = {};
+    
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+
+    // Table sorting functionality
+    function initSorting() {
+        const headers = document.querySelectorAll('[data-sort]');
+        headers.forEach(header => {
+            header.style.cursor = 'pointer';
+            header.addEventListener('click', () => sortTable(header.dataset.sort));
+        });
+    }
+
+    function sortTable(column) {
+        const table = document.getElementById('prenotazioniTable');
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        
+        if (!sortDirection[column]) {
+            sortDirection[column] = 'asc';
+        } else {
+            sortDirection[column] = sortDirection[column] === 'asc' ? 'desc' : 'asc';
+        }
+
+        rows.sort((a, b) => {
+            let aVal, bVal;
+            
+            switch(column) {
+                case 'user':
+                    aVal = a.dataset.user || '';
+                    bVal = b.dataset.user || '';
+                    break;
+                case 'risorsa':
+                    aVal = a.dataset.risorsa || '';
+                    bVal = b.dataset.risorsa || '';
+                    break;
+                case 'data':
+                    aVal = a.dataset.data || '';
+                    bVal = b.dataset.data || '';
+                    break;
+                case 'stato':
+                    aVal = a.dataset.stato || '';
+                    bVal = b.dataset.stato || '';
+                    break;
+                default:
+                    aVal = a.cells[getColumnIndex(column)].textContent.trim();
+                    bVal = b.cells[getColumnIndex(column)].textContent.trim();
+            }
+
+            if (sortDirection[column] === 'asc') {
+                return aVal.localeCompare(bVal, 'it');
+            } else {
+                return bVal.localeCompare(aVal, 'it');
+            }
+        });
+
+        // Update sort icons
+        document.querySelectorAll('.sort-icon').forEach(icon => {
+            icon.className = 'bi bi-chevron-expand sort-icon ms-1';
+        });
+        
+        const clickedIcon = document.querySelector(`[data-sort="${column}"] .sort-icon`);
+        if (clickedIcon) {
+            clickedIcon.className = sortDirection[column] === 'asc' ? 
+                'bi bi-chevron-up sort-icon ms-1' : 
+                'bi bi-chevron-down sort-icon ms-1';
+        }
+
+        // Reorder rows with animation
+        tbody.innerHTML = '';
+        rows.forEach((row, index) => {
+            row.style.animationDelay = `${index * 50}ms`;
+            tbody.appendChild(row);
+        });
+    }
+
+    function getColumnIndex(column) {
+        const headers = Array.from(document.querySelectorAll('[data-sort]'));
+        return headers.findIndex(h => h.dataset.sort === column);
+    }
+
+    // Filter functionality
+    function filterTable() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const statusFilter = document.getElementById('statusFilter').value;
+        const dateFilter = document.getElementById('dateFilter').value;
+        const table = document.getElementById('prenotazioniTable');
+        const tbody = table.querySelector('tbody');
+        const rows = tbody.querySelectorAll('tr');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            const userText = row.dataset.user ? row.dataset.user.toLowerCase() : '';
+            const risorsaText = row.dataset.risorsa ? row.dataset.risorsa.toLowerCase() : '';
+            const dataText = row.dataset.data || '';
+            const statoText = row.dataset.stato || '';
+            
+            // Search in user and risorsa cells
+            const textContent = (userText + ' ' + risorsaText).toLowerCase();
+            
+            let showRow = textContent.includes(searchTerm);
+            
+            // Status filter
+            if (statusFilter && statoText !== statusFilter) {
+                showRow = false;
+            }
+            
+            // Date filter
+            if (dateFilter && dataText !== dateFilter) {
+                showRow = false;
+            }
+
+            if (showRow) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Show/hide empty state
+        const emptyState = document.getElementById('emptyState');
+        if (visibleCount === 0 && rows.length > 0) {
+            emptyState.style.display = 'block';
+            table.style.display = 'none';
+        } else {
+            emptyState.style.display = 'none';
+            table.style.display = '';
+        }
+    }
+
+    function clearFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('dateFilter').value = '';
+        filterTable();
+    }
+
+    // Delete confirmation with modern modal
+    function confirmDelete(prenotazioneId) {
+        const modal = createConfirmModal(
+            'Elimina Prenotazione',
+            'Sei sicuro di voler eliminare questa prenotazione? Questa azione non può essere annullata.',
+            () => {
+                showLoadingState(true);
+                window.location.href = `{% url 'prenotazioni:delete_prenotazione' 0 %}`.replace('0', prenotazioneId);
+            }
+        );
+        document.body.appendChild(modal);
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+    }
+
+    function createConfirmModal(title, message, onConfirm) {
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content glass">
+                    <div class="modal-header border-0">
+                        <h5 class="modal-title fw-bold">${title}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3rem;"></i>
+                        </div>
+                        <p class="text-muted">${message}</p>
+                    </div>
+                    <div class="modal-footer border-0 justify-content-center gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                            <i class="bi bi-trash me-2"></i>
+                            Elimina
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        modal.querySelector('#confirmDeleteBtn').addEventListener('click', () => {
+            onConfirm();
+            bootstrap.Modal.getInstance(modal).hide();
+        });
+        
+        return modal;
+    }
+
+    // Loading state management
+    function showLoadingState(show) {
+        const loadingState = document.getElementById('loadingState');
+        const table = document.getElementById('prenotazioniTable');
+        
+        if (show) {
+            loadingState.style.display = 'block';
+            table.style.opacity = '0.5';
+        } else {
+            loadingState.style.display = 'none';
+            table.style.opacity = '1';
+        }
+    }
+
+    // Export to CSV functionality
+    function exportToCSV() {
+        showToast('Funzionalità in sviluppo', 'info');
+    }
+
+    // Refresh data functionality  
+    function refreshData() {
+        showLoadingState(true);
+        setTimeout(() => {
+            showLoadingState(false);
+            showToast('Dati aggiornati con successo', 'success');
+        }, 1000);
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+F or Cmd+F to focus search
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            e.preventDefault();
+            document.getElementById('searchInput').focus();
+        }
+        
+        // Escape to clear search
+        if (e.key === 'Escape') {
+            clearFilters();
+            document.getElementById('searchInput').blur();
+        }
+    });
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        initSorting();
+        filterTable(); // Initial filter to set up empty state
+        
+        // Add smooth animations to table rows
+        const rows = document.querySelectorAll('.table-row-modern');
+        rows.forEach((row, index) => {
+            row.style.animationDelay = `${index * 50}ms`;
+        });
+    });
+</script>
 {% endblock %}

@@ -4,11 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Sistema di Prenotazioni Scolastiche{% endblock %}</title>
+    
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            --danger-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            
+            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --shadow-medium: 0 8px 30px rgba(0, 0, 0, 0.12);
+            --shadow-strong: 0 15px 60px rgba(0, 0, 0, 0.15);
+            
+            --border-radius-sm: 8px;
+            --border-radius-md: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 20px;
+            
+            --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-smooth: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -16,61 +46,57 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f8f9fa;
-            color: #333;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background-attachment: fixed;
+            color: #2d3748;
             line-height: 1.6;
+            overflow-x: hidden;
         }
 
-        /* Stili specifici per ruolo amministratore */
-        .admin-interface .header {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
         }
 
-        .admin-interface .btn-primary {
-            background: #e74c3c;
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
         }
 
-        .admin-interface .btn-primary:hover {
-            background: #c0392b;
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 4px;
         }
 
-        .admin-interface .page-header {
-            background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
-            border-left: 5px solid #e74c3c;
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #764ba2, #667eea);
         }
 
-        .admin-interface .content-card {
-            border-left: 4px solid #e74c3c;
+        /* Theme Variations */
+        .admin-interface {
+            --theme-primary: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            --theme-secondary: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            --theme-accent: #e74c3c;
         }
 
-        /* Stili specifici per ruolo docente */
-        .docente-interface .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .docente-interface {
+            --theme-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --theme-secondary: linear-gradient(135deg, #28a745 0%, #218838 100%);
+            --theme-accent: #28a745;
         }
 
-        .docente-interface .btn-primary {
-            background: #28a745;
-        }
-
-        .docente-interface .btn-primary:hover {
-            background: #218838;
-        }
-
-        .docente-interface .page-header {
-            background: white;
-            border-left: none;
-        }
-
-        .docente-interface .content-card {
-            border-left: none;
-        }
-
+        /* Header Moderno */
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--theme-primary);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             color: white;
             padding: 1rem 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: var(--shadow-medium);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .nav-container {
@@ -84,92 +110,153 @@
 
         .logo {
             font-size: 1.5rem;
-            font-weight: bold;
+            font-weight: 700;
             text-decoration: none;
             color: white;
-        }
-
-        .user-info {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
+            transition: var(--transition-smooth);
         }
 
+        .logo:hover {
+            transform: translateY(-2px);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .logo::before {
+            content: "🚀";
+            font-size: 1.8rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* User Avatar Moderno */
         .user-avatar {
-            width: 40px;
-            height: 40px;
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
-            color: white;
-        }
-
-        .user-details {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .user-name {
             font-weight: 600;
-            font-size: 0.9rem;
+            color: white;
+            box-shadow: var(--shadow-soft);
+            transition: var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
         }
 
-        .user-role {
-            font-size: 0.7rem;
-            opacity: 0.8;
+        .user-avatar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
         }
 
-        .auth-buttons {
-            display: flex;
-            gap: 10px;
+        .user-avatar:hover {
+            transform: scale(1.1);
+            border-color: rgba(255, 255, 255, 0.5);
+            box-shadow: var(--shadow-medium);
         }
 
+        .user-avatar:hover::before {
+            transform: translateX(100%);
+        }
+
+        /* Pulsing dot online indicator */
+        .user-avatar::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        /* Bottoni Moderni */
         .btn {
-            padding: 8px 16px;
+            padding: 10px 20px;
             border: none;
-            border-radius: 6px;
+            border-radius: var(--border-radius-md);
             font-size: 0.9rem;
             font-weight: 500;
             cursor: pointer;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            transition: all 0.2s ease;
+            gap: 8px;
+            transition: var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
         }
 
         .btn-primary {
-            background: #28a745;
+            background: var(--theme-secondary);
             color: white;
+            box-shadow: var(--shadow-soft);
         }
 
         .btn-primary:hover {
-            background: #218838;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
         }
 
         .btn-secondary {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.15);
             color: white;
-            border: 1px solid rgba(255,255,255,0.3);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         .btn-secondary:hover {
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
         }
 
         .btn-danger {
-            background: #dc3545;
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
             color: white;
+            box-shadow: var(--shadow-soft);
         }
 
         .btn-danger:hover {
-            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
         }
 
+        /* Layout Moderno */
         .main-content {
             max-width: 1200px;
             margin: 2rem auto;
@@ -178,38 +265,278 @@
         }
 
         .page-header {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border-radius: var(--border-radius-lg);
+            padding: 2.5rem;
             margin-bottom: 2rem;
+            box-shadow: var(--shadow-soft);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--theme-primary);
+            border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
         }
 
         .page-title {
-            color: #2c3e50;
-            font-size: 2rem;
+            color: #2d3748;
+            font-size: 2.2rem;
+            font-weight: 700;
             margin-bottom: 0.5rem;
+            background: var(--theme-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .page-subtitle {
-            color: #6c757d;
+            color: #718096;
             font-size: 1.1rem;
+            font-weight: 400;
         }
 
         .content-card {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            padding: 2rem;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-soft);
+            padding: 2.5rem;
             margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
         }
 
+        .content-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .content-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        /* Loading States Moderni */
+        .loading-skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: var(--border-radius-sm);
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--theme-accent, #667eea);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Toast Notifications Moderne */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
+
+        .toast {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: none;
+            border-radius: var(--border-radius-md);
+            box-shadow: var(--shadow-medium);
+            overflow: hidden;
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        .toast-success {
+            border-left: 4px solid #10b981;
+        }
+
+        .toast-error {
+            border-left: 4px solid #ef4444;
+        }
+
+        .toast-warning {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .toast-info {
+            border-left: 4px solid #3b82f6;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Progress Indicators */
+        .progress-modern {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-modern {
+            height: 100%;
+            background: var(--theme-primary);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar-modern::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: progressShine 2s infinite;
+        }
+
+        @keyframes progressShine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Pulse Animation */
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Fade In Up Animation */
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Messages Moderne */
+        .messages {
+            margin-bottom: 1rem;
+        }
+
+        .alert {
+            padding: 16px 20px;
+            border-radius: var(--border-radius-md);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: none;
+            box-shadow: var(--shadow-soft);
+            animation: slideInDown 0.3s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .alert::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--alert-color);
+        }
+
+        .alert-success {
+            --alert-color: #10b981;
+        }
+
+        .alert-error {
+            --alert-color: #ef4444;
+        }
+
+        .alert-warning {
+            --alert-color: #f59e0b;
+        }
+
+        .alert-info {
+            --alert-color: #3b82f6;
+        }
+
+        @keyframes slideInDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Footer Moderno */
         .footer {
-            background: #343a40;
-            color: #adb5bd;
+            background: rgba(45, 55, 72, 0.95);
+            backdrop-filter: blur(20px);
+            color: #a0aec0;
             text-align: center;
-            padding: 2rem 0;
+            padding: 2.5rem 0;
             margin-top: 4rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .footer-content {
@@ -218,20 +545,22 @@
             padding: 0 20px;
         }
 
-        /* Responsive */
+        /* Responsive Design */
         @media (max-width: 768px) {
             .nav-container {
                 flex-direction: column;
                 gap: 15px;
+                text-align: center;
             }
 
             .user-info {
                 flex-direction: column;
-                text-align: center;
+                gap: 10px;
             }
 
             .auth-buttons {
                 justify-content: center;
+                flex-wrap: wrap;
             }
 
             .main-content {
@@ -239,69 +568,87 @@
                 padding: 0 15px;
             }
 
-            .page-header {
+            .page-header,
+            .content-card {
                 padding: 1.5rem;
             }
 
             .page-title {
-                font-size: 1.5rem;
+                font-size: 1.8rem;
+            }
+
+            .toast-container {
+                top: 10px;
+                right: 10px;
+                left: 10px;
             }
         }
 
-        /* Messages */
-        .messages {
-            margin-bottom: 1rem;
+        /* Glassmorphism Effects */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .alert {
-            padding: 12px 16px;
-            border-radius: 6px;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        /* Hover Effects */
+        .hover-lift {
+            transition: var(--transition-smooth);
         }
 
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+        .hover-lift:hover {
+            transform: translateY(-5px);
         }
 
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+        .hover-glow:hover {
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
         }
 
-        .alert-warning {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
+        /* Focus States */
+        .btn:focus,
+        a:focus {
+            outline: 2px solid var(--theme-accent);
+            outline-offset: 2px;
         }
 
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
         }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="{% if user.is_authenticated %}{% if user.is_admin %}admin-interface{% else %}docente-interface{% endif %}{% endif %}">
+    <!-- Loading Screen -->
+    <div id="loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s ease-out;">
+        <div style="text-align: center; color: white;">
+            <div class="spinner" style="border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid white; width: 50px; height: 50px; margin: 0 auto 20px;"></div>
+            <h2 style="font-weight: 300;">Caricamento...</h2>
+        </div>
+    </div>
+
     <header class="header">
         <nav class="navbar navbar-expand-lg navbar-dark">
             <div class="container-fluid nav-container">
-                <a href="{% url 'home' %}" class="navbar-brand logo">📚 Sistema Prenotazioni</a>
+                <a href="{% url 'home' %}" class="navbar-brand logo" data-aos="fade-right">
+                    Sistema Prenotazioni
+                </a>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <button class="navbar-toggler glass" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation" data-aos="fade-left">
                     <span class="navbar-toggler-icon"></span>
                 </button>
 
                 <div class="collapse navbar-collapse" id="navbarNav">
-                    <div class="user-info d-flex align-items-center ms-auto">
+                    <div class="user-info d-flex align-items-center ms-auto" data-aos="fade-left">
                         {% if user.is_authenticated %}
-                            <div class="user-avatar me-3">
+                            <div class="user-avatar me-3 pulse">
                                 {{ user.first_name|first|default:user.username|first|upper }}
                             </div>
                             <div class="user-details me-3">
@@ -315,30 +662,30 @@
                             </div>
                             <div class="auth-buttons d-flex flex-column flex-lg-row gap-2">
                                 {% if user.is_admin %}
-                                <a href="{% url 'prenotazioni:admin_operazioni' %}" class="btn btn-danger btn-sm">
+                                <a href="{% url 'prenotazioni:admin_operazioni' %}" class="btn btn-danger btn-sm hover-lift">
                                     ⚙️ Admin
                                 </a>
                                 {% endif %}
-                                <a href="{% url 'prenotazioni:prenota_laboratorio' %}" class="btn btn-primary btn-sm">
+                                <a href="{% url 'prenotazioni:prenota_laboratorio' %}" class="btn btn-primary btn-sm hover-lift">
                                     📅 Prenota
                                 </a>
-                                <a href="{% url 'prenotazioni:lista_prenotazioni' %}" class="btn btn-secondary btn-sm">
+                                <a href="{% url 'prenotazioni:lista_prenotazioni' %}" class="btn btn-secondary btn-sm hover-lift">
                                     📋 Mie Prenotazioni
                                 </a>
                                 <form method="post" action="{% url 'logout' %}" class="d-inline">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn btn-danger btn-sm">
+                                    <button type="submit" class="btn btn-danger btn-sm hover-lift">
                                         🚪 Logout
                                     </button>
                                 </form>
                             </div>
                         {% else %}
                             <div class="auth-buttons d-flex gap-2">
-                                <a href="{% url 'email_login' %}" class="btn btn-primary btn-sm">
+                                <a href="{% url 'email_login' %}" class="btn btn-primary btn-sm hover-lift">
                                     🔐 Accedi
                                 </a>
                                 {% if user.is_staff %}
-                                    <a href="{% url 'admin:index' %}" class="btn btn-secondary btn-sm">
+                                    <a href="{% url 'admin:index' %}" class="btn btn-secondary btn-sm hover-lift">
                                         👑 Admin
                                     </a>
                                 {% endif %}
@@ -352,13 +699,18 @@
 
     <main class="main-content">
         {% if messages %}
-            <div class="messages">
+            <div class="messages" data-aos="fade-down">
                 {% for message in messages %}
-                    <div class="alert alert-{{ message.tags|default:'info' }}">
-                        {% if message.tags == 'success' %}✅{% endif %}
-                        {% if message.tags == 'error' %}❌{% endif %}
-                        {% if message.tags == 'warning' %}⚠️{% endif %}
-                        {% if message.tags == 'info' %}ℹ️{% endif %}
+                    <div class="alert alert-{{ message.tags|default:'info' }}" id="message-{{ forloop.counter }}">
+                        {% if message.tags == 'success' %}
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                        {% elif message.tags == 'error' %}
+                            <i class="bi bi-x-circle-fill text-danger"></i>
+                        {% elif message.tags == 'warning' %}
+                            <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                        {% elif message.tags == 'info' %}
+                            <i class="bi bi-info-circle-fill text-info"></i>
+                        {% endif %}
                         {{ message }}
                     </div>
                 {% endfor %}
@@ -374,8 +726,200 @@
         </div>
     </footer>
 
-    <!-- Bootstrap JS -->
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    
+    <!-- AOS Animation Library -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            easing: 'ease-in-out',
+            once: true,
+            mirror: false
+        });
+
+        // Hide loading screen on page load
+        window.addEventListener('load', function() {
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) {
+                setTimeout(() => {
+                    loadingScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        loadingScreen.style.display = 'none';
+                    }, 500);
+                }, 500);
+            }
+        });
+
+        // Enhanced Button Interactions
+        document.querySelectorAll('.btn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                // Ripple effect
+                const ripple = document.createElement('span');
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = e.clientX - rect.left - size / 2;
+                const y = e.clientY - rect.top - size / 2;
+                
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                ripple.classList.add('ripple');
+                
+                this.appendChild(ripple);
+                
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
+        });
+
+        // Modern Toast Notifications
+        function showToast(message, type = 'info', duration = 4000) {
+            const toastContainer = document.getElementById('toast-container');
+            const toastId = 'toast-' + Date.now();
+            
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.id = toastId;
+            toast.setAttribute('role', 'alert');
+            
+            const iconMap = {
+                success: 'check-circle-fill',
+                error: 'x-circle-fill', 
+                warning: 'exclamation-triangle-fill',
+                info: 'info-circle-fill'
+            };
+            
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <i class="bi bi-${iconMap[type]} me-2 text-${type}"></i>
+                    <strong class="me-auto">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            const bsToast = new bootstrap.Toast(toast, { delay: duration });
+            bsToast.show();
+            
+            toast.addEventListener('hidden.bs.toast', () => {
+                toast.remove();
+            });
+        }
+
+        // Auto-hide messages after 5 seconds
+        document.querySelectorAll('.alert').forEach((alert, index) => {
+            setTimeout(() => {
+                if (alert && alert.parentNode) {
+                    alert.style.animation = 'fadeOut 0.5s ease-out forwards';
+                    setTimeout(() => {
+                        alert.remove();
+                    }, 500);
+                }
+            }, 5000 + (index * 1000));
+        });
+
+        // Add smooth scrolling for internal links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add fade out animation CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeOut {
+                to {
+                    opacity: 0;
+                    transform: translateY(-20px);
+                }
+            }
+            
+            .ripple {
+                position: absolute;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.6);
+                transform: scale(0);
+                animation: ripple-animation 0.6s linear;
+                pointer-events: none;
+            }
+            
+            @keyframes ripple-animation {
+                to {
+                    transform: scale(4);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Add intersection observer for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in-up');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        // Observe all content cards
+        document.querySelectorAll('.content-card, .page-header').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Keyboard navigation enhancement
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                document.body.classList.add('keyboard-navigation');
+            }
+        });
+
+        document.addEventListener('mousedown', function() {
+            document.body.classList.remove('keyboard-navigation');
+        });
+
+        // Enhanced form validation with visual feedback
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<span class="spinner me-2"></span>Elaborazione...';
+                    submitBtn.disabled = true;
+                }
+            });
+        });
+
+        // Global error handler
+        window.addEventListener('error', function(e) {
+            console.error('Error:', e.error);
+            // You could show a toast here for production
+        });
+    </script>
 
     {% block extra_js %}{% endblock %}
 </body>

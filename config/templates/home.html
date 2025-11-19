@@ -3,30 +3,212 @@
 {% block title %}Homepage - Sistema di Prenotazioni Scolastiche{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 class="page-title">🏫 Benvenuto nel Sistema di Prenotazioni</h1>
-    <p class="page-subtitle">Istituto Statale di Istruzione Superiore di Follonica</p>
-    <div class="clock" id="clock"></div>
+<div class="page-header" data-aos="fade-up">
+    <div class="text-center">
+        <h1 class="page-title">🏫 Benvenuto nel Sistema di Prenotazioni</h1>
+        <p class="page-subtitle">Istituto Statale di Istruzione Superiore di Follonica</p>
+        <div class="clock mt-4" id="clock"></div>
+    </div>
 </div>
 
-<div class="content-card">
-    <h2>🚀 Come utilizzare il sistema</h2>
-    <p>Il sistema permette di prenotare risorse scolastiche in modo semplice e organizzato:</p>
+<div class="row g-4" data-aos="fade-up" data-aos-delay="200">
+    <!-- Statistiche Dashboard -->
+    <div class="col-lg-4 col-md-6" data-aos="zoom-in" data-aos-delay="100">
+        <div class="content-card text-center hover-lift">
+            <div class="feature-icon mb-3">
+                <div class="icon-bg bg-primary bg-gradient mx-auto d-flex align-items-center justify-content-center rounded-circle" 
+                     style="width: 80px; height: 80px;">
+                    <i class="bi bi-calendar-event text-white fs-1"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold mb-2">{{ prenotazioni_totali|default:0 }}</h3>
+            <p class="text-muted mb-3">Prenotazioni Totali</p>
+            <div class="progress-modern">
+                <div class="progress-bar-modern" style="width: {{ prenotazioni_percentuale|default:0 }}%"></div>
+            </div>
+        </div>
+    </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem;">
-        <div style="text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
-            <h3 style="color: #2c3e50; margin-bottom: 1rem;">🏫 Laboratori</h3>
-            <p style="color: #666;">Prenota l'intero laboratorio multimediale per le tue lezioni.</p>
+    <div class="col-lg-4 col-md-6" data-aos="zoom-in" data-aos-delay="200">
+        <div class="content-card text-center hover-lift">
+            <div class="feature-icon mb-3">
+                <div class="icon-bg bg-success bg-gradient mx-auto d-flex align-items-center justify-content-center rounded-circle" 
+                     style="width: 80px; height: 80px;">
+                    <i class="bi bi-check-circle text-white fs-1"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold mb-2">{{ prenotazioni_attive|default:0 }}</h3>
+            <p class="text-muted mb-3">Prenotazioni Attive</p>
+            <div class="progress-modern">
+                <div class="progress-bar-modern bg-success" style="width: {{ attive_percentuale|default:0 }}%"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4 col-md-6" data-aos="zoom-in" data-aos-delay="300">
+        <div class="content-card text-center hover-lift">
+            <div class="feature-icon mb-3">
+                <div class="icon-bg bg-warning bg-gradient mx-auto d-flex align-items-center justify-content-center rounded-circle" 
+                     style="width: 80px; height: 80px;">
+                    <i class="bi bi-clock text-white fs-1"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold mb-2">{{ risorse_disponibili|default:0 }}</h3>
+            <p class="text-muted mb-3">Risorse Disponibili</p>
+            <div class="progress-modern">
+                <div class="progress-bar-modern bg-warning" style="width: {{ risorse_percentuale|default:0 }}%"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content-card" data-aos="fade-up" data-aos-delay="300">
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <h2 class="fw-bold mb-3">🚀 Come utilizzare il sistema</h2>
+            <p class="text-muted mb-4">Il sistema permette di prenotare risorse scolastiche in modo semplice e organizzato:</p>
+        </div>
+        <div class="col-lg-4 text-center">
+            <a href="{% url 'prenotazioni:prenota_laboratorio' %}" class="btn btn-primary btn-lg hover-lift">
+                <i class="bi bi-calendar-plus me-2"></i>
+                Prenota Ora
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-2">
+        <div class="col-lg-4 col-md-6" data-aos="slide-up" data-aos-delay="100">
+            <div class="feature-card p-4 glass rounded-3 h-100 hover-lift">
+                <div class="feature-icon mb-3">
+                    <div class="icon-bg bg-primary bg-gradient d-inline-flex align-items-center justify-content-center rounded-circle" 
+                         style="width: 60px; height: 60px;">
+                        <i class="bi bi-building text-white fs-4"></i>
+                    </div>
+                </div>
+                <h4 class="fw-bold mb-3" style="color: #2d3748;">🏫 Laboratori</h4>
+                <p class="text-muted">Prenota l'intero laboratorio multimediale per le tue lezioni. Completo di postazioni, proiettori e attrezzature specializzate.</p>
+                <div class="feature-stats mt-3">
+                    <small class="text-muted">
+                        <i class="bi bi-check-circle me-1 text-success"></i>
+                        Disponibile tutti i giorni
+                    </small>
+                </div>
+            </div>
         </div>
 
-        <div style="text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
-            <h3 style="color: #2c3e50; margin-bottom: 1rem;">📱 Dispositivi</h3>
-            <p style="color: #666;">Prenota iPad e notebook in base alle tue esigenze (prenotazioni parziali disponibili).</p>
+        <div class="col-lg-4 col-md-6" data-aos="slide-up" data-aos-delay="200">
+            <div class="feature-card p-4 glass rounded-3 h-100 hover-lift">
+                <div class="feature-icon mb-3">
+                    <div class="icon-bg bg-success bg-gradient d-inline-flex align-items-center justify-content-center rounded-circle" 
+                         style="width: 60px; height: 60px;">
+                        <i class="bi bi-phone text-white fs-4"></i>
+                    </div>
+                </div>
+                <h4 class="fw-bold mb-3" style="color: #2d3748;">📱 Dispositivi</h4>
+                <p class="text-muted">Prenota iPad e notebook in base alle tue esigenze. Prenotazioni parziali disponibili per un uso flessibile.</p>
+                <div class="feature-stats mt-3">
+                    <small class="text-muted">
+                        <i class="bi bi-check-circle me-1 text-success"></i>
+                        Prenotazioni parziali
+                    </small>
+                </div>
+            </div>
         </div>
 
-        <div style="text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
-            <h3 style="color: #2c3e50; margin-bottom: 1rem;">📅 Organizzazione</h3>
-            <p style="color: #666;">Prenota con anticipo e gestisci facilmente le tue risorse scolastiche.</p>
+        <div class="col-lg-4 col-md-6" data-aos="slide-up" data-aos-delay="300">
+            <div class="feature-card p-4 glass rounded-3 h-100 hover-lift">
+                <div class="feature-icon mb-3">
+                    <div class="icon-bg bg-warning bg-gradient d-inline-flex align-items-center justify-content-center rounded-circle" 
+                         style="width: 60px; height: 60px;">
+                        <i class="bi bi-calendar3 text-white fs-4"></i>
+                    </div>
+                </div>
+                <h4 class="fw-bold mb-3" style="color: #2d3748;">📅 Organizzazione</h4>
+                <p class="text-muted">Prenota con anticipo e gestisci facilmente le tue risorse scolastiche. Sistema di calendario integrato.</p>
+                <div class="feature-stats mt-3">
+                    <small class="text-muted">
+                        <i class="bi bi-check-circle me-1 text-success"></i>
+                        Calendario intelligente
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sezione Azioni Rapide -->
+<div class="row g-4" data-aos="fade-up" data-aos-delay="400">
+    <div class="col-lg-8">
+        <div class="content-card">
+            <h3 class="fw-bold mb-3">⚡ Azioni Rapide</h3>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <a href="{% url 'prenotazioni:prenota_laboratorio' %}" 
+                       class="btn btn-primary btn-lg w-100 hover-lift mb-2">
+                        <i class="bi bi-calendar-plus me-2"></i>
+                        Nuova Prenotazione
+                    </a>
+                </div>
+                <div class="col-md-6">
+                    <a href="{% url 'prenotazioni:lista_prenotazioni' %}" 
+                       class="btn btn-outline-primary btn-lg w-100 hover-lift mb-2">
+                        <i class="bi bi-list-ul me-2"></i>
+                        Mie Prenotazioni
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="content-card text-center">
+            <div class="weather-widget mb-3">
+                <i class="bi bi-sun text-warning fs-1" id="weather-icon"></i>
+            </div>
+            <h5 class="fw-bold">Condizioni Meteo</h5>
+            <p class="text-muted">Perfette per le attività didattiche</p>
+        </div>
+    </div>
+</div>
+
+<!-- Sezione Notizie/Bacheca -->
+<div class="content-card" data-aos="fade-up" data-aos-delay="500">
+    <h3 class="fw-bold mb-4">📢 Bacheca Scolastica</h3>
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="news-card p-3 glass rounded-3 mb-3 hover-lift">
+                <div class="d-flex align-items-start">
+                    <div class="news-icon me-3">
+                        <i class="bi bi-info-circle-fill text-primary fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="fw-bold mb-1">Manutenzione Laboratori</h6>
+                        <p class="text-muted small mb-2">Il laboratorio di informatica sarà disponibile dal 22 novembre.</p>
+                        <small class="text-muted">
+                            <i class="bi bi-clock me-1"></i>
+                            2 giorni fa
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="news-card p-3 glass rounded-3 mb-3 hover-lift">
+                <div class="d-flex align-items-start">
+                    <div class="news-icon me-3">
+                        <i class="bi bi-star-fill text-warning fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="fw-bold mb-1">Nuovi Dispositivi Disponibili</h6>
+                        <p class="text-muted small mb-2">Arrivati 10 nuovi iPad e 5 notebook per le prenotazioni.</p>
+                        <small class="text-muted">
+                            <i class="bi bi-clock me-1"></i>
+                            1 settimana fa
+                        </small>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -36,16 +218,145 @@
 <style>
     .clock {
         font-size: 2.5em;
-        font-weight: bold;
+        font-weight: 700;
         color: #667eea;
         background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        border-radius: 12px;
-        padding: 20px;
+        border-radius: var(--border-radius-lg);
+        padding: 30px;
         margin: 2rem 0;
         letter-spacing: 3px;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.1);
+        box-shadow: var(--shadow-medium);
         text-align: center;
         font-family: 'Courier New', monospace;
+        border: 2px solid rgba(102, 126, 234, 0.2);
+        backdrop-filter: blur(10px);
+    }
+
+    .feature-card {
+        transition: var(--transition-smooth);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .feature-card:hover {
+        transform: translateY(-10px);
+        box-shadow: var(--shadow-medium);
+    }
+
+    .icon-bg {
+        box-shadow: var(--shadow-soft);
+    }
+
+    .progress-modern {
+        width: 100%;
+        height: 8px;
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-bar-modern {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .progress-bar-modern::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        animation: progressShine 2s infinite;
+    }
+
+    @keyframes progressShine {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .news-card {
+        transition: var(--transition-smooth);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .news-card:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateX(5px);
+    }
+
+    .weather-widget {
+        animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-5px); }
+    }
+
+    /* Loading animation for statistics */
+    .content-card {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .content-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .content-card:hover::before {
+        left: 100%;
+    }
+
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .clock {
+            font-size: 2rem;
+            padding: 20px;
+            letter-spacing: 2px;
+        }
+        
+        .feature-card {
+            margin-bottom: 1rem;
+        }
+        
+        .btn-lg {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+        }
+    }
+
+    /* Pulse animation for live elements */
+    .pulse-slow {
+        animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse-slow {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
+    }
+
+    /* Glow effects */
+    .glow-primary {
+        box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .glow-success {
+        box-shadow: 0 0 20px rgba(40, 167, 69, 0.3);
+    }
+
+    .glow-warning {
+        box-shadow: 0 0 20px rgba(255, 193, 7, 0.3);
     }
 </style>
 {% endblock %}
@@ -62,9 +373,192 @@
         const capitalizedMonth = month.charAt(0).toUpperCase() + month.slice(1);
         const year = now.getFullYear();
         const date = `${capitalizedWeekday}, ${day} ${capitalizedMonth} ${year}`;
-        document.getElementById('clock').innerHTML = `Ora Esatta<br>${time}<br>${date}`;
+        
+        document.getElementById('clock').innerHTML = `
+            <div class="time-display">${time}</div>
+            <div class="date-display">${date}</div>
+        `;
     }
-    setInterval(updateClock, 1000);
-    updateClock();
+
+    // Weather simulation (in a real app, this would call an API)
+    function updateWeather() {
+        const weatherConditions = [
+            { icon: 'bi-sun', text: 'Soleggiato' },
+            { icon: 'bi-cloud-sun', text: 'Parzialmente nuvoloso' },
+            { icon: 'bi-cloud', text: 'Nuvoloso' },
+            { icon: 'bi-cloud-rain', text: 'Piovoso' }
+        ];
+        
+        const randomWeather = weatherConditions[Math.floor(Math.random() * weatherConditions.length)];
+        const weatherIcon = document.getElementById('weather-icon');
+        
+        if (weatherIcon) {
+            weatherIcon.className = `bi ${randomWeather.icon} text-warning fs-1`;
+        }
+    }
+
+    // Animated counter for statistics
+    function animateCounters() {
+        const counters = document.querySelectorAll('.content-card h3');
+        counters.forEach(counter => {
+            const target = parseInt(counter.textContent);
+            const increment = target / 50;
+            let current = 0;
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    counter.textContent = target;
+                    clearInterval(timer);
+                } else {
+                    counter.textContent = Math.floor(current);
+                }
+            }, 50);
+        });
+    }
+
+    // Notification system
+    function showWelcomeNotification() {
+        const messages = [
+            'Benvenuto! Sistema di prenotazioni aggiornato.',
+            'Nuove funzionalità disponibili per una migliore esperienza.',
+            'Ricorda di prenotare con anticipo per garantire la disponibilità.'
+        ];
+        
+        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+        
+        // Show notification after a delay
+        setTimeout(() => {
+            if (typeof showToast === 'function') {
+                showToast(randomMessage, 'info', 5000);
+            }
+        }, 2000);
+    }
+
+    // Smooth scroll for internal links
+    function initSmoothScroll() {
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    }
+
+    // Keyboard shortcuts
+    function initKeyboardShortcuts() {
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + N for new reservation
+            if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+                e.preventDefault();
+                window.location.href = "{% url 'prenotazioni:prenota_laboratorio' %}";
+            }
+            
+            // Ctrl/Cmd + L for reservations list
+            if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+                e.preventDefault();
+                window.location.href = "{% url 'prenotazioni:lista_prenotazioni' %}";
+            }
+        });
+    }
+
+    // Intersection Observer for animations
+    function initIntersectionObserver() {
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in-up');
+                    
+                    // Trigger counter animation for statistic cards
+                    if (entry.target.querySelector('.content-card h3')) {
+                        setTimeout(() => {
+                            animateCounters();
+                        }, 300);
+                    }
+                    
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        // Observe all content cards
+        document.querySelectorAll('.content-card, .feature-card').forEach(card => {
+            observer.observe(card);
+        });
+    }
+
+    // Initialize everything when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Update clock immediately and then every second
+        updateClock();
+        setInterval(updateClock, 1000);
+        
+        // Update weather
+        updateWeather();
+        setInterval(updateWeather, 300000); // Every 5 minutes
+        
+        // Initialize other features
+        initSmoothScroll();
+        initKeyboardShortcuts();
+        initIntersectionObserver();
+        
+        // Show welcome notification after a delay
+        setTimeout(() => {
+            showWelcomeNotification();
+        }, 1500);
+        
+        // Add floating animation to clock
+        const clock = document.getElementById('clock');
+        if (clock) {
+            clock.classList.add('pulse-slow');
+        }
+    });
+
+    // Add some interactive effects
+    document.addEventListener('mousemove', function(e) {
+        const cursor = { x: e.clientX, y: e.clientY };
+        const cards = document.querySelectorAll('.hover-lift');
+        
+        cards.forEach(card => {
+            const rect = card.getBoundingClientRect();
+            const cardCenter = {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2
+            };
+            
+            const distance = Math.sqrt(
+                Math.pow(cursor.x - cardCenter.x, 2) + 
+                Math.pow(cursor.y - cardCenter.y, 2)
+            );
+            
+            if (distance < 200) {
+                const rotateX = (cursor.y - cardCenter.y) / 10;
+                const rotateY = (cardCenter.x - cursor.x) / 10;
+                
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+            } else {
+                card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateZ(0)';
+            }
+        });
+    });
+
+    // Reset card transforms when mouse leaves
+    document.addEventListener('mouseleave', function() {
+        const cards = document.querySelectorAll('.hover-lift');
+        cards.forEach(card => {
+            card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateZ(0)';
+        });
+    });
 </script>
 {% endblock %}
