@@ -69,6 +69,10 @@ class Configuration(models.Model):
         verbose_name = 'Configurazione'
         verbose_name_plural = 'Configurazioni'
         ordering = ['tipo', 'chiave']
+        indexes = [
+            models.Index(fields=['chiave']),
+            models.Index(fields=['tipo']),
+        ]
     
     def __str__(self):
         return f"{self.chiave}: {self.valore[:50]}..."
@@ -804,6 +808,9 @@ class Resource(models.Model):
             models.Index(fields=['codice']),
             models.Index(fields=['tipo', 'attivo']),
             models.Index(fields=['localizzazione']),
+            models.Index(fields=['attivo']),
+            models.Index(fields=['manutenzione']),
+            models.Index(fields=['bloccato']),
         ]
     
     def __str__(self):

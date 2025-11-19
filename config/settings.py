@@ -164,38 +164,61 @@ WHITENOISE_USE_FINDERS = True
 WHITENOISE_AUTOREFRESH = True
 
 # =========================
-# Basic Logging configuration
+# Optimized Caching & Performance
+# =========================
+# Use LocMemCache for free tier, Redis if available
+REDIS_URL = os.environ.get('REDIS_URL')
+if REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': REDIS_URL,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'CONNECTION_POOL_KWARGS': {
+                    'max_connections': 10,
+                    'decode_responses': True,
+                }
+            },
+            'KEY_PREFIX': 'prenotazioni',
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'booking-system-cache',
+        }
+    }
+
+# Session caching for better performance
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
+
+# =========================
+# Optimized Logging Configuration
 # =========================
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process} {thread} {message}',
-            'style': '{',
-        },
         'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
+            'format': f'[%(asctime)s] %(levelname)s %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
         },
     },
     'handlers': {
         'console': {
-            'level': 'INFO',
+            'level': 'WARNING' if not DEBUG else 'INFO',
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
     },
     'root': {
         'handlers': ['console'],
-        'level': 'INFO',
+        'level': 'WARNING' if not DEBUG else 'INFO',
     },
     'loggers': {
-        'prenotazioni': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
         'django': {
             'handlers': ['console'],
             'level': 'WARNING',
@@ -206,22 +229,12 @@ LOGGING = {
             'level': 'WARNING',
             'propagate': False,
         },
-        'django.request': {
+        'prenotazioni': {
             'handlers': ['console'],
-            'level': 'ERROR',
+            'level': 'WARNING' if not DEBUG else 'INFO',
             'propagate': False,
         },
     },
-}
-
-# =========================
-# Simple Cache Configuration
-# =========================
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
-    }
 }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -237,7 +250,6 @@ SCHOOL_EMAIL_DOMAIN = os.environ.get("SCHOOL_EMAIL_DOMAIN", "isufol.it")
 # Admin emails
 # =========================
 ADMINS_EMAIL_LIST = os.environ.get("ADMINS_EMAIL_LIST", "").split(",")
-# Rimuovi eventuali stringhe vuote dalla lista
 ADMINS_EMAIL_LIST = [email.strip() for email in ADMINS_EMAIL_LIST if email.strip()]
 
 # =========================
