@@ -20,6 +20,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import get_user_model
 from rest_framework import viewsets, status, generics
+from rest_framework.decorators import action
 
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
@@ -42,7 +43,7 @@ from .services import (
     SystemInitializer
 )
 from .serializers import (
-    ProfiloUtenteSerializer, RisorsaSerializer, Dispositivoserializer, PrenotazioneSerializer,
+    ProfiloUtenteSerializer, RisorsaSerializer, DispositivoSerializer, PrenotazioneSerializer,
     ConfigurazioneSistemaSerializer, NotificaUtenteSerializer, LogSistemaSerializer
 )
 
@@ -65,7 +66,7 @@ class HomeView(LoginRequiredMixin, View):
             recent_bookings = Prenotazione.objects.filter(
                 cancellato_il__isnull=True
             ).select_related('utente', 'risorsa', 'stato').order_by('-inizio')[:10]
-            recent_logs = SystemLog.objects.order_by('-timestamp')[:20]
+            recent_logs = LogSistema.objects.order_by('-timestamp')[:20]
             
             context.update({
                 'stats': stats,
@@ -81,7 +82,7 @@ class HomeView(LoginRequiredMixin, View):
                 cancellato_il__isnull=True
             ).select_related('risorsa', 'stato').order_by('-inizio')[:5]
             
-            available_resources = ResourceService.get_available_resources()[:10]
+            available_resources = ServizioRisorsa.get_available_resources()[:10]
             
             context.update({
                 'my_bookings': my_bookings,
@@ -91,7 +92,7 @@ class HomeView(LoginRequiredMixin, View):
         
         # Informazioni scuola
         try:
-            school_info = SchoolInfo.get_instance()
+            school_info = InformazioniScuola.ottieni_istanza()
             context['school_info'] = school_info
         except:
             context['school_info'] = None
@@ -136,26 +137,26 @@ class ConfigurazioneSistemaView(LoginRequiredMixin, UserPassesTestMixin, View):
     def get(self, request):
         """Mostra stato configurazione sistema."""
         # Controlla se sistema già configurato
-        if not Resource.objects.exists():
+        if not Risorsa.objects.exists():
             return self._render_setup_wizard(request)
-        
+
         # Sistema già configurato - mostra gestione configurazioni
-        configs = Configuration.objects.all().order_by('tipo', 'chiave')
+        configs = ConfigurazioneSistema.objects.all().order_by('tipo_configurazione', 'chiave_configurazione')
         paginator = Paginator(configs, 20)
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
-        
+
         context = {
             'page_obj': page_obj,
             'configs': page_obj.object_list,
-            'config_types': Configuration.TIPO_CONFIG
+            'config_types': ConfigurazioneSistema.TIPO_CONFIGURAZIONE
         }
         return render(request, 'admin/configurazioni.html', context)
-    
+
     def post(self, request):
         """Gestisce creazione/modifica configurazioni."""
         action = request.POST.get('action')
-        
+
         if action == 'create':
             form = ConfigurationForm(request.POST)
             if form.is_valid():
@@ -163,26 +164,26 @@ class ConfigurazioneSistemaView(LoginRequiredMixin, UserPassesTestMixin, View):
                 messages.success(request, 'Configurazione creata con successo.')
             else:
                 messages.error(request, 'Errore nella creazione della configurazione.')
-        
+
         elif action == 'update':
             config_id = request.POST.get('config_id')
-            config = get_object_or_404(Configuration, id=config_id)
+            config = get_object_or_404(ConfigurazioneSistema, id=config_id)
             form = ConfigurationForm(request.POST, instance=config)
             if form.is_valid():
                 form.save()
                 messages.success(request, 'Configurazione aggiornata con successo.')
             else:
                 messages.error(request, 'Errore nell\'aggiornamento della configurazione.')
-        
+
         elif action == 'delete':
             config_id = request.POST.get('config_id')
-            config = get_object_or_404(Configuration, id=config_id)
-            if config.modificabile:
+            config = get_object_or_404(ConfigurazioneSistema, id=config_id)
+            if config.configurazione_modificabile:
                 config.delete()
                 messages.success(request, 'Configurazione eliminata.')
             else:
                 messages.error(request, 'Questa configurazione non può essere eliminata.')
-        
+
         elif action == 'initialize':
             # Inizializza sistema
             success, message = SystemInitializer.initialize_system()
@@ -190,27 +191,27 @@ class ConfigurazioneSistemaView(LoginRequiredMixin, UserPassesTestMixin, View):
                 messages.success(request, message)
             else:
                 messages.error(request, message)
-        
+
         return redirect('admin:configurazioni')
-    
+
     def _render_setup_wizard(self, request):
         """Render wizard di setup iniziale."""
         step = request.GET.get('step', '1')
-        
+
         if step == '1':
             # Configurazione scuola
-            school_info, _ = SchoolInfo.objects.get_or_create(id=1)
+            school_info, _ = InformazioniScuola.objects.get_or_create(id=1)
             form = SchoolInfoForm(instance=school_info)
-            
+
         elif step == '2':
             # Configurazione dispositivi
             form = DeviceWizardForm()
-            dispositivi = Device.objects.all().order_by('marca', 'nome')
-            
+            dispositivi = Dispositivo.objects.all().order_by('marca', 'nome')
+
         elif step == '3':
             # Configurazione risorse
             num_risorse = request.session.get('num_risorse', 3)
-            dispositivi_disponibili = Device.objects.all()
+            dispositivi_disponibili = Dispositivo.objects.all()
             form = RisorseConfigurazioneForm(
                 num_risorse=num_risorse,
                 dispositivi_disponibili=dispositivi_disponibili
@@ -236,16 +237,16 @@ class AdminOperazioniView(LoginRequiredMixin, UserPassesTestMixin, View):
         stats = SystemService.get_system_stats()
         
         # Prossime prenotazioni
-        upcoming_bookings = Booking.objects.filter(
+        upcoming_bookings = Prenotazione.objects.filter(
             inizio__gte=timezone.now(),
             cancellato_il__isnull=True
         ).select_related('utente', 'risorsa').order_by('inizio')[:10]
-        
+
         # Risorse in manutenzione
-        resources_maintenance = Resource.objects.filter(manutenzione=True)
-        
+        resources_maintenance = Risorsa.objects.filter(manutenzione=True)
+
         # Notifiche in attesa
-        pending_notifications = Notification.objects.filter(
+        pending_notifications = NotificaUtente.objects.filter(
             stato='pending'
         ).select_related('utente').order_by('-creato_il')[:10]
         
@@ -329,12 +330,13 @@ class EmailLoginView(View):
             email = form.cleaned_data['email']
             
             try:
-                user = Utente.objects.get(email=email)
-                
-                if not user.account_attivo:
+                from django.contrib.auth.models import User
+                user = User.objects.get(email=email)
+
+                if not user.is_active:
                     messages.error(request, 'Account disattivato.')
                     return redirect('email_login')
-                
+
                 # Genera PIN e crea sessione
                 pin = UserSessionService.generate_pin()
                 session = UserSessionService.create_session(
@@ -343,7 +345,7 @@ class EmailLoginView(View):
                     email_destinazione=email,
                     pin=pin
                 )
-                
+
                 # Invia email
                 success, error = EmailService.send_pin_email(user, pin)
                 if success:
@@ -352,8 +354,8 @@ class EmailLoginView(View):
                     return redirect('verify_pin')
                 else:
                     messages.error(request, f'Errore invio email: {error}')
-            
-            except Utente.DoesNotExist:
+
+            except User.DoesNotExist:
                 messages.error(request, 'Email non registrata nel sistema.')
         
         return render(request, 'registration/email_login.html', {'form': form})
@@ -467,50 +469,50 @@ class ListaPrenotazioniView(LoginRequiredMixin, View):
         
         # Base queryset
         if user.is_admin():
-            bookings = Booking.objects.all()
+            bookings = Prenotazione.objects.all()
             is_admin_view = True
         else:
-            bookings = Booking.objects.filter(utente=user)
+            bookings = Prenotazione.objects.filter(utente=user)
             is_admin_view = False
-        
+
         # Filtri
-        status_filter = request.GET.get('status', '')
-        resource_filter = request.GET.get('resource', '')
-        date_from = request.GET.get('date_from', '')
-        date_to = request.GET.get('date_to', '')
-        
+        status_filter = request.GET.get('status', ''))
+        resource_filter = request.GET.get('resource', ''))
+        date_from = request.GET.get('date_from', ''))
+        date_to = request.GET.get('date_to', ''))
+
         if status_filter:
             bookings = bookings.filter(stato__nome=status_filter)
-        
+
         if resource_filter:
             bookings = bookings.filter(risorsa__id=resource_filter)
-        
+
         if date_from:
             bookings = bookings.filter(inizio__date__gte=date_from)
-        
+
         if date_to:
             bookings = bookings.filter(fine__date__lte=date_to)
-        
+
         # Escludi cancellate per vista normale
         if not request.GET.get('include_cancelled'):
             bookings = bookings.filter(cancellato_il__isnull=True)
-        
+
         # Ordinamento
         order_by = request.GET.get('order_by', '-inizio')
         bookings = bookings.select_related('utente', 'risorsa', 'stato').order_by(order_by)
-        
+
         # Paginazione
         paginator = Paginator(bookings, 20)
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
-        
+
         # Opzioni filtri
         context = {
             'page_obj': page_obj,
             'bookings': page_obj.object_list,
             'is_admin_view': is_admin_view,
-            'status_choices': BookingStatus.objects.all(),
-            'resource_choices': Resource.objects.all(),
+            'status_choices': StatoPrenotazione.objects.all(),
+            'resource_choices': Risorsa.objects.all(),
             'current_filters': {
                 'status': status_filter,
                 'resource': resource_filter,
@@ -808,8 +810,8 @@ class ResourceViewSet(viewsets.ReadOnlyModelViewSet):
 
 class DeviceViewSet(viewsets.ReadOnlyModelViewSet):
     """API REST per dispositivi (solo lettura)."""
-    queryset = Device.objects.filter(attivo=True).select_related('categoria')
-    serializer_class = DeviceSerializer
+    queryset = Dispositivo.objects.filter(attivo=True).select_related('categoria')
+    serializer_class = DispositivoSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['tipo', 'stato', 'categoria']
