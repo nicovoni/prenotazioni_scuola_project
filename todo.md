@@ -1,16 +1,39 @@
-# Task: Fix Django Logging Configuration Error
+# Analisi e Ottimizzazione Struttura Database Sistema Prenotazioni
 
-## Objective: 
-Fix the ValueError in Django logging configuration where JSON formatter has incorrectly quoted field names causing deployment failure.
+## Obiettivo
+Controllare che la struttura del database sia efficiente e rispecchi in pieno il sistema di prenotazione scolastico con il nuovo database Neon.
 
-## Steps:
-- [ ] Identify the problematic JSON formatter configuration
-- [ ] Fix the JSON format string by removing incorrect quotes from field names
-- [ ] Test the configuration to ensure it works
-- [ ] Verify no other logging configuration issues exist
+## Task List
 
-## Issue Found:
-The JSON formatter in config/settings.py line 145 has field names incorrectly quoted as `"timestamp"` instead of just `timestamp`, causing the Python logging system to fail when trying to parse the format string.
+### 1. Analisi Struttura Database Esistente
+- [ ] Esaminare models.py per valutare l'architettura attuale
+- [ ] Controllare file di documentazione esistenti (RESOCONTO_TABELLE_DATABASE.md, ecc.)
+- [ ] Analizzare migrations per vedere la struttura reale del database
+- [ ] Verificare coerenza tra modelli e funzionalità richieste
 
-## Solution:
-Remove the quotes around the field names in the JSON format string while preserving the JSON syntax around the entire string.
+### 2. Valutazione Efficienza Architetturale
+- [ ] Verificare normalizzazione delle tabelle
+- [ ] Controllare indici e performance
+- [ ] Valutare relazioni tra entità
+- [ ] Analizzare gestione stati e workflow
+
+### 3. Validazione Funzionalità Sistema Prenotazione
+- [ ] Verificare gestione risorse e dispositivi
+- [ ] Controllare workflow prenotazioni
+- [ ] Validare gestione utenti e ruoli
+- [ ] Verificare sistema di notifiche e logging
+
+### 4. Identificazione Aree di Miglioramento
+- [ ] Individuare ridondanze o inefficienze
+- [ ] Proporre ottimizzazioni delle query
+- [ ] Suggerire miglioramenti agli indici
+- [ ] Valutare normalizzazione/denormalizzazione
+
+### 5. Documentazione e Raccomandazioni
+- [ ] Creare report dettagliato della struttura
+- [ ] Documentare raccomandazioni per miglioramenti
+- [ ] Fornire piano di implementazione ottimizzazioni
+- [ ] Creare script di migrazione se necessari
+
+## Status: In Corso
+Data inizio: 19/11/2025 12:39
