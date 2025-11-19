@@ -59,7 +59,7 @@ class HomeView(LoginRequiredMixin, View):
         """Mostra dashboard personalizzato per ruolo."""
         user = request.user
         context = {}
-        
+
         if user.is_admin():
             # Dashboard admin
             stats = SystemService.get_system_stats()
@@ -67,36 +67,36 @@ class HomeView(LoginRequiredMixin, View):
                 cancellato_il__isnull=True
             ).select_related('utente', 'risorsa', 'stato').order_by('-inizio')[:10]
             recent_logs = LogSistema.objects.order_by('-timestamp')[:20]
-            
+
             context.update({
                 'stats': stats,
                 'recent_bookings': recent_bookings,
                 'recent_logs': recent_logs,
                 'is_admin': True
             })
-            
+
         elif user.is_docente() or user.is_studente():
             # Dashboard utente normale
             my_bookings = Prenotazione.objects.filter(
                 utente=user,
                 cancellato_il__isnull=True
             ).select_related('risorsa', 'stato').order_by('-inizio')[:5]
-            
+
             available_resources = ServizioRisorsa.get_available_resources()[:10]
-            
+
             context.update({
                 'my_bookings': my_bookings,
                 'available_resources': available_resources,
                 'is_admin': False
             })
-        
+
         # Informazioni scuola
         try:
             school_info = InformazioniScuola.ottieni_istanza()
             context['school_info'] = school_info
         except:
             context['school_info'] = None
-        
+
         return render(request, 'home.html', context)
 
 
@@ -294,7 +294,7 @@ class UserProfileView(LoginRequiredMixin, View):
         context = {
             'user': user,
             'profile': profile,
-            'recent_bookings': BookingService.get_user_bookings(user)[:5]
+            'recent_bookings': ServizioPrenotazione.get_user_bookings(user)[:5]
         }
         
         return render(request, 'users/profile.html', context)
@@ -412,21 +412,21 @@ class PrenotaResourceView(LoginRequiredMixin, View):
     
     def get(self, request):
         """Mostra form prenotazione."""
-        form = BookingForm(user=request.user)
-        resources = ResourceService.get_available_resources()
-        
+        form = FormPrenotazione(user=request.user)
+        risorse = ServizioRisorsa.get_available_resources()
+
         context = {
             'form': form,
-            'resources': resources,
+            'resources': risorse,
             'is_edit': False
         }
-        
+
         return render(request, 'bookings/prenota.html', context)
-    
+
     def post(self, request):
         """Processa creazione prenotazione."""
-        form = BookingForm(request.POST, user=request.user)
-        
+        form = FormPrenotazione(request.POST, user=request.user)
+
         if form.is_valid():
             # Crea prenotazione
             success, result = BookingService.create_booking(
@@ -441,7 +441,7 @@ class PrenotaResourceView(LoginRequiredMixin, View):
                 setup_needed=form.cleaned_data['setup_needed'],
                 cleanup_needed=form.cleaned_data['cleanup_needed']
             )
-            
+
             if success:
                 messages.success(request, 'Prenotazione creata con successo!')
                 return redirect('bookings:lista')
@@ -449,14 +449,14 @@ class PrenotaResourceView(LoginRequiredMixin, View):
                 messages.error(request, f'Errore: {result}')
         else:
             messages.error(request, 'Correggi gli errori nel form.')
-        
-        resources = ResourceService.get_available_resources()
+
+        risorse = ServizioRisorsa.get_available_resources()
         context = {
             'form': form,
-            'resources': resources,
+            'resources': risorse,
             'is_edit': False
         }
-        
+
         return render(request, 'bookings/prenota.html', context)
 
 
@@ -476,10 +476,10 @@ class ListaPrenotazioniView(LoginRequiredMixin, View):
             is_admin_view = False
 
         # Filtri
-        status_filter = request.GET.get('status', ''))
-        resource_filter = request.GET.get('resource', ''))
-        date_from = request.GET.get('date_from', ''))
-        date_to = request.GET.get('date_to', ''))
+        status_filter = request.GET.get('status', '')
+        resource_filter = request.GET.get('resource', '')
+        date_from = request.GET.get('date_from', '')
+        date_to = request.GET.get('date_to', '')
 
         if status_filter:
             bookings = bookings.filter(stato__nome=status_filter)
@@ -530,50 +530,50 @@ class EditPrenotazioneView(LoginRequiredMixin, View):
     
     def get(self, request, pk):
         """Mostra form modifica."""
-        booking = get_object_or_404(Booking, pk=pk)
-        
+        prenotazione = get_object_or_404(Prenotazione, pk=pk)
+
         # Controllo permessi
-        if not booking.can_be_modified_by(request.user):
+        if not prenotazione.can_be_modified_by(request.user):
             messages.error(request, 'Non hai i permessi per modificare questa prenotazione.')
             return redirect('bookings:lista')
-        
+
         # Pre-compila form
         initial_data = {
-            'risorsa': booking.risorsa,
-            'data': booking.inizio.date(),
-            'ora_inizio': booking.inizio.time(),
-            'ora_fine': booking.fine.time(),
-            'quantita': booking.quantita,
-            'scopo': booking.scopo,
-            'note': booking.note,
-            'priorita': booking.priorita,
-            'setup_needed': booking.setup_needed,
-            'cleanup_needed': booking.cleanup_needed
+            'risorsa': prenotazione.risorsa,
+            'data': prenotazione.inizio.date(),
+            'ora_inizio': prenotazione.inizio.time(),
+            'ora_fine': prenotazione.fine.time(),
+            'quantita': prenotazione.quantita,
+            'scopo': prenotazione.scopo,
+            'note': prenotazione.note,
+            'priorita': prenotazione.priorita,
+            'setup_needed': prenotazione.setup_needed,
+            'cleanup_needed': prenotazione.cleanup_needed
         }
-        
-        form = BookingForm(initial=initial_data, user=request.user, prenotazione_id=pk)
-        resources = ResourceService.get_available_resources()
-        
+
+        form = FormPrenotazione(initial=initial_data, user=request.user, prenotazione_id=pk)
+        risorse = ServizioRisorsa.get_available_resources()
+
         context = {
             'form': form,
-            'booking': booking,
-            'resources': resources,
+            'booking': prenotazione,
+            'resources': risorse,
             'is_edit': True
         }
-        
+
         return render(request, 'bookings/prenota.html', context)
-    
+
     def post(self, request, pk):
         """Processa modifica prenotazione."""
-        booking = get_object_or_404(Booking, pk=pk)
-        
+        prenotazione = get_object_or_404(Prenotazione, pk=pk)
+
         # Controllo permessi
-        if not booking.can_be_modified_by(request.user):
+        if not prenotazione.can_be_modified_by(request.user):
             messages.error(request, 'Non hai i permessi per modificare questa prenotazione.')
             return redirect('bookings:lista')
-        
-        form = BookingForm(request.POST, user=request.user, prenotazione_id=pk)
-        
+
+        form = FormPrenotazione(request.POST, user=request.user, prenotazione_id=pk)
+
         if form.is_valid():
             # Aggiorna prenotazione
             success, result = BookingService.update_booking(
@@ -588,7 +588,7 @@ class EditPrenotazioneView(LoginRequiredMixin, View):
                 setup_needed=form.cleaned_data['setup_needed'],
                 cleanup_needed=form.cleaned_data['cleanup_needed']
             )
-            
+
             if success:
                 messages.success(request, 'Prenotazione aggiornata con successo!')
                 return redirect('bookings:lista')
@@ -596,50 +596,50 @@ class EditPrenotazioneView(LoginRequiredMixin, View):
                 messages.error(request, f'Errore: {result}')
         else:
             messages.error(request, 'Correggi gli errori nel form.')
-        
-        resources = ResourceService.get_available_resources()
+
+        risorse = ServizioRisorsa.get_available_resources()
         context = {
             'form': form,
-            'booking': booking,
-            'resources': resources,
+            'booking': prenotazione,
+            'resources': risorse,
             'is_edit': True
         }
-        
+
         return render(request, 'bookings/prenota.html', context)
 
 
 class DeletePrenotazioneView(LoginRequiredMixin, View):
     """Elimina prenotazione."""
-    
+
     def get(self, request, pk):
         """Mostra conferma eliminazione."""
-        booking = get_object_or_404(Booking, pk=pk)
-        
+        prenotazione = get_object_or_404(Prenotazione, pk=pk)
+
         # Controllo permessi
-        if not booking.can_be_cancelled_by(request.user):
+        if not prenotazione.can_be_cancelled_by(request.user):
             messages.error(request, 'Non hai i permessi per eliminare questa prenotazione.')
             return redirect('bookings:lista')
-        
+
         form = ConfirmDeleteForm()
-        
+
         context = {
             'form': form,
-            'booking': booking
+            'booking': prenotazione
         }
-        
+
         return render(request, 'bookings/delete_confirm.html', context)
-    
+
     def post(self, request, pk):
         """Processa eliminazione."""
-        booking = get_object_or_404(Booking, pk=pk)
-        
+        prenotazione = get_object_or_404(Prenotazione, pk=pk)
+
         # Controllo permessi
-        if not booking.can_be_cancelled_by(request.user):
+        if not prenotazione.can_be_cancelled_by(request.user):
             messages.error(request, 'Non hai i permessi per eliminare questa prenotazione.')
             return redirect('bookings:lista')
-        
+
         form = ConfirmDeleteForm(request.POST)
-        
+
         if form.is_valid():
             # Elimina prenotazione
             success, result = BookingService.cancel_booking(
@@ -647,14 +647,14 @@ class DeletePrenotazioneView(LoginRequiredMixin, View):
                 utente=request.user,
                 reason="Eliminata dall'utente"
             )
-            
+
             if success:
                 messages.success(request, 'Prenotazione eliminata con successo!')
             else:
                 messages.error(request, f'Errore: {result}')
         else:
             messages.error(request, 'Devi confermare per procedere.')
-        
+
         return redirect('bookings:lista')
 
 
@@ -670,26 +670,26 @@ class ResourceListView(LoginRequiredMixin, View):
         resource_type = request.GET.get('type', '')
         location = request.GET.get('location', '')
         
-        query = Resource.objects.filter(attivo=True)
-        
+        query = Risorsa.objects.filter(attivo=True)
+
         if resource_type:
             query = query.filter(tipo=resource_type)
-        
+
         if location:
-            query = query.filter(localizzazione__id=location)
-        
-        resources = query.select_related('localizzazione').order_by('tipo', 'nome')
-        
+            query = query.filter(ubicazione__id=location)
+
+        resources = query.select_related('ubicazione').order_by('tipo', 'nome')
+
         # Paginazione
         paginator = Paginator(resources, 20)
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
-        
+
         context = {
             'page_obj': page_obj,
             'resources': page_obj.object_list,
-            'resource_types': Resource.TIPO_RISORSA,
-            'locations': ResourceLocation.objects.filter(attivo=True),
+            'resource_types': Risorsa.TIPO_RISORSA,
+            'locations': UbicazioneRisorsa.objects.filter(attivo=True),
             'current_filters': {
                 'type': resource_type,
                 'location': location
@@ -708,30 +708,30 @@ class DeviceListView(LoginRequiredMixin, View):
         category = request.GET.get('category', '')
         status = request.GET.get('status', 'disponibile')
         
-        query = Device.objects.filter(attivo=True)
-        
+        query = Dispositivo.objects.filter(attivo=True)
+
         if device_type:
             query = query.filter(tipo=device_type)
-        
+
         if category:
             query = query.filter(categoria__id=category)
-        
+
         if status:
             query = query.filter(stato=status)
-        
+
         devices = query.select_related('categoria').order_by('tipo', 'marca', 'nome')
-        
+
         # Paginazione
         paginator = Paginator(devices, 20)
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
-        
+
         context = {
             'page_obj': page_obj,
             'devices': page_obj.object_list,
-            'device_types': Device.TIPO_DISPOSITIVO,
-            'categories': DeviceCategory.objects.filter(attiva=True),
-            'status_choices': Device._meta.get_field('stato').choices,
+            'device_types': Dispositivo.TIPO_DISPOSITIVO,
+            'categories': CategoriaDispositivo.objects.filter(attiva=True),
+            'status_choices': Dispositivo._meta.get_field('stato').choices,
             'current_filters': {
                 'type': device_type,
                 'category': category,
@@ -800,8 +800,8 @@ class BookingViewSet(viewsets.ModelViewSet):
 
 class ResourceViewSet(viewsets.ReadOnlyModelViewSet):
     """API REST per risorse (solo lettura)."""
-    queryset = Resource.objects.filter(attivo=True).select_related('localizzazione')
-    serializer_class = ResourceSerializer
+    queryset = Risorsa.objects.filter(attivo=True).select_related('ubicazione')
+    serializer_class = RisorsaSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['tipo', 'attivo', 'localizzazione']
@@ -881,11 +881,12 @@ def database_viewer(request):
     stats = SystemService.get_system_stats()
     
     # Dati completi
-    utenti = Utente.objects.all().order_by('username')
-    risorse = Resource.objects.all().select_related('localizzazione')
-    dispositivi = Device.objects.all().select_related('categoria').order_by('marca', 'nome')
-    prenotazioni = Booking.objects.all().select_related('utente', 'risorsa', 'stato').order_by('-inizio')[:100]
-    logs = SystemLog.objects.order_by('-timestamp')[:50]
+    from django.contrib.auth.models import User
+    utenti = User.objects.all().order_by('username')
+    risorse = Risorsa.objects.all().select_related('ubicazione')
+    dispositivi = Dispositivo.objects.all().select_related('categoria').order_by('marca', 'nome')
+    prenotazioni = Prenotazione.objects.all().select_related('utente', 'risorsa', 'stato').order_by('-inizio')[:100]
+    logs = LogSistema.objects.order_by('-timestamp')[:50]
     
     context = {
         'stats': stats,
