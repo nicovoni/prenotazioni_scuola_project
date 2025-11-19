@@ -597,12 +597,11 @@ class SystemLogForm(forms.ModelForm):
 
 class NotificationTemplateForm(forms.ModelForm):
     """Form per template notifiche."""
-    
+
     class Meta:
         model = NotificationTemplate
         fields = [
-            'nome', 'tipo', 'evento', 'oggetto', 'contenuto', 'attivo',
-            'invio_immediato', 'tentativi_massimi', 'intervallo_tentativi_minuti'
+            'nome', 'tipo', 'evento', 'oggetto', 'contenuto', 'attivo'
         ]
         widgets = {
             'nome': forms.TextInput(attrs={'class': 'form-control'}),
@@ -611,9 +610,6 @@ class NotificationTemplateForm(forms.ModelForm):
             'oggetto': forms.TextInput(attrs={'class': 'form-control'}),
             'contenuto': forms.Textarea(attrs={'class': 'form-control', 'rows': 6}),
             'attivo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'invio_immediato': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'tentativi_massimi': forms.NumberInput(attrs={'class': 'form-control'}),
-            'intervallo_tentativi_minuti': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
 
