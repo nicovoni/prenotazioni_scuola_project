@@ -1313,22 +1313,17 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
 
-@receiver(post_save, sender=Utente)
-def create_user_profile(sender, instance, created, **kwargs):
+def create_user_profile_signal(sender, instance, created, **kwargs):
     """Crea profilo automaticamente quando viene creato un utente."""
     if created:
         UserProfile.objects.create(user=instance)
 
-
-@receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
+def save_user_profile_signal(sender, instance, **kwargs):
     """Salva profilo quando viene salvato l'utente."""
     if hasattr(instance, 'profile'):
         instance.profile.save()
 
-
-@receiver(post_save, sender=Booking)
-def log_booking_action(sender, instance, created, **kwargs):
+def log_booking_action_signal(created, instance, **kwargs):
     """Log azioni prenotazioni."""
     if created:
         log_user_action(
@@ -1345,9 +1340,7 @@ def log_booking_action(sender, instance, created, **kwargs):
             related_booking=instance
         )
 
-
-@receiver(post_delete, sender=Booking)
-def log_booking_deletion(sender, instance, **kwargs):
+def log_booking_deletion_signal(sender, instance, **kwargs):
     """Log cancellazione prenotazioni."""
     log_user_action(
         utente=instance.utente,
@@ -1355,3 +1348,9 @@ def log_booking_deletion(sender, instance, **kwargs):
         message=f"Prenotazione cancellata: {instance.risorsa.nome}",
         related_booking=instance
     )
+
+# Connect signals after function definitions
+post_save.connect(create_user_profile_signal, sender=User)
+post_save.connect(save_user_profile_signal, sender=User)
+post_save.connect(log_booking_action_signal, sender=Booking)
+post_delete.connect(log_booking_deletion_signal, sender=Booking)
