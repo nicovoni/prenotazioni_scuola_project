@@ -9,26 +9,26 @@ from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from .models import (
-    # Core Models
-    UserProfile, Resource, Device, Booking,
+    # Modelli Core
+    ProfiloUtente, Risorsa, Dispositivo, Prenotazione,
 
-    # Configuration & Info
-    Configuration, SchoolInfo,
+    # Configurazione e Info
+    ConfigurazioneSistema, InformazioniScuola,
 
-    # Session Management
-    UserSession,
+    # Gestione Sessioni
+    SessioneUtente,
 
-    # Device Management
-    DeviceCategory, ResourceLocation,
+    # Gestione Dispositivi
+    CategoriaDispositivo, UbicazioneRisorsa,
 
-    # Booking Management
-    BookingStatus,
+    # Gestione Prenotazioni
+    StatoPrenotazione,
 
-    # System & Notifications
-    SystemLog, NotificationTemplate, Notification,
+    # Sistema e Notifiche
+    LogSistema, TemplateNotifica, NotificaUtente,
 
-    # File Management
-    FileUpload
+    # Gestione File
+    CaricamentoFile
 )
 
 
@@ -36,109 +36,109 @@ from .models import (
 # ADMIN UTENTI
 # =====================================================
 
-# Using Django's built-in User admin - custom user profile fields are managed via UserProfile admin
+# Using Django's built-in User admin - custom user profile fields are managed via ProfiloUtente admin
 
 
-@admin.register(UserProfile)
-class UserProfileAdmin(admin.ModelAdmin):
+@admin.register(ProfiloUtente)
+class AmministrazioneProfiloUtente(admin.ModelAdmin):
     """Admin per profili utente estesi."""
-    
-    list_display = ('user', 'nome_completo', 'classe', 'dipartimento', 'attivo', 'verificato')
-    list_filter = ('attivo', 'verificato', 'sesso', 'preferenze_lingua')
-    search_fields = ('nome', 'cognome', 'user__username', 'user__email', 'classe', 'dipartimento')
-    readonly_fields = ('creato_il', 'modificato_il', 'nome_completo', 'eta')
+
+    list_display = ('utente', 'nome_completo_utente', 'classe_utente', 'dipartimento_utente', 'utente_attivo', 'utente_verificato')
+    list_filter = ('utente_attivo', 'utente_verificato', 'sesso_utente', 'preferenze_lingua_utente')
+    search_fields = ('nome_utente', 'cognome_utente', 'utente__username', 'utente__email', 'classe_utente', 'dipartimento_utente')
+    readonly_fields = ('data_creazione_utente', 'data_modifica_utente', 'nome_completo_utente', 'eta_utente')
 
 
 # =====================================================
 # ADMIN CONFIGURAZIONE
 # =====================================================
 
-@admin.register(Configuration)
-class ConfigurationAdmin(admin.ModelAdmin):
+@admin.register(ConfigurazioneSistema)
+class AmministrazioneConfigurazioneSistema(admin.ModelAdmin):
     """Admin per configurazioni di sistema."""
-    
-    list_display = ('chiave', 'tipo', 'valore_preview', 'modificabile', 'modificato_il')
-    list_filter = ('tipo', 'modificabile')
-    search_fields = ('chiave', 'descrizione')
-    readonly_fields = ('creato_il', 'modificato_il')
-    
-    def valore_preview(self, obj):
+
+    list_display = ('chiave_configurazione', 'tipo_configurazione', 'anteprima_valore', 'configurazione_modificabile', 'data_modifica_configurazione')
+    list_filter = ('tipo_configurazione', 'configurazione_modificabile')
+    search_fields = ('chiave_configurazione', 'descrizione_configurazione')
+    readonly_fields = ('data_creazione_configurazione', 'data_modifica_configurazione')
+
+    def anteprima_valore(self, obj):
         """Mostra anteprima del valore."""
-        return obj.valore[:50] + '...' if len(obj.valore) > 50 else obj.valore
-    valore_preview.short_description = 'Valore'
+        return obj.valore_configurazione[:50] + '...' if len(obj.valore_configurazione) > 50 else obj.valore_configurazione
+    anteprima_valore.short_description = 'Valore'
 
 
-@admin.register(SchoolInfo)
-class SchoolInfoAdmin(admin.ModelAdmin):
+@admin.register(InformazioniScuola)
+class AmministrazioneInformazioniScuola(admin.ModelAdmin):
     """Admin per informazioni scuola."""
-    
+
     fieldsets = (
         ('Identificazione', {
-            'fields': ('nome_completo', 'nome_breve', 'codice_meccanografico', 'partita_iva')
+            'fields': ('nome_completo_scuola', 'nome_breve_scuola', 'codice_meccanografico_scuola', 'partita_iva_scuola')
         }),
         ('Contatti', {
-            'fields': ('sito_web', 'email_istituzionale', 'telefono', 'fax')
+            'fields': ('sito_web_scuola', 'email_istituzionale_scuola', 'telefono_scuola', 'fax_scuola')
         }),
         ('Indirizzo', {
-            'fields': ('indirizzo', 'cap', 'comune', 'provincia', 'regione', 'nazione')
+            'fields': ('indirizzo_scuola', 'codice_postale_scuola', 'comune_scuola', 'provincia_scuola', 'regione_scuola', 'nazione_scuola')
         }),
         ('Geolocalizzazione', {
-            'fields': ('latitudine', 'longitudine')
+            'fields': ('latitudine_scuola', 'longitudine_scuola')
         }),
         ('Status', {
-            'fields': ('attivo', 'creato_il', 'modificato_il')
+            'fields': ('scuola_attiva', 'data_creazione_scuola', 'data_modifica_scuola')
         }),
     )
-    
-    readonly_fields = ('creato_il', 'modificato_il')
+
+    readonly_fields = ('data_creazione_scuola', 'data_modifica_scuola')
 
 
 # =====================================================
 # ADMIN SESSIONI
 # =====================================================
 
-@admin.register(UserSession)
-class UserSessionAdmin(admin.ModelAdmin):
+@admin.register(SessioneUtente)
+class AmministrazioneSessioneUtente(admin.ModelAdmin):
     """Admin per sessioni utente."""
-    
-    list_display = ('user', 'tipo', 'stato', 'email_destinazione', 'created_at', 'expires_at', 'is_expired')
-    list_filter = ('tipo', 'stato', 'created_at')
-    search_fields = ('user__username', 'email_destinazione')
-    readonly_fields = ('token', 'created_at', 'expires_at', 'verified_at', 'is_expired', 'is_valid')
-    
-    def is_expired(self, obj):
-        return obj.is_expired
-    is_expired.boolean = True
-    is_expired.short_description = 'Scaduta'
+
+    list_display = ('utente_sessione', 'tipo_sessione', 'stato_sessione', 'email_destinazione_sessione', 'data_creazione_sessione', 'data_scadenza_sessione', 'sessione_scaduta')
+    list_filter = ('tipo_sessione', 'stato_sessione', 'data_creazione_sessione')
+    search_fields = ('utente_sessione__username', 'email_destinazione_sessione')
+    readonly_fields = ('token_sessione', 'data_creazione_sessione', 'data_scadenza_sessione', 'data_verifica_sessione', 'sessione_scaduta', 'sessione_valida')
+
+    def sessione_scaduta(self, obj):
+        return obj.sessione_scaduta
+    sessione_scaduta.boolean = True
+    sessione_scaduta.short_description = 'Scaduta'
 
 
 # =====================================================
 # ADMIN DISPOSITIVI
 # =====================================================
 
-@admin.register(DeviceCategory)
-class DeviceCategoryAdmin(admin.ModelAdmin):
+@admin.register(CategoriaDispositivo)
+class AmministrazioneCategoriaDispositivo(admin.ModelAdmin):
     """Admin per categorie dispositivi."""
-    
+
     list_display = ('nome', 'ordine', 'attiva', 'icona')
     list_filter = ('attiva',)
     search_fields = ('nome', 'descrizione')
     ordering = ('ordine', 'nome')
 
 
-@admin.register(ResourceLocation)
-class ResourceLocationAdmin(admin.ModelAdmin):
+@admin.register(UbicazioneRisorsa)
+class AmministrazioneUbicazioneRisorsa(admin.ModelAdmin):
     """Admin per localizzazioni risorse."""
-    
+
     list_display = ('nome', 'edificio', 'piano', 'aula', 'capacita_persone', 'attivo')
     list_filter = ('attivo', 'edificio')
     search_fields = ('nome', 'descrizione', 'edificio', 'aula')
 
 
-@admin.register(Device)
-class DeviceAdmin(admin.ModelAdmin):
+@admin.register(Dispositivo)
+class AmministrazioneDispositivo(admin.ModelAdmin):
     """Admin per dispositivi."""
-    
+
     list_display = ('display_name', 'tipo', 'categoria', 'stato', 'edificio', 'attivo')
     list_filter = ('tipo', 'stato', 'categoria', 'attivo', 'data_acquisto')
     search_fields = ('nome', 'marca', 'modello', 'serie', 'codice_inventario')
@@ -149,15 +149,15 @@ class DeviceAdmin(admin.ModelAdmin):
 # ADMIN RISORSE
 # =====================================================
 
-@admin.register(Resource)
-class ResourceAdmin(admin.ModelAdmin):
+@admin.register(Risorsa)
+class AmministrazioneRisorsa(admin.ModelAdmin):
     """Admin per risorse prenotabili."""
-    
+
     list_display = ('nome', 'codice', 'tipo', 'localizzazione', 'capacita_massima', 'attivo')
     list_filter = ('tipo', 'categoria', 'attivo', 'manutenzione', 'feriali_disponibile', 'weekend_disponibile')
     search_fields = ('nome', 'codice', 'descrizione')
     readonly_fields = ('creato_il', 'modificato_il', 'is_laboratorio', 'is_carrello', 'is_aula', 'is_available_for_booking')
-    
+
     filter_horizontal = ('dispositivi',)
 
 
@@ -165,27 +165,27 @@ class ResourceAdmin(admin.ModelAdmin):
 # ADMIN PRENOTAZIONI
 # =====================================================
 
-@admin.register(BookingStatus)
-class BookingStatusAdmin(admin.ModelAdmin):
+@admin.register(StatoPrenotazione)
+class AmministrazioneStatoPrenotazione(admin.ModelAdmin):
     """Admin per stati prenotazione."""
-    
+
     list_display = ('nome', 'ordine', 'colore', 'icon')
     list_filter = ('ordine',)
     search_fields = ('nome', 'descrizione')
     ordering = ('ordine', 'nome')
 
 
-@admin.register(Booking)
-class BookingAdmin(admin.ModelAdmin):
+@admin.register(Prenotazione)
+class AmministrazionePrenotazione(admin.ModelAdmin):
     """Admin per prenotazioni."""
-    
+
     list_display = ('utente', 'risorsa', 'stato', 'quantita', 'inizio', 'fine', 'priorita')
     list_filter = ('stato', 'priorita', 'setup_needed', 'cleanup_needed', 'inizio', 'fine')
     search_fields = ('utente__username', 'utente__email', 'risorsa__nome', 'scopo')
     readonly_fields = ('creato_il', 'modificato_il', 'durata_minuti', 'durata_ore', 'is_passata', 'is_futura', 'is_in_corso')
-    
+
     filter_horizontal = ('dispositivi_selezionati',)
-    
+
     def get_readonly_fields(self, request, obj=None):
         """Campi readonly per prenotazioni passate."""
         readonly = self.readonly_fields
@@ -198,48 +198,49 @@ class BookingAdmin(admin.ModelAdmin):
 # ADMIN SISTEMA
 # =====================================================
 
-@admin.register(SystemLog)
-class SystemLogAdmin(admin.ModelAdmin):
+@admin.register(LogSistema)
+class AmministrazioneLogSistema(admin.ModelAdmin):
     """Admin per log di sistema."""
-    
+
     list_display = ('livello', 'tipo_evento', 'utente', 'messaggio_preview', 'timestamp')
     list_filter = ('livello', 'tipo_evento', 'timestamp')
     search_fields = ('utente__username', 'messaggio', 'dettagli')
     readonly_fields = ('timestamp', 'messaggio_preview')
-    
+
     def messaggio_preview(self, obj):
         """Mostra anteprima messaggio."""
         return obj.messaggio[:50] + '...' if len(obj.messaggio) > 50 else obj.messaggio
     messaggio_preview.short_description = 'Messaggio'
-    
+
     def has_add_permission(self, request):
         """Non permette aggiunta manuale di log."""
         return False
-    
+
     def has_change_permission(self, request, obj=None):
         """Non permette modifica di log."""
         return False
 
 
-@admin.register(NotificationTemplate)
-class NotificationTemplateAdmin(admin.ModelAdmin):
+@admin.register(TemplateNotifica)
+class AmministrazioneTemplateNotifica(admin.ModelAdmin):
     """Admin per template notifiche."""
-    
+
     list_display = ('nome', 'tipo', 'evento', 'attivo', 'invio_immediato')
     list_filter = ('tipo', 'attivo', 'invio_immediato')
     search_fields = ('nome', 'evento', 'oggetto', 'contenuto')
     readonly_fields = ('creato_il', 'modificato_il')
 
 
-@admin.register(Notification)
-class NotificationAdmin(admin.ModelAdmin):
+# Fix the import - NotificaUtente is not the model name, let's check what it actually is
+@admin.register(NotificaUtente)
+class AmministrazioneNotifica(admin.ModelAdmin):
     """Admin per notifiche."""
-    
+
     list_display = ('utente', 'tipo', 'canale', 'stato', 'titolo', 'creato_il')
     list_filter = ('tipo', 'canale', 'stato', 'creato_il')
     search_fields = ('utente__username', 'titolo', 'messaggio')
     readonly_fields = ('creato_il', 'is_pending', 'can_retry')
-    
+
     def has_add_permission(self, request):
         """Non permette aggiunta manuale di notifiche."""
         return False
@@ -249,18 +250,17 @@ class NotificationAdmin(admin.ModelAdmin):
 # ADMIN FILE
 # =====================================================
 
-@admin.register(FileUpload)
-class FileUploadAdmin(admin.ModelAdmin):
+@admin.register(CaricamentoFile)
+class AmministrazioneCaricamentoFile(admin.ModelAdmin):
     """Admin per file caricati."""
-    
+
     list_display = ('nome_originale', 'tipo_file', 'dimensione_formattata', 'caricato_da', 'pubblico', 'creato_il')
     list_filter = ('tipo_file', 'pubblico', 'attivo', 'virus_scanned', 'creato_il')
     search_fields = ('nome_originale', 'titolo', 'descrizione')
     readonly_fields = ('creato_il', 'modificato_il', 'estensione', 'dimensione_formattata', 'download_count', 'ultimo_download')
-    
+
     def dimensione_formattata(self, obj):
         return obj.dimensione_formattata
-    dimensione_formattata.short_description = 'Dimensione'
 
 
 # =====================================================
