@@ -24,9 +24,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
-    Utente, Resource, Device, Booking, Configuration, UserSession,
-    SystemLog, NotificationTemplate, Notification, UserProfile,
-    ResourceLocation, DeviceCategory, BookingStatus, FileUpload, SchoolInfo
+    Risorsa, Dispositivo, Prenotazione, ConfigurazioneSistema, SessioneUtente,
+    LogSistema, TemplateNotifica, NotificaUtente, ProfiloUtente,
+    UbicazioneRisorsa, CategoriaDispositivo, StatoPrenotazione, CaricamentoFile, InformazioniScuola
 )
 from .forms import (
     ConfigurationForm, SchoolInfoForm, UserProfileForm, UtenteForm, AdminUserForm,
@@ -41,8 +41,8 @@ from .services import (
     SystemInitializer
 )
 from .serializers import (
-    UtenteSerializer, ResourceSerializer, DeviceSerializer, BookingSerializer,
-    ConfigurationSerializer, NotificationSerializer, SystemLogSerializer
+    ProfiloUtenteSerializer, RisorsaSerializer, Dispositivoserializer, PrenotazioneSerializer,
+    ConfigurazioneSistemaSerializer, NotificaUtenteSerializer, LogSistemaSerializer
 )
 
 
