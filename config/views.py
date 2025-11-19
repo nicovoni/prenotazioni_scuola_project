@@ -4,8 +4,8 @@ from django.db import connection
 
 def home(request):
     # Controllo se il sistema è configurato
-    from prenotazioni.models import Utente, Risorsa
-    if not Utente.objects.exists() or not Risorsa.objects.exists():
+    from prenotazioni.models import Utente, Resource
+    if not Utente.objects.exists() or not Resource.objects.exists():
         return redirect('prenotazioni:configurazione_sistema')
     return render(request, 'home.html')
 

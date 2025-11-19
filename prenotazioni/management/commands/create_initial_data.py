@@ -3,7 +3,7 @@ Management command to create initial data for the booking system.
 Or reset all data with --reset option.
 """
 from django.core.management.base import BaseCommand
-from prenotazioni.models import Prenotazione, Risorsa, Utente
+from prenotazioni.models import Booking, Resource, Utente
 
 
 class Command(BaseCommand):
@@ -24,42 +24,42 @@ class Command(BaseCommand):
             self.stdout.write('Reinitializing resources...')
 
         # Clear all existing resources first to ensure we have exactly the required ones
-        deleted_count = Risorsa.objects.all().delete()[0]
+        deleted_count = Resource.objects.all().delete()[0]
         if not options['reset']:
             if deleted_count > 0:
                 self.stdout.write(f'  Deleted {deleted_count} existing resources')
 
         # Create laboratory (fixed workstations - cannot be partially booked)
         laboratories = [
-            {'nome': 'Laboratorio Multimediale', 'tipo': 'lab', 'quantita_totale': 1},  # 1 means the whole lab
+            {'nome': 'Laboratorio Multimediale', 'tipo': 'laboratorio', 'capacita_massima': 25},
         ]
 
         # Create equipment carts (can be partially booked)
         equipment = [
-            {'nome': 'Carrello iPad', 'tipo': 'carrello', 'quantita_totale': 25},
-            {'nome': 'Carrello Notebook', 'tipo': 'carrello', 'quantita_totale': 30},
+            {'nome': 'Carrello iPad', 'tipo': 'carrello', 'capacita_massima': 25},
+            {'nome': 'Carrello Notebook', 'tipo': 'carrello', 'capacita_massima': 30},
         ]
 
         created_count = 0
 
         # Create laboratories
         for lab_data in laboratories:
-            risorsa = Risorsa.objects.create(
+            risorsa = Resource.objects.create(
                 nome=lab_data['nome'],
                 tipo=lab_data['tipo'],
-                quantita_totale=lab_data['quantita_totale']
+                capacita_massima=lab_data['capacita_massima']
             )
-            self.stdout.write(f'  Created: {risorsa.nome} ({risorsa.quantita_totale} posti)')
+            self.stdout.write(f'  Created: {risorsa.nome} ({risorsa.capacita_massima} posti)')
             created_count += 1
 
         # Create equipment
         for equip_data in equipment:
-            risorsa = Risorsa.objects.create(
+            risorsa = Resource.objects.create(
                 nome=equip_data['nome'],
                 tipo=equip_data['tipo'],
-                quantita_totale=equip_data['quantita_totale']
+                capacita_massima=equip_data['capacita_massima']
             )
-            self.stdout.write(f'  Created: {risorsa.nome} ({risorsa.quantita_totale} unità)')
+            self.stdout.write(f'  Created: {risorsa.nome} ({risorsa.capacita_massima} unità)')
             created_count += 1
 
         if options['reset']:
@@ -73,8 +73,8 @@ class Command(BaseCommand):
 
     def reset_all_data(self):
         """Delete all data from all tables"""
-        deleted_prenotazioni = Prenotazione.objects.all().delete()[0]
-        deleted_risorse = Risorsa.objects.all().delete()[0]
+        deleted_prenotazioni = Booking.objects.all().delete()[0]
+        deleted_risorse = Resource.objects.all().delete()[0]
         deleted_utenti = Utente.objects.all().delete()[0]
 
         self.stdout.write(f'  Deleted {deleted_prenotazioni} prenotazioni')
