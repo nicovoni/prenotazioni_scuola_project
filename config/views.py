@@ -4,10 +4,15 @@ from django.db import connection
 
 def home(request):
     # Controllo se il sistema è configurato
-    from prenotazioni.models import Utente, Resource
-    if not Utente.objects.exists() or not Resource.objects.exists():
+    try:
+        from prenotazioni.models import Utente, Resource
+        if not Utente.objects.exists() or not Resource.objects.exists():
+            return redirect('prenotazioni:configurazione_sistema')
+        return render(request, 'home.html')
+    except Exception as e:
+        # Se le tabelle non esistono, redirect alla configurazione
+        # Questo permette al sito di funzionare durante il deploy
         return redirect('prenotazioni:configurazione_sistema')
-    return render(request, 'home.html')
 
 def health_check(request):
     """Health check endpoint for Render deployment monitoring"""
