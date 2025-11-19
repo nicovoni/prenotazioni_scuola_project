@@ -408,7 +408,7 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 class SystemStatsSerializer(serializers.Serializer):
     """Serializer per statistiche sistema."""
-    
+
     users = serializers.DictField()
     resources = serializers.DictField()
     devices = serializers.DictField()
@@ -418,7 +418,7 @@ class SystemStatsSerializer(serializers.Serializer):
 
 class ResourceUtilizationSerializer(serializers.Serializer):
     """Serializer per statistiche utilizzo risorse."""
-    
+
     resource = ResourceSerializer(read_only=True)
     total_bookings = serializers.IntegerField()
     total_hours = serializers.DecimalField(max_digits=8, decimal_places=2)
@@ -429,7 +429,7 @@ class ResourceUtilizationSerializer(serializers.Serializer):
 
 class DeviceUsageStatsSerializer(serializers.Serializer):
     """Serializer per statistiche utilizzo dispositivi."""
-    
+
     device = DeviceSerializer(read_only=True)
     total_bookings = serializers.IntegerField()
     total_hours = serializers.DecimalField(max_digits=8, decimal_places=2)
@@ -469,7 +469,7 @@ class FileUploadSerializer(serializers.ModelSerializer):
 
 class BookingSummarySerializer(serializers.Serializer):
     """Serializer per riassunto prenotazioni."""
-    
+
     total_bookings = serializers.IntegerField()
     active_bookings = serializers.IntegerField()
     cancelled_bookings = serializers.IntegerField()
@@ -483,7 +483,7 @@ class BookingSummarySerializer(serializers.Serializer):
 
 class UserActivitySerializer(serializers.Serializer):
     """Serializer per attività utente."""
-    
+
     user = UtenteSerializer(read_only=True)
     total_bookings = serializers.IntegerField()
     bookings_this_month = serializers.IntegerField()
@@ -498,7 +498,7 @@ class UserActivitySerializer(serializers.Serializer):
 
 class SystemHealthSerializer(serializers.Serializer):
     """Serializer per salute sistema."""
-    
+
     status = serializers.CharField()
     database_connection = serializers.CharField()
     active_sessions = serializers.IntegerField()
@@ -517,16 +517,16 @@ class SystemHealthSerializer(serializers.Serializer):
 
 class BookingWithDetailsSerializer(BookingSerializer):
     """Serializer esteso per prenotazioni con dettagli."""
-    
+
     resource_details = ResourceSerializer(source='risorsa', read_only=True)
     user_details = UtenteSerializer(source='utente', read_only=True)
     related_notifications = serializers.SerializerMethodField()
-    
+
     class Meta(BookingSerializer.Meta):
         fields = BookingSerializer.Meta.fields + [
             'resource_details', 'user_details', 'related_notifications'
         ]
-    
+
     def get_related_notifications(self, obj):
         """Notifiche correlate alla prenotazione."""
         notifications = obj.notification_set.all()[:5]
@@ -535,21 +535,21 @@ class BookingWithDetailsSerializer(BookingSerializer):
 
 class UserWithStatsSerializer(UtenteSerializer):
     """Serializer esteso per utenti con statistiche."""
-    
+
     booking_stats = serializers.SerializerMethodField()
     activity_summary = serializers.SerializerMethodField()
     permissions = serializers.SerializerMethodField()
-    
+
     class Meta(UtenteSerializer.Meta):
         fields = UtenteSerializer.Meta.fields + [
             'booking_stats', 'activity_summary', 'permissions'
         ]
-    
+
     def get_booking_stats(self, obj):
         """Statistiche prenotazioni utente."""
         from .services import BookingService
         return BookingService.get_user_bookings(obj).count()
-    
+
     def get_activity_summary(self, obj):
         """Riassunto attività utente."""
         return {
@@ -557,7 +557,7 @@ class UserWithStatsSerializer(UtenteSerializer):
             'total_sessions': obj.sessions.count(),
             'profile_completion': self._calculate_profile_completion(obj)
         }
-    
+
     def get_permissions(self, obj):
         """Permessi utente basati sul ruolo."""
         return {
@@ -568,7 +568,7 @@ class UserWithStatsSerializer(UtenteSerializer):
             'can_manage_resources': obj.is_staff,
             'can_manage_users': obj.is_superuser
         }
-    
+
     def _calculate_profile_completion(self, user):
         """Calcola percentuale completamento profilo."""
         if hasattr(user, 'profile'):
