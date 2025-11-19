@@ -182,7 +182,7 @@ class AmministrazionePrenotazione(admin.ModelAdmin):
     list_display = ('utente', 'risorsa', 'stato', 'quantita', 'inizio', 'fine', 'priorita')
     list_filter = ('stato', 'priorita', 'setup_needed', 'cleanup_needed', 'inizio', 'fine')
     search_fields = ('utente__username', 'utente__email', 'risorsa__nome', 'scopo')
-    readonly_fields = ('creato_il', 'modificato_il', 'durata_minuti', 'durata_ore', 'is_passata', 'is_futura', 'is_in_corso')
+    readonly_fields = ('creato_il', 'modificato_il')
 
     filter_horizontal = ('dispositivi_selezionati',)
 
@@ -225,8 +225,8 @@ class AmministrazioneLogSistema(admin.ModelAdmin):
 class AmministrazioneTemplateNotifica(admin.ModelAdmin):
     """Admin per template notifiche."""
 
-    list_display = ('nome', 'tipo', 'evento', 'attivo', 'invio_immediato')
-    list_filter = ('tipo', 'attivo', 'invio_immediato')
+    list_display = ('nome', 'tipo', 'evento', 'attivo')
+    list_filter = ('tipo', 'attivo')
     search_fields = ('nome', 'evento', 'oggetto', 'contenuto')
     readonly_fields = ('creato_il', 'modificato_il')
 
@@ -239,7 +239,7 @@ class AmministrazioneNotifica(admin.ModelAdmin):
     list_display = ('utente', 'tipo', 'canale', 'stato', 'titolo', 'creato_il')
     list_filter = ('tipo', 'canale', 'stato', 'creato_il')
     search_fields = ('utente__username', 'titolo', 'messaggio')
-    readonly_fields = ('creato_il', 'is_pending', 'can_retry')
+    readonly_fields = ('creato_il',)
 
     def has_add_permission(self, request):
         """Non permette aggiunta manuale di notifiche."""
@@ -257,7 +257,7 @@ class AmministrazioneCaricamentoFile(admin.ModelAdmin):
     list_display = ('nome_originale', 'tipo_file', 'dimensione_formattata', 'caricato_da', 'pubblico', 'creato_il')
     list_filter = ('tipo_file', 'pubblico', 'attivo', 'virus_scanned', 'creato_il')
     search_fields = ('nome_originale', 'titolo', 'descrizione')
-    readonly_fields = ('creato_il', 'modificato_il', 'estensione', 'dimensione_formattata', 'download_count', 'ultimo_download')
+    readonly_fields = ('creato_il', 'modificato_il')
 
     def dimensione_formattata(self, obj):
         return obj.dimensione_formattata

@@ -1,7 +1,9 @@
 """
-Serializers Django REST Framework per la nuova architettura.
+Serializers Django REST Framework per la nuova architettura del sistema di prenotazioni.
 
-Supportano la nuova struttura database con tutti i campi aggiornati.
+Questo file contiene tutti i serializer necessari per la conversione tra modelli di database
+e rappresentazioni JSON dell'API REST, supportando la nuova struttura italiana del database
+con tutti i campi e relazioni aggiornati per il sistema completo di gestione prenotazioni scolastiche.
 """
 
 from rest_framework import serializers
@@ -14,9 +16,10 @@ from .models import (
     UbicazioneRisorsa, CategoriaDispositivo, StatoPrenotazione, CaricamentoFile, InformazioniScuola
 )
 
-# Additional imports needed
+# Import aggiuntivi necessari per il funzionamento dei serializer
 from django.contrib.auth.models import User, Group
 
+# Utilizzo del modello User ottenuto da get_user_model() per compatibilità con modelli personalizzati
 User = get_user_model()
 
 
@@ -25,7 +28,16 @@ User = get_user_model()
 # =====================================================
 
 class ConfigurazioneSistemaSerializer(serializers.ModelSerializer):
-    """Serializer per configurazioni di sistema."""
+    """
+    Serializer per la gestione delle configurazioni di sistema dell'applicazione.
+
+    Questo serializer permette di gestire i parametri di configurazione globali
+    che controllano il comportamento dell'intero sistema di prenotazioni,
+    inclusi impostazioni per notifiche, limiti, comportamenti predefiniti e altro.
+
+    Utilizzato principalmente dagli amministratori di sistema per modificare
+    il comportamento dinamico dell'applicazione senza modifiche al codice.
+    """
 
     class Meta:
         model = ConfigurazioneSistema
