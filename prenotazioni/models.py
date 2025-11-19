@@ -371,7 +371,7 @@ class UserSession(models.Model):
     ]
     
     user = models.ForeignKey(
-        Utente,
+        User,
         on_delete=models.CASCADE,
         related_name='sessions'
     )
@@ -789,7 +789,7 @@ class Booking(models.Model):
     
     # Relazioni principali
     utente = models.ForeignKey(
-        Utente,
+        User,
         on_delete=models.CASCADE,
         related_name='prenotazioni'
     )
@@ -847,7 +847,7 @@ class Booking(models.Model):
     # Validazione e conformità
     approvazione_richiesta = models.BooleanField(default=False)
     approvato_da = models.ForeignKey(
-        Utente,
+        User,
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='prenotazioni_approvate'
@@ -999,7 +999,7 @@ class SystemLog(models.Model):
     )
     tipo_evento = models.CharField(max_length=30, choices=TIPO_EVENTO)
     utente = models.ForeignKey(
-        Utente,
+        User,
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='logs'
@@ -1112,7 +1112,7 @@ class Notification(models.Model):
     ]
     
     utente = models.ForeignKey(
-        Utente,
+        User,
         on_delete=models.CASCADE,
         related_name='notifiche'
     )
@@ -1151,7 +1151,7 @@ class Notification(models.Model):
         null=True, blank=True
     )
     related_user = models.ForeignKey(
-        Utente,
+        User,
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='notifiche_riferimento'
@@ -1219,7 +1219,7 @@ class FileUpload(models.Model):
     
     # Relazioni
     caricato_da = models.ForeignKey(
-        Utente,
+        User,
         on_delete=models.SET_NULL,
         null=True,
         related_name='file_caricati'
@@ -1320,7 +1320,7 @@ def create_user_profile(sender, instance, created, **kwargs):
         UserProfile.objects.create(user=instance)
 
 
-@receiver(post_save, sender=Utente)
+@receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
     """Salva profilo quando viene salvato l'utente."""
     if hasattr(instance, 'profile'):
