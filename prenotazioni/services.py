@@ -19,7 +19,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.template.loader import render_to_string
 from .models import (
-    Resource, Device, Booking, ConfigurazioneSistema as Configuration, SessioneUtente as UserSession,
+    Risorsa, Dispositivo, Prenotazione, ConfigurazioneSistema as Configuration, SessioneUtente as UserSession,
     LogSistema as SystemLog, TemplateNotifica as NotificationTemplate, NotificaUtente as Notification, ProfiloUtente as UserProfile,
     UbicazioneRisorsa as ResourceLocation, CategoriaDispositivo as DeviceCategory, StatoPrenotazione as BookingStatus, CaricamentoFile as FileUpload
 )
@@ -336,8 +336,8 @@ class BookingService:
             tuple: (is_available, available_quantity, errors)
         """
         try:
-            risorsa = Resource.objects.get(id=risorsa_id)
-        except Resource.DoesNotExist:
+            risorsa = Risorsa.objects.get(id=risorsa_id)
+        except Risorsa.DoesNotExist:
             return False, 0, ["Risorsa non trovata."]
         
         # Controllo stato risorsa
@@ -424,7 +424,7 @@ class BookingService:
                 return False, "Utente non attivo."
             
             # Crea prenotazione
-            risorsa = Resource.objects.get(id=risorsa_id)
+            risorsa = Risorsa.objects.get(id=risorsa_id)
             
             # Determina stato iniziale
             initial_status = BookingStatus.objects.get_or_create(
