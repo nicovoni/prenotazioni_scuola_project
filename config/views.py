@@ -5,8 +5,10 @@ from django.db import connection
 def home(request):
     # Controllo se il sistema è configurato
     try:
-        from prenotazioni.models import Utente, Resource
-        if not Utente.objects.exists() or not Resource.objects.exists():
+        from prenotazioni.models import Resource
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        if not User.objects.exists() or not Resource.objects.exists():
             return redirect('prenotazioni:configurazione_sistema')
         return render(request, 'home.html')
     except Exception as e:
@@ -18,8 +20,9 @@ def health_check(request):
     """Health check endpoint for Render deployment monitoring"""
     try:
         # Test database connection using Django ORM
-        from prenotazioni.models import Utente
-        Utente.objects.count()
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        User.objects.count()
         return HttpResponse("OK", status=200)
     except Exception as e:
         return HttpResponse(f"Database Error: {str(e)}", status=500)

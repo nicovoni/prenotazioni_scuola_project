@@ -10,23 +10,23 @@ from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from .models import (
     # Core Models
-    Utente, UserProfile, Resource, Device, Booking,
-    
+    UserProfile, Resource, Device, Booking,
+
     # Configuration & Info
     Configuration, SchoolInfo,
-    
+
     # Session Management
     UserSession,
-    
+
     # Device Management
     DeviceCategory, ResourceLocation,
-    
+
     # Booking Management
     BookingStatus,
-    
+
     # System & Notifications
     SystemLog, NotificationTemplate, Notification,
-    
+
     # File Management
     FileUpload
 )
@@ -36,46 +36,7 @@ from .models import (
 # ADMIN UTENTI
 # =====================================================
 
-@admin.register(Utente)
-class UtenteAdmin(UserAdmin):
-    """Admin per utenti di sistema con ruoli estesi."""
-    
-    model = Utente
-    fieldsets = (
-        (None, {'fields': ('username', 'password')}),
-        (_('Personal info'), {
-            'fields': ('first_name', 'last_name', 'email', 'ruolo', 'email_verificato', 'telefono_verificato')
-        }),
-        (_('Account Status'), {
-            'fields': ('account_attivo', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
-        }),
-        (_('Security'), {
-            'fields': ('pin_tentativi', 'pin_bloccato_fino', 'ultimo_login_ip')
-        }),
-        (_('Important dates'), {
-            'fields': ('last_login', 'date_joined', 'data_creazione')
-        }),
-    )
-    
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('username', 'email', 'password1', 'password2', 'ruolo', 'first_name', 'last_name'),
-        }),
-    )
-    
-    list_display = ('username', 'email', 'first_name', 'last_name', 'ruolo', 'email_verificato', 'account_attivo', 'is_staff')
-    list_filter = ('ruolo', 'email_verificato', 'account_attivo', 'is_staff', 'is_superuser', 'date_joined')
-    search_fields = ('username', 'first_name', 'last_name', 'email')
-    ordering = ('username',)
-    
-    readonly_fields = ('last_login', 'date_joined', 'data_creazione')
-    
-    def get_readonly_fields(self, request, obj=None):
-        """Campi readonly per non-superuser."""
-        if not request.user.is_superuser:
-            return self.readonly_fields + ('is_staff', 'is_superuser', 'pin_tentativi', 'pin_bloccato_fino')
-        return self.readonly_fields
+# Using Django's built-in User admin - custom user profile fields are managed via UserProfile admin
 
 
 @admin.register(UserProfile)

@@ -279,15 +279,33 @@ def verify_pin(request):
             for k in ['login_pin', 'login_pin_time']:
                 request.session.pop(k, None)
             return render(request, 'registration/verify_pin.html')
-        # Autentica utente (crea o recupera Utente)
-        from prenotazioni.models import Utente
-        # Determina ruolo basato sull'email
-        ruolo = 'admin' if email in settings.ADMINS_EMAIL_LIST else 'docente'
-        user, created = Utente.objects.get_or_create(username=email, defaults={'email': email, 'ruolo': ruolo})
-        # Aggiorna ruolo se già esistente e non è admin
-        if not created and user.ruolo != 'admin':
-            user.ruolo = ruolo
-            user.save()
+        # Autentica utente (crea o recupera User)
+        from django.contrib.auth import get_user_model
+        from prenotazioni.models import UserProfile
+        User = get_user_model()
+
+        user, created = User.objects.get_or_create(username=email, defaults={'email': email})
+
+        # Determina ruolo basato sull'email e imposta permessi
+        is_admin = email in settings.ADMINS_EMAIL_LIST
+
+        # Aggiorna permessi dell'utente
+        if is_admin:
+            user.is_staff = True
+            user.is_superuser = True
+        else:
+            user.is_staff = False
+            user.is_superuser = False
+        user.save()
+
+        # Crea profilo utente se necessario
+        if created:
+            UserProfile.objects.create(
+                user=user,
+                nome=email.split('@')[0] if '@' in email else email,
+                cognome='',
+                attivo=True
+            )
         from django.contrib.auth import login
         login(request, user)
         # Pulisci sessione

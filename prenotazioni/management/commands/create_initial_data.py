@@ -3,7 +3,10 @@ Management command to create initial data for the booking system.
 Or reset all data with --reset option.
 """
 from django.core.management.base import BaseCommand
-from prenotazioni.models import Booking, Resource, Utente
+from prenotazioni.models import Booking, Resource
+from django.contrib.auth import get_user_model
+
+Utente = get_user_model()
 
 
 class Command(BaseCommand):
