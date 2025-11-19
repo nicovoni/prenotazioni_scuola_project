@@ -208,14 +208,14 @@ class AdminUserForm(forms.Form):
 
 class UserSessionForm(forms.ModelForm):
     """Form per gestione sessioni utente."""
-    
+
     class Meta:
         model = UserSession
-        fields = ['tipo', 'metadata', 'email_destinazione']
+        fields = ['tipo_sessione', 'metadati_sessione', 'email_destinazione_sessione']
         widgets = {
-            'tipo': forms.Select(attrs={'class': 'form-select'}),
-            'metadata': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'email_destinazione': forms.EmailInput(attrs={'class': 'form-control'}),
+            'tipo_sessione': forms.Select(attrs={'class': 'form-select'}),
+            'metadati_sessione': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'email_destinazione_sessione': forms.EmailInput(attrs={'class': 'form-control'}),
         }
 
 
