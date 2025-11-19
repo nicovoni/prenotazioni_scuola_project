@@ -58,32 +58,32 @@ class SchoolInfoForm(forms.ModelForm):
     class Meta:
         model = InformazioniScuola
         fields = [
-            'nome_completo', 'nome_breve', 'codice_meccanografico', 'partita_iva',
-            'sito_web', 'email_istituzionale', 'telefono', 'fax',
-            'indirizzo', 'cap', 'comune', 'provincia', 'regione', 'nazione',
-            'latitudine', 'longitudine'
+            'nome_completo_scuola', 'nome_breve_scuola', 'codice_meccanografico_scuola', 'partita_iva_scuola',
+            'sito_web_scuola', 'email_istituzionale_scuola', 'telefono_scuola', 'fax_scuola',
+            'indirizzo_scuola', 'codice_postale_scuola', 'comune_scuola', 'provincia_scuola', 'regione_scuola', 'nazione_scuola',
+            'latitudine_scuola', 'longitudine_scuola'
         ]
         widgets = {
-            'nome_completo': forms.TextInput(attrs={'class': 'form-control'}),
-            'nome_breve': forms.TextInput(attrs={'class': 'form-control'}),
-            'codice_meccanografico': forms.TextInput(attrs={'class': 'form-control'}),
-            'partita_iva': forms.TextInput(attrs={'class': 'form-control'}),
-            'sito_web': forms.URLInput(attrs={'class': 'form-control'}),
-            'email_istituzionale': forms.EmailInput(attrs={'class': 'form-control'}),
-            'telefono': forms.TextInput(attrs={'class': 'form-control'}),
-            'fax': forms.TextInput(attrs={'class': 'form-control'}),
-            'indirizzo': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-            'cap': forms.TextInput(attrs={'class': 'form-control'}),
-            'comune': forms.TextInput(attrs={'class': 'form-control'}),
-            'provincia': forms.TextInput(attrs={'class': 'form-control'}),
-            'regione': forms.TextInput(attrs={'class': 'form-control'}),
-            'nazione': forms.TextInput(attrs={'class': 'form-control'}),
-            'latitudine': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00000001'}),
-            'longitudine': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00000001'}),
+            'nome_completo_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'nome_breve_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'codice_meccanografico_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'partita_iva_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'sito_web_scuola': forms.URLInput(attrs={'class': 'form-control'}),
+            'email_istituzionale_scuola': forms.EmailInput(attrs={'class': 'form-control'}),
+            'telefono_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'fax_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'indirizzo_scuola': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'codice_postale_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'comune_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'provincia_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'regione_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'nazione_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'latitudine_scuola': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00000001'}),
+            'longitudine_scuola': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00000001'}),
         }
 
-    def clean_codice_meccanografico(self):
-        codice = self.cleaned_data['codice_meccanografico'].upper()
+    def clean_codice_meccanografico_scuola(self):
+        codice = self.cleaned_data['codice_meccanografico_scuola'].upper()
         if len(codice) != 10:
             raise ValidationError("Il codice meccanografico deve essere di esattamente 10 caratteri.")
         return codice
