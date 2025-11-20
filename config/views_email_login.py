@@ -281,7 +281,7 @@ def verify_pin(request):
             return render(request, 'registration/verify_pin.html')
         # Autentica utente (crea o recupera User)
         from django.contrib.auth import get_user_model
-        from prenotazioni.models import UserProfile
+
         User = get_user_model()
 
         user, created = User.objects.get_or_create(username=email, defaults={'email': email})
@@ -300,12 +300,18 @@ def verify_pin(request):
 
         # Crea profilo utente se necessario
         if created:
-            UserProfile.objects.create(
-                user=user,
-                nome=email.split('@')[0] if '@' in email else email,
-                cognome='',
-                attivo=True
-            )
+            try:
+                # try to load prenotazioni.UserProfile if it exists
+                UserProfile = apps.get_model("prenotazioni", "UserProfile")
+                UserProfile.objects.create(
+                    user=user,
+                    nome=email.split('@')[0] if '@' in email else email,
+                    cognome='',
+                    attivo=True
+                )
+            except LookupError:
+                # fallback to the project's user model
+                pass
         from django.contrib.auth import login
         login(request, user)
         # Pulisci sessione
