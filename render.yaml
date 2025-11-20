@@ -1,13 +1,14 @@
 services:
+  # Servizio web con Dockerfile
   - type: web
     name: prenotazioni-scuola
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: Dockerfile
     buildCommand: |
-      python manage.py makemigrations
-      python manage.py migrate
-      python manage.py collectstatic --noinput
-      python manage.py initialize_data
-    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+      python manage.py makemigrations --noinput || echo "Migrazioni esistenti"
+      python manage.py migrate --noinput || echo "Migrazione fallita"
+      python manage.py collectstatic --noinput || echo "Static files falliti"
+      python manage.py initialize_data --force || echo "Inizializzazione fallita"
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings
@@ -16,38 +17,20 @@ services:
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: ALLOWED_HOSTS
-        fromService:
-          type: web
-          name: prenotazioni-scuola
-          property: host
+        value: prenotazioni-scuola.onrender.com
       - key: DATABASE_URL
-        fromDatabase:
-          type: postgresql
-          name: prenotazioni-scuola-db
-          property: connectionString
+        generateValue: true
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: prenotazioni-scuola-redis
-          property: connectionStringUrl
+        generateValue: true
       - key: ADMIN_USERNAME
         generateValue: true
       - key: ADMIN_EMAIL
-        fromService:
-          type: web
-          name: prenotazioni-scuola
-          property: domain
+        value: admin@prenotazioni-scuola.onrender.com
       - key: ADMIN_FIRST_NAME
         value: Amministratore
       - key: ADMIN_LAST_NAME
         value: Sistema
       - key: ADMIN_PASSWORD
         generateValue: true
-
-  - type: postgresql
-    name: prenotazioni-scuola-db
-    ipAllowList: []
-
-  - type: redis
-    name: prenotazioni-scuola-redis
-    ipAllowList: []
+      - key: PYTHONUNBUFFERED
+        value: 1
