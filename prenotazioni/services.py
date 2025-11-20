@@ -10,19 +10,16 @@ Logica di business completamente rinnovata per supportare:
 """
 
 import logging
-import threading
-import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.utils import timezone
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Count
 from django.core.mail import send_mail
 from django.conf import settings
 from django.template.loader import render_to_string
+# Import dei modelli usando alias coerenti con i nomi italiani
 from .models import (
     Risorsa, Dispositivo, Prenotazione, ConfigurazioneSistema as Configuration, SessioneUtente as UserSession,
-    LogSistema as SystemLog, TemplateNotifica as NotificationTemplate, NotificaUtente as Notification, ProfiloUtente as UserProfile,
-    UbicazioneRisorsa as ResourceLocation, CategoriaDispositivo as DeviceCategory, StatoPrenotazione as BookingStatus, CaricamentoFile as FileUpload,
-    InformazioniScuola
+    LogSistema as SystemLog, TemplateNotifica as NotificationTemplate, NotificaUtente as Notification, CategoriaDispositivo as DeviceCategory, StatoPrenotazione as BookingStatus, InformazioniScuola, log_user_action
 )
 # Alias for compatibility
 Resource = Risorsa
@@ -41,24 +38,24 @@ class ConfigurationService:
     
     @classmethod
     def get_config(cls, chiave, default=None):
-        """Ottiene valore configurazione dal database."""
-        return Configuration.get_config(chiave, default)
+        """Ottiene valore configurazione dal database (usa il metodo del modello)."""
+        return Configuration.ottieni_configurazione(chiave, default)
     
     @classmethod
-    def set_config(cls, chiave, valore, tipo='system', modificabile=True):
-        """Imposta una configurazione."""
+    def set_config(cls, chiave, valore, tipo='sistema', modificabile=True):
+        """Imposta una configurazione usando i campi reali del modello."""
         config, created = Configuration.objects.get_or_create(
-            chiave=chiave,
+            chiave_configurazione=chiave,
             defaults={
-                'valore': valore,
-                'tipo': tipo,
-                'modificabile': modificabile
+                'valore_configurazione': str(valore),
+                'tipo_configurazione': tipo,
+                'configurazione_modificabile': modificabile
             }
         )
         if not created:
-            config.valore = valore
-            config.tipo = tipo
-            config.modificabile = modificabile
+            config.valore_configurazione = str(valore)
+            config.tipo_configurazione = tipo
+            config.configurazione_modificabile = modificabile
             config.save()
         return config
     
@@ -119,83 +116,77 @@ class UserSessionService:
     """Servizio per gestire sessioni utente e verifiche."""
     
     SESSION_TYPES = UserSession.TIPO_SESSIONE
+    # Mappatura a valori del DB (italiano)
     SESSION_TIMEOUTS = {
-        'email_verification': timedelta(hours=24),
-        'password_reset': timedelta(hours=1),
-        'pin_login': timedelta(hours=1),
-        'admin_setup': timedelta(hours=2),
-        'booking_confirmation': timedelta(hours=6),
+        'verifica_email': timedelta(hours=24),
+        'reset_password': timedelta(hours=1),
+        'login_pin': timedelta(hours=1),
+        'setup_amministratore': timedelta(hours=2),
+        'conferma_prenotazione': timedelta(hours=6),
     }
     
     @classmethod
     def create_session(cls, user, tipo, email_destinazione, pin=None, metadata=None):
-        """Crea nuova sessione utente."""
+        """Crea nuova sessione utente usando i campi del modello."""
         timeout = cls.SESSION_TIMEOUTS.get(tipo, timedelta(hours=1))
         expires_at = timezone.now() + timeout
-        
+
         session = UserSession.objects.create(
-            user=user,
-            tipo=tipo,
-            email_destinazione=email_destinazione,
-            pin=pin,
-            metadata=metadata or {},
-            expires_at=expires_at
+            utente_sessione=user,
+            tipo_sessione=tipo,
+            email_destinazione_sessione=email_destinazione,
+            pin_sessione=pin,
+            metadati_sessione=metadata or {},
+            data_scadenza_sessione=expires_at
         )
-        
-        # Log event
-        SystemLog.log_event(
-            tipo_evento='user_session_created',
-            messaggio=f"Sessione {tipo} creata per {user.username}",
-            utente=user,
-            dettagli={'session_id': session.id, 'tipo': tipo}
-        )
-        
+
+        # Log event tramite helper
+        try:
+            log_user_action(user, 'user_session_created', f"Sessione {tipo} creata per {getattr(user, 'username', str(user))}", related_session=session)
+        except Exception:
+            pass
+
         return session
     
     @classmethod
     def verify_session(cls, session_token, pin=None):
         """Verifica sessione con eventuale PIN."""
         try:
-            session = UserSession.objects.get(token=session_token)
+            session = UserSession.objects.get(token_sessione=session_token)
         except UserSession.DoesNotExist:
             return False, "Sessione non trovata"
-        
-        if session.is_expired:
-            session.expire()
+
+        if session.sessione_scaduta:
+            session.scadenza_sessione()
             return False, "Sessione scaduta"
-        
-        if session.stato != 'pending':
+
+        if session.stato_sessione != 'in_attesa':
             return False, "Sessione non valida"
-        
+
         # Verifica PIN se richiesto
-        if session.pin and pin != session.pin:
-            # Note: increment_pin_attempts method doesn't exist on User model
-            # In a full implementation, this would be handled differently
+        if session.pin_sessione and pin != session.pin_sessione:
             return False, "PIN non corretto"
-        
-        # Verifica sessione
-        success, message = session.verify(pin)
+
+        # Verifica sessione tramite metodo del modello
+        success, message = session.verifica_sessione(pin=pin)
         if success:
-            # Log event
-            SystemLog.log_event(
-                tipo_evento='user_session_verified',
-                messaggio=f"Sessione {session.tipo} verificata per {session.user.username}",
-                utente=session.user,
-                dettagli={'session_id': session.id}
-            )
-        
+            try:
+                log_user_action(session.utente_sessione, 'user_session_verified', f"Sessione {session.tipo_sessione} verificata per {getattr(session.utente_sessione, 'username', str(session.utente_sessione))}", related_session=session)
+            except Exception:
+                pass
+
         return success, message
     
     @classmethod
     def cleanup_expired_sessions(cls):
         """Pulizia sessioni scadute."""
         expired_count = UserSession.objects.filter(
-            Q(expires_at__lt=timezone.now()) | Q(stato='expired')
-        ).update(stato='expired')
-        
+            Q(data_scadenza_sessione__lt=timezone.now()) | Q(stato_sessione='scaduto')
+        ).update(stato_sessione='scaduto')
+
         if expired_count > 0:
             logger.info(f"Pulite {expired_count} sessioni scadute")
-        
+
         return expired_count
     
     @classmethod
@@ -231,15 +222,14 @@ class EmailService:
             )
             
             # Log invio
-            SystemLog.log_event(
-                tipo_evento='email_sent',
-                messaggio=f"Email inviata a {len(recipient_list)} destinatari",
-                dettagli={
+            try:
+                log_user_action(None, 'email_sent', f"Email inviata a {len(recipient_list)} destinatari", dettagli={
                     'subject': subject,
                     'recipients': recipient_list,
                     'template': template_name
-                }
-            )
+                })
+            except Exception:
+                pass
             
             return True, None
             
@@ -247,33 +237,33 @@ class EmailService:
             error_msg = f"Errore invio email: {str(e)}"
             logger.error(error_msg)
             
-            SystemLog.log_event(
-                tipo_evento='system_error',
-                messaggio=error_msg,
-                livello='ERROR',
-                dettagli={'subject': subject, 'recipients': recipient_list}
-            )
+            try:
+                log_user_action(None, 'system_error', error_msg, livello='ERROR', dettagli={'subject': subject, 'recipients': recipient_list})
+            except Exception:
+                pass
             
             return False, str(e)
     
     @classmethod
-    def send_pin_email(cls, user, pin, session_type='pin_login'):
+    def send_pin_email(cls, user, pin, session_type='login_pin'):
         """Invia email con PIN."""
-        school_info = SchoolInfo.get_instance()
-        
-        subject = f"Codice PIN - {school_info.nome_breve}"
+        school_info = SchoolInfo.ottieni_istanza() if hasattr(SchoolInfo, 'ottieni_istanza') else SchoolInfo
+
+        school_breve = getattr(school_info, 'nome_breve_scuola', getattr(school_info, 'nome_breve', ''))
+
+        subject = f"Codice PIN - {school_breve}"
         context = {
             'user': user,
             'pin': pin,
-            'school_name': school_info.nome_breve,
-            'school_logo': school_info.logo.url if hasattr(school_info, 'logo') and school_info.logo else None,
+            'school_name': school_breve,
+            'school_logo': getattr(getattr(school_info, 'logo', None), 'url', None),
             'expires_in': '1 ora',
         }
-        
+
         return cls.send_email(
             subject=subject,
             message="",
-            recipient_list=[user.email],
+            recipient_list=[getattr(user, 'email', '')],
             template_name='pin_verification',
             context=context
         )
@@ -281,18 +271,18 @@ class EmailService:
     @classmethod
     def send_booking_confirmation(cls, booking):
         """Invia conferma prenotazione."""
-        subject = f"Conferma Prenotazione - {booking.risorsa.nome}"
+        subject = f"Conferma Prenotazione - {getattr(booking.risorsa, 'nome', '')}"
         context = {
             'booking': booking,
             'user': booking.utente,
             'resource': booking.risorsa,
-            'school_info': SchoolInfo.get_instance(),
+            'school_info': SchoolInfo.ottieni_istanza() if hasattr(SchoolInfo, 'ottieni_istanza') else SchoolInfo,
         }
         
         return cls.send_email(
             subject=subject,
             message="",
-            recipient_list=[booking.utente.email],
+            recipient_list=[getattr(booking.utente, 'email', '')],
             template_name='booking_confirmation',
             context=context
         )
@@ -300,12 +290,12 @@ class EmailService:
     @classmethod
     def send_booking_reminder(cls, booking):
         """Invia promemoria prenotazione."""
-        subject = f"Promemoria Prenotazione - {booking.risorsa.nome}"
+        subject = f"Promemoria Prenotazione - {getattr(booking.risorsa, 'nome', '')}"
         context = {
             'booking': booking,
             'user': booking.utente,
             'resource': booking.risorsa,
-            'school_info': SchoolInfo.get_instance(),
+            'school_info': SchoolInfo.ottieni_istanza() if hasattr(SchoolInfo, 'ottieni_istanza') else SchoolInfo,
             'hours_until': int((booking.inizio - timezone.now()).total_seconds() / 3600),
         }
         
@@ -365,7 +355,7 @@ class BookingService:
     @classmethod
     def _check_laboratorio_availability(cls, risorsa, inizio, fine, exclude_booking_id):
         """Controlla disponibilità laboratorio (prenotazione esclusiva)."""
-        query = Booking.objects.filter(
+        query = Prenotazione.objects.filter(
             risorsa=risorsa,
             inizio__lt=fine,
             fine__gt=inizio,
@@ -386,7 +376,7 @@ class BookingService:
         if not risorsa.capacita_massima:
             return False, 0, ["Carrello senza capacità definita."]
         
-        query = Booking.objects.filter(
+        query = Prenotazione.objects.filter(
             risorsa=risorsa,
             inizio__lt=fine,
             fine__gt=inizio,
@@ -425,7 +415,7 @@ class BookingService:
                 return False, errors[0] if errors else "Risorsa non disponibile."
             
             # Verifica permessi utente - simplified since User model doesn't have permission methods
-            if not utente.is_active:
+            if not getattr(utente, 'is_active', False):
                 return False, "Utente non attivo."
             
             # Crea prenotazione
@@ -437,7 +427,7 @@ class BookingService:
                 defaults={'descrizione': 'In Attesa', 'colore': '#ffc107'}
             )[0]
             
-            booking = Booking.objects.create(
+            booking = Prenotazione.objects.create(
                 utente=utente,
                 risorsa=risorsa,
                 quantita=quantita,
@@ -448,18 +438,16 @@ class BookingService:
             )
             
             # Log event
-            SystemLog.log_event(
-                tipo_evento='booking_created',
-                messaggio=f"Prenotazione creata: {risorsa.nome}",
-                utente=utente,
-                dettagli={
+            try:
+                log_user_action(utente, 'booking_created', f"Prenotazione creata: {getattr(risorsa, 'nome', '')}", dettagli={
                     'booking_id': booking.id,
-                    'resource': risorsa.nome,
+                    'resource': getattr(risorsa, 'nome', ''),
                     'quantity': quantita,
                     'start': inizio.isoformat(),
                     'end': fine.isoformat()
-                }
-            )
+                })
+            except Exception:
+                pass
             
             # Invia notifiche
             NotificationService.create_booking_notifications(booking)
@@ -470,13 +458,10 @@ class BookingService:
             error_msg = f"Errore creazione prenotazione: {str(e)}"
             logger.error(error_msg)
             
-            SystemLog.log_event(
-                tipo_evento='system_error',
-                messaggio=error_msg,
-                livello='ERROR',
-                utente=utente,
-                dettagli={'resource_id': risorsa_id}
-            )
+            try:
+                log_user_action(utente, 'system_error', error_msg, livello='ERROR', dettagli={'resource_id': risorsa_id})
+            except Exception:
+                pass
             
             return False, str(e)
     
@@ -484,7 +469,7 @@ class BookingService:
     def update_booking(cls, booking_id, utente, inizio, fine, quantita, **kwargs):
         """Aggiorna prenotazione esistente."""
         try:
-            booking = Booking.objects.get(id=booking_id)
+            booking = Prenotazione.objects.get(id=booking_id)
             
             # Controllo permessi - simplified since Booking model doesn't have permission methods
             if booking.utente != utente:
@@ -511,22 +496,17 @@ class BookingService:
             booking.save()
             
             # Log event
-            SystemLog.log_event(
-                tipo_evento='booking_modified',
-                messaggio=f"Prenotazione modificata: {booking.risorsa.nome}",
-                utente=utente,
-                dettagli={
-                    'booking_id': booking.id,
-                    'changes': kwargs
-                }
-            )
+            try:
+                log_user_action(utente, 'booking_modified', f"Prenotazione modificata: {getattr(booking.risorsa, 'nome', '')}", dettagli={'booking_id': booking.id, 'changes': kwargs})
+            except Exception:
+                pass
             
             # Invia notifiche aggiornamento
             NotificationService.create_booking_update_notifications(booking)
             
             return True, booking
             
-        except Booking.DoesNotExist:
+        except Prenotazione.DoesNotExist:
             return False, "Prenotazione non trovata."
         except Exception as e:
             error_msg = f"Errore aggiornamento prenotazione: {str(e)}"
@@ -537,7 +517,7 @@ class BookingService:
     def cancel_booking(cls, booking_id, utente, reason=""):
         """Cancella prenotazione."""
         try:
-            booking = Booking.objects.get(id=booking_id)
+            booking = Prenotazione.objects.get(id=booking_id)
             
             # Controllo permessi - simplified since Booking model doesn't have permission methods
             if booking.utente != utente:
@@ -545,21 +525,17 @@ class BookingService:
 
             # Cancella prenotazione - simplified since Booking model doesn't have cancel method
             booking.cancellato_il = timezone.now()
-            booking.note_cancellazione = reason
+            # Some models use note_amministrative; keep reason in that field as well
+            booking.note_amministrative = (booking.note_amministrative or '') + f"\nCancellata: {reason}"
             booking.save()
             success, message = True, f"Prenotazione cancellata con successo. Motivo: {reason}"
             
             if success:
                 # Log event
-                SystemLog.log_event(
-                    tipo_evento='booking_cancelled',
-                    messaggio=f"Prenotazione cancellata: {booking.risorsa.nome}",
-                    utente=utente,
-                    dettagli={
-                        'booking_id': booking.id,
-                        'reason': reason
-                    }
-                )
+                try:
+                    log_user_action(utente, 'booking_cancelled', f"Prenotazione cancellata: {getattr(booking.risorsa, 'nome', '')}", dettagli={'booking_id': booking.id, 'reason': reason})
+                except Exception:
+                    pass
                 
                 # Invia notifiche cancellazione
                 NotificationService.create_booking_cancellation_notifications(booking)
@@ -576,17 +552,17 @@ class BookingService:
     @classmethod
     def get_user_bookings(cls, user, include_cancelled=False):
         """Ottiene prenotazioni utente."""
-        query = Booking.objects.filter(utente=user)
-        
+        query = Prenotazione.objects.filter(utente=user)
+
         if not include_cancelled:
             query = query.filter(cancellato_il__isnull=True)
-        
+
         return query.select_related('risorsa', 'stato').order_by('-inizio')
     
     @classmethod
     def get_resource_bookings(cls, resource, start_date=None, end_date=None):
         """Ottiene prenotazioni risorsa in un periodo."""
-        query = Booking.objects.filter(risorsa=resource, cancellato_il__isnull=True)
+        query = Prenotazione.objects.filter(risorsa=resource, cancellato_il__isnull=True)
         
         if start_date:
             query = query.filter(fine__gte=start_date)
@@ -598,7 +574,7 @@ class BookingService:
     @classmethod
     def check_conflicts(cls, resource, start, end, exclude_booking_id=None):
         """Controlla conflitti per una risorsa."""
-        query = Booking.objects.filter(
+        query = Prenotazione.objects.filter(
             risorsa=resource,
             inizio__lt=end,
             fine__gt=start,
@@ -724,14 +700,13 @@ class NotificationService:
                 logger.error(f"Errore invio notifica {notification.id}: {e}")
                 notification.tentativo_corrente += 1
                 notification.ultimo_tentativo = timezone.now()
-                
                 if notification.can_retry and notification.template:
-                    next_retry = notification.template.intervallo_tentativi_minuti
+                    next_retry = getattr(notification.template, 'intervallo_tentativi_minuti', 15)
                     notification.prossimo_tentativo = timezone.now() + timedelta(minutes=next_retry)
                 else:
                     notification.stato = 'failed'
                     notification.errore_messaggio = str(e)
-                
+
                 notification.save()
     
     @classmethod
@@ -770,7 +745,7 @@ class DeviceService:
     @classmethod
     def get_available_devices(cls, resource=None, device_type=None):
         """Ottiene dispositivi disponibili."""
-        query = Device.objects.filter(attivo=True, stato='disponibile')
+        query = Dispositivo.objects.filter(attivo=True, stato='disponibile')
         
         if resource:
             query = query.filter(risorse=resource)
@@ -782,7 +757,7 @@ class DeviceService:
     @classmethod
     def check_device_availability(cls, device, start, end, exclude_booking_id=None):
         """Controlla disponibilità dispositivo specifico."""
-        query = Booking.objects.filter(
+        query = Prenotazione.objects.filter(
             dispositivi_selezionati=device,
             inizio__lt=end,
             fine__gt=start,
@@ -799,15 +774,18 @@ class DeviceService:
         """Statistiche utilizzo dispositivo."""
         start_date = timezone.now() - timedelta(days=days)
         
-        bookings = Booking.objects.filter(
+        bookings = Prenotazione.objects.filter(
             dispositivi_selezionati=device,
             inizio__gte=start_date,
             cancellato_il__isnull=True
         )
-        
+
         total_bookings = bookings.count()
-        total_hours = sum(b.durata_ore for b in bookings)
-        
+        total_hours = 0
+        for b in bookings:
+            if b.inizio and b.fine:
+                total_hours += (b.fine - b.inizio).total_seconds() / 3600
+
         return {
             'total_bookings': total_bookings,
             'total_hours': total_hours,
@@ -841,15 +819,17 @@ class ResourceService:
     def get_resource_utilization(cls, resource, days=30):
         """Statistiche utilizzo risorsa."""
         start_date = timezone.now() - timedelta(days=days)
-        
-        bookings = Booking.objects.filter(
+        bookings = Prenotazione.objects.filter(
             risorsa=resource,
             inizio__gte=start_date,
             cancellato_il__isnull=True
         )
-        
+
         total_bookings = bookings.count()
-        total_hours = sum(b.durata_ore for b in bookings)
+        total_hours = 0
+        for b in bookings:
+            if b.inizio and b.fine:
+                total_hours += (b.fine - b.inizio).total_seconds() / 3600
         
         # Calcola occupazione media
         working_hours_per_day = 10  # 8-18
@@ -897,27 +877,27 @@ class SystemService:
             'users': {
                 'total': User.objects.count(),
                 'active': User.objects.filter(is_active=True).count(),
-                'verified': User.objects.filter(is_active=True).count(),  # Simplified since User doesn't have email_verificato field
-                'by_role': {}  # User model doesn't have role field
+                'verified': User.objects.filter(is_active=True).count(),  # no email_verificato field
+                'by_role': {}
             },
             'resources': {
-                'total': Resource.objects.count(),
-                'active': Resource.objects.filter(attivo=True).count(),
-                'by_type': dict(Resource.objects.values_list('tipo').annotate(count=models.Count('id')))
+                'total': Risorsa.objects.count(),
+                'active': Risorsa.objects.filter(attivo=True).count(),
+                'by_type': dict(Risorsa.objects.values('tipo').annotate(count=Count('id')).values_list('tipo', 'count'))
             },
             'devices': {
-                'total': Device.objects.count(),
-                'available': Device.objects.filter(stato='disponibile').count(),
-                'by_type': dict(Device.objects.values_list('tipo').annotate(count=models.Count('id')))
+                'total': Dispositivo.objects.count(),
+                'available': Dispositivo.objects.filter(stato='disponibile').count(),
+                'by_type': dict(Dispositivo.objects.values('tipo').annotate(count=Count('id')).values_list('tipo', 'count'))
             },
             'bookings': {
-                'total': Booking.objects.count(),
-                'active': Booking.objects.filter(cancellato_il__isnull=True).count(),
-                'today': Booking.objects.filter(
+                'total': Prenotazione.objects.count(),
+                'active': Prenotazione.objects.filter(cancellato_il__isnull=True).count(),
+                'today': Prenotazione.objects.filter(
                     inizio__date=now.date(),
                     cancellato_il__isnull=True
                 ).count(),
-                'this_week': Booking.objects.filter(
+                'this_week': Prenotazione.objects.filter(
                     inizio__gte=now - timedelta(days=7),
                     cancellato_il__isnull=True
                 ).count()
@@ -926,7 +906,7 @@ class SystemService:
                 'uptime': cls._get_uptime(),
                 'last_backup': cls._get_last_backup(),
                 'disk_usage': cls._get_disk_usage(),
-                'active_sessions': UserSession.objects.filter(stato='pending').count()
+                'active_sessions': UserSession.objects.filter(stato_sessione='in_attesa').count()
             }
         }
         

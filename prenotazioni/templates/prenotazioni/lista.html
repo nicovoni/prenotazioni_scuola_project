@@ -137,8 +137,8 @@
                                             <small class="text-muted">{{ p.utente.first_name }} {{ p.utente.last_name }}</small>
                                         {% endif %}
                                         <br>
-                                        <span class="badge badge-modern {% if p.utente.is_docente %}bg-success{% elif p.utente.is_admin %}bg-danger{% else %}bg-primary{% endif %}">
-                                            {% if p.utente.is_docente %}👨‍🏫 Docente{% elif p.utente.is_admin %}⚡ Admin{% else %}🎓 {{ p.utente.ruolo|title }}{% endif %}
+                                        <span class="badge badge-modern {% if p.utente.is_docente|default:False %}bg-success{% elif p.utente.is_staff %}bg-danger{% else %}bg-primary{% endif %}">
+                                            {% if p.utente.is_docente|default:False %}👨‍🏫 Docente{% elif p.utente.is_staff %}⚡ Admin{% else %}🎓 {{ p.utente.ruolo|default:''|title }}{% endif %}
                                         </span>
                                     </div>
                                 </div>

@@ -21,6 +21,7 @@ User = get_user_model()
 # SERIALIZERS CONFIGURAZIONE E SETTINGS
 # =====================================================
 
+
 class ConfigurationSerializer(serializers.ModelSerializer):
     """Serializer per configurazioni di sistema."""
 
@@ -53,6 +54,7 @@ class SchoolInfoSerializer(serializers.ModelSerializer):
 # =====================================================
 # SERIALIZERS UTENTI E PROFILI
 # =====================================================
+
 
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer per profilo utente esteso."""
@@ -109,6 +111,7 @@ class UtenteSerializer(serializers.ModelSerializer):
 # SERIALIZERS SESSIONI E VERIFICHE
 # =====================================================
 
+
 class UserSessionSerializer(serializers.ModelSerializer):
     """Serializer per sessioni utente."""
 
@@ -132,6 +135,7 @@ class UserSessionSerializer(serializers.ModelSerializer):
 # =====================================================
 # SERIALIZERS DISPOSITIVI E RISORSE
 # =====================================================
+
 
 class DeviceCategorySerializer(serializers.ModelSerializer):
     """Serializer per categorie dispositivi."""
@@ -230,6 +234,7 @@ class ResourceSerializer(serializers.ModelSerializer):
 # =====================================================
 # SERIALIZERS PRENOTAZIONI
 # =====================================================
+
 
 class BookingStatusSerializer(serializers.ModelSerializer):
     """Serializer per stati prenotazione."""
@@ -344,6 +349,7 @@ class BookingCreateSerializer(serializers.ModelSerializer):
 # SERIALIZERS SISTEMA E LOG
 # =====================================================
 
+
 class SystemLogSerializer(serializers.ModelSerializer):
     """Serializer per log di sistema."""
 
@@ -402,6 +408,7 @@ class NotificationSerializer(serializers.ModelSerializer):
 # =====================================================
 # SERIALIZERS STATISTICHE E REPORT
 # =====================================================
+
 
 class SystemStatsSerializer(serializers.Serializer):
     """Serializer per statistiche sistema."""

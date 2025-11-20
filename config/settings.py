@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import dj_database_url
+import logging as _logging
 
 # BASE_DIR e variabili di progetto
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -59,7 +60,6 @@ EMAIL_CONFIG = {
 }
 
 # Small runtime hints useful in Render logs
-import logging as _logging
 _logger = _logging.getLogger('prenotazioni')
 if EMAIL_SEND_VIA_BREVO_API:
     _logger.warning('BREVO_API_KEY detected: HTTP API fallback enabled for sending emails.')
@@ -269,7 +269,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'simple': {
-            'format': f'[%(asctime)s] %(levelname)s %(message)s',
+            'format': '[%(asctime)s] %(levelname)s %(message)s',
             'datefmt': '%Y-%m-%d %H:%M:%S',
         },
     },

@@ -1,6 +1,5 @@
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
-from django.db import connection
 
 def home(request):
     # Controllo se il sistema è configurato
@@ -11,7 +10,7 @@ def home(request):
         if not User.objects.exists() or not Risorsa.objects.exists():
             return redirect('prenotazioni:configurazione_sistema')
         return render(request, 'home.html')
-    except Exception as e:
+    except Exception:
         # Se le tabelle non esistono, redirect alla configurazione
         # Questo permette al sito di funzionare durante il deploy
         return redirect('prenotazioni:configurazione_sistema')

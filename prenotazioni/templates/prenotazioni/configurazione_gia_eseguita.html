@@ -52,7 +52,7 @@
             <li><a href="{% url 'prenotazioni:database_viewer' %}" class="btn btn-secondary">📊 Visualizza Database Completo</a></li>
         </ul>
 
-        {% if user.is_admin %}
+        {% if user.is_staff %}
         <div class="alert alert-warning mt-3">
             <h6>🔧 Opzioni Amministrative</h6>
             <p>Per riconfigurare il sistema completamente, puoi:</p>

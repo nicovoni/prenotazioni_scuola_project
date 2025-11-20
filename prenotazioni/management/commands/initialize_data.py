@@ -8,12 +8,10 @@ popolando il database con le informazioni essenziali per il funzionamento.
 import os
 import logging
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 from prenotazioni.models import (
     InformazioniScuola, Risorsa, Dispositivo, ConfigurazioneSistema,
     UbicazioneRisorsa, CategoriaDispositivo, StatoPrenotazione, ProfiloUtente
 )
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User as DjangoUser
 from prenotazioni.services import SystemInitializer
 

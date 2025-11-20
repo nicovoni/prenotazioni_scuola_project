@@ -12,10 +12,10 @@ Ristrutturazione completa del database con miglioramenti architetturali:
 """
 
 from django.db import models
-from django.contrib.auth.models import AbstractUser, User
+from django.contrib.auth.models import User
 from django.utils import timezone
-from django.contrib.auth import get_user_model
 import uuid
+from django.db.models.signals import post_save, post_delete
 
 
 # =============================================================================
@@ -24,7 +24,8 @@ import uuid
 
 def genera_codice_univoco():
     """Genera un codice univoco per elementi del sistema."""
-    return str(uuid.uuid4())
+    # Return a UUID instance (preferred for UUIDField defaults)
+    return uuid.uuid4()
 
 
 # =====================================================
@@ -1131,33 +1132,39 @@ def create_notification(user, template_name, context, **kwargs):
         return None
 
 
+
 # =====================================================
 # SEGNALI (SIGNALS)
 # =====================================================
 
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
-
-
 def create_user_profile_signal(sender, instance, created, **kwargs):
     """Crea profilo automaticamente quando viene creato un utente."""
     if created:
-        ProfiloUtente.objects.create(user=instance)
+        # Il campo sul modello `ProfiloUtente` si chiama `utente`
+        ProfiloUtente.objects.create(utente=instance)
+
 
 def save_user_profile_signal(sender, instance, **kwargs):
     """Salva profilo quando viene salvato l'utente."""
-    if hasattr(instance, 'profile'):
-        instance.profile.save()
+    # Il related_name usato nel modello è `profilo_utente`
+    if hasattr(instance, 'profilo_utente') and instance.profilo_utente:
+        instance.profilo_utente.save()
 
-def log_booking_action_signal(created, instance, **kwargs):
+
+def log_booking_action_signal(sender, instance, created, **kwargs):
     """Log azioni prenotazioni."""
     if created:
-        log_user_action(
-            utente=instance.utente,
-            action_type='booking_created',
-            message=f"Prenotazione creata: {instance.risorsa.nome}",
-            related_booking=instance
-        )
+        # Usa il nostro helper di log passando i campi corretti
+        try:
+            log_user_action(
+                user=instance.utente if hasattr(instance, 'utente') else None,
+                action_type='booking_created',
+                message=f"Prenotazione creata: {getattr(instance.risorsa, 'nome', '')}",
+                related_booking=instance
+            )
+        except Exception:
+            # Non bloccare il flusso se il logging fallisce
+            pass
 
 def log_booking_deletion_signal(sender, instance, **kwargs):
     """Log cancellazione prenotazioni."""

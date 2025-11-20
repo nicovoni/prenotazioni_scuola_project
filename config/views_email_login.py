@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.db import ProgrammingError, OperationalError
 from django.http import JsonResponse
 from django.contrib.auth import get_user_model
+from django.apps import apps
 
 from .brevo_client import send_brevo_email  # safe: brevo_client uses lazy imports
 
@@ -35,7 +36,7 @@ def send_pin_email_async(email, pin):
     def _send():
         logger = logging.getLogger('django.security')
         try:
-            logger.info(f"=== AVVIO INVIO EMAIL PIN ===")
+            logger.info("=== AVVIO INVIO EMAIL PIN ===")
             logger.info(f"Destinatario: {email}")
             logger.info(f"PIN: {pin}")
             logger.info(f"Host: {settings.EMAIL_HOST}:{settings.EMAIL_PORT}")
@@ -103,7 +104,7 @@ def send_pin_email_async(email, pin):
             logger.info(f"=== EMAIL PIN INVIATA CON SUCCESSO A {email} ===")
 
         except Exception as e:
-            logger.error(f"=== ERRORE INVIO EMAIL PIN ===")
+            logger.error("=== ERRORE INVIO EMAIL PIN ===")
             logger.error(f"Destinatario: {email}")
             logger.error(f"Tipo eccezione: {type(e).__name__}")
             logger.error(f"Messaggio errore: {str(e)}")
@@ -120,7 +121,7 @@ def send_pin_email_async(email, pin):
             logger.error(f"  Password length: {len(settings.EMAIL_HOST_PASSWORD) if settings.EMAIL_HOST_PASSWORD else 0}")
             logger.error(f"  From: {settings.DEFAULT_FROM_EMAIL}")
             logger.error(f"  TLS: {settings.EMAIL_USE_TLS}")
-            logger.error(f"  Timeout: 10")
+            logger.error("  Timeout: 10")
             logger.error("==========================")
 
     thread = threading.Thread(target=_send)
@@ -243,7 +244,7 @@ def _send_email(to_email: str, subject: str, html_message: str, from_email: str)
 	try:
 		send_mail(subject, "", from_email, [to_email], html_message=html_message, fail_silently=False)
 		return
-	except Exception as smtp_exc:
+	except Exception:
 		# log minimal info only
 		logger.warning("SMTP send failed; attempting HTTP fallback")
 		# try Brevo HTTP API fallback

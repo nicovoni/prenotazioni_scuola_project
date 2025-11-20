@@ -623,9 +623,9 @@
             }
         }
     </style>
-    {% block extra_head %}{% endblock %}
-</head>
-<body class="{% if user.is_authenticated %}{% if user.is_admin %}admin-interface{% else %}docente-interface{% endif %}{% endif %}">
+        {% block extra_head %}{% endblock %}
+    </head>
+    <body class="{% if user.is_authenticated %}{% if user.is_staff %}admin-interface{% else %}docente-interface{% endif %}{% endif %}">
     <!-- Loading Screen -->
     <div id="loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s ease-out;">
         <div style="text-align: center; color: white;">
@@ -661,7 +661,7 @@
                                 </span>
                             </div>
                             <div class="auth-buttons d-flex flex-column flex-lg-row gap-2">
-                                {% if user.is_admin %}
+                                {% if user.is_staff %}
                                 <a href="{% url 'prenotazioni:admin_operazioni' %}" class="btn btn-danger btn-sm hover-lift">
                                     ⚙️ Admin
                                 </a>

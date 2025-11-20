@@ -4,47 +4,34 @@ Views Django per la nuova architettura del sistema di prenotazioni.
 Aggiornate per supportare la nuova struttura database e servizi migliorati.
 """
 
-from django.views.generic.edit import TemplateResponseMixin, View
+from django.views.generic.edit import View
 from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
 from django.contrib import messages
 from django.shortcuts import redirect, render, get_object_or_404
-from django.urls import reverse
 from django.utils import timezone
-from django.db import transaction
-from django.http import JsonResponse, HttpResponse, FileResponse
+from django.http import JsonResponse
 from django.core.paginator import Paginator
-from django.views.decorators.http import require_http_methods
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.auth import get_user_model
-from rest_framework import viewsets, status, generics
+from rest_framework import viewsets, generics
 from rest_framework.decorators import action
+from django.contrib.auth import get_user_model
 
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
-    Risorsa, Dispositivo, Prenotazione, ConfigurazioneSistema, SessioneUtente,
-    LogSistema, TemplateNotifica, NotificaUtente, ProfiloUtente,
-    UbicazioneRisorsa, CategoriaDispositivo, StatoPrenotazione, CaricamentoFile, InformazioniScuola
+    Risorsa, Dispositivo, Prenotazione, ConfigurazioneSistema, SessioneUtente, LogSistema, NotificaUtente, UbicazioneRisorsa, CategoriaDispositivo, StatoPrenotazione, InformazioniScuola
 )
 from .forms import (
-    ConfigurationForm, SchoolInfoForm, UserProfileForm, UtenteForm, AdminUserForm,
-    UserSessionForm, PinVerificationForm, EmailLoginForm, DeviceCategoryForm,
-    DeviceForm, DeviceWizardForm, ResourceLocationForm, ResourceForm,
-    BookingStatusForm, BookingForm, ConfirmDeleteForm, NotificationTemplateForm,
-    FileUploadForm, ConfigurazioneSistemaForm, RisorseConfigurazioneForm
+    ConfigurationForm, SchoolInfoForm, UserProfileForm, PinVerificationForm, EmailLoginForm, DeviceWizardForm, BookingForm, ConfirmDeleteForm, RisorseConfigurazioneForm
 )
 from .services import (
     ConfigurationService, UserSessionService, EmailService, BookingService,
-    NotificationService, DeviceService, ResourceService, SystemService,
+    NotificationService, ResourceService, SystemService,
     SystemInitializer
 )
 from .serializers import (
-    ProfiloUtenteSerializer, RisorsaSerializer, DispositivoSerializer, PrenotazioneSerializer,
-    ConfigurazioneSistemaSerializer, NotificaUtenteSerializer, LogSistemaSerializer
+    RisorsaSerializer, DispositivoSerializer, PrenotazioneSerializer
 )
 
 
@@ -60,7 +47,7 @@ class HomeView(LoginRequiredMixin, View):
         user = request.user
         context = {}
 
-        if user.is_admin():
+        if user.is_staff:
             # Dashboard admin
             stats = SystemService.get_system_stats()
             recent_bookings = Prenotazione.objects.filter(
@@ -75,14 +62,14 @@ class HomeView(LoginRequiredMixin, View):
                 'is_admin': True
             })
 
-        elif user.is_docente() or user.is_studente():
+        else:
             # Dashboard utente normale
             my_bookings = Prenotazione.objects.filter(
                 utente=user,
                 cancellato_il__isnull=True
             ).select_related('risorsa', 'stato').order_by('-inizio')[:5]
 
-            available_resources = ServizioRisorsa.get_available_resources()[:10]
+            available_resources = ResourceService.get_available_resources()[:10]
 
             context.update({
                 'my_bookings': my_bookings,
@@ -94,7 +81,7 @@ class HomeView(LoginRequiredMixin, View):
         try:
             school_info = InformazioniScuola.ottieni_istanza()
             context['school_info'] = school_info
-        except:
+        except Exception:
             context['school_info'] = None
 
         return render(request, 'home.html', context)
@@ -132,7 +119,7 @@ class ConfigurazioneSistemaView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Vista per configurazione iniziale e gestione configurazioni."""
     
     def test_func(self):
-        return self.request.user.is_admin()
+        return self.request.user.is_staff
     
     def get(self, request):
         """Mostra stato configurazione sistema."""
@@ -230,7 +217,7 @@ class AdminOperazioniView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Vista operazioni amministrative."""
     
     def test_func(self):
-        return self.request.user.is_admin()
+        return self.request.user.is_staff
     
     def get(self, request):
         """Mostra dashboard operazioni admin."""
@@ -272,7 +259,7 @@ class AdminOperazioniView(LoginRequiredMixin, UserPassesTestMixin, View):
             messages.success(request, 'Notifiche in coda inviate.')
         
         elif action == 'generate_report':
-            report = SystemService.generate_system_report()
+            SystemService.generate_system_report()
             # Qui potresti salvare il report o inviarlo via email
             messages.success(request, 'Report sistema generato.')
         
@@ -289,12 +276,12 @@ class UserProfileView(LoginRequiredMixin, View):
     def get(self, request):
         """Mostra profilo utente."""
         user = request.user
-        profile = getattr(user, 'profile', None)
-        
+        profile = getattr(user, 'profilo_utente', None)
+
         context = {
             'user': user,
             'profile': profile,
-            'recent_bookings': ServizioPrenotazione.get_user_bookings(user)[:5]
+            'recent_bookings': BookingService.get_user_bookings(user)[:5]
         }
         
         return render(request, 'users/profile.html', context)
@@ -302,8 +289,8 @@ class UserProfileView(LoginRequiredMixin, View):
     def post(self, request):
         """Aggiorna profilo utente."""
         user = request.user
-        profile = user.profile
-        
+        profile = getattr(user, 'profilo_utente', None)
+
         form = UserProfileForm(request.POST, instance=profile)
         if form.is_valid():
             form.save()
@@ -330,7 +317,7 @@ class EmailLoginView(View):
             email = form.cleaned_data['email']
             
             try:
-                from django.contrib.auth.models import User
+                User = get_user_model()
                 user = User.objects.get(email=email)
 
                 if not user.is_active:
@@ -349,7 +336,8 @@ class EmailLoginView(View):
                 # Invia email
                 success, error = EmailService.send_pin_email(user, pin)
                 if success:
-                    request.session['login_session_token'] = str(session.token)
+                    # Save the model's token field name
+                    request.session['login_session_token'] = str(getattr(session, 'token_sessione', getattr(session, 'token', '')))
                     messages.success(request, 'PIN inviato via email. Controlla la tua casella di posta.')
                     return redirect('verify_pin')
                 else:
@@ -387,8 +375,9 @@ class PinVerificationView(View):
                 if success:
                     # Login automatico
                     from django.contrib.auth import login
-                    session = UserSession.objects.get(token=token)
-                    login(request, session.user)
+                    # Retrieve the session model by its token field
+                    session = SessioneUtente.objects.get(token_sessione=token)
+                    login(request, session.utente_sessione)
                     
                     # Pulisci sessione
                     del request.session['login_session_token']
@@ -412,8 +401,8 @@ class PrenotaResourceView(LoginRequiredMixin, View):
     
     def get(self, request):
         """Mostra form prenotazione."""
-        form = FormPrenotazione(user=request.user)
-        risorse = ServizioRisorsa.get_available_resources()
+        form = BookingForm(user=request.user)
+        risorse = ResourceService.get_available_resources()
 
         context = {
             'form': form,
@@ -425,7 +414,7 @@ class PrenotaResourceView(LoginRequiredMixin, View):
 
     def post(self, request):
         """Processa creazione prenotazione."""
-        form = FormPrenotazione(request.POST, user=request.user)
+        form = BookingForm(request.POST, user=request.user)
 
         if form.is_valid():
             # Crea prenotazione
@@ -450,7 +439,7 @@ class PrenotaResourceView(LoginRequiredMixin, View):
         else:
             messages.error(request, 'Correggi gli errori nel form.')
 
-        risorse = ServizioRisorsa.get_available_resources()
+        risorse = ResourceService.get_available_resources()
         context = {
             'form': form,
             'resources': risorse,
@@ -468,7 +457,7 @@ class ListaPrenotazioniView(LoginRequiredMixin, View):
         user = request.user
         
         # Base queryset
-        if user.is_admin():
+        if user.is_staff:
             bookings = Prenotazione.objects.all()
             is_admin_view = True
         else:
@@ -551,8 +540,8 @@ class EditPrenotazioneView(LoginRequiredMixin, View):
             'cleanup_needed': prenotazione.cleanup_needed
         }
 
-        form = FormPrenotazione(initial=initial_data, user=request.user, prenotazione_id=pk)
-        risorse = ServizioRisorsa.get_available_resources()
+        form = BookingForm(initial=initial_data, user=request.user, prenotazione_id=pk)
+        risorse = ResourceService.get_available_resources()
 
         context = {
             'form': form,
@@ -572,7 +561,7 @@ class EditPrenotazioneView(LoginRequiredMixin, View):
             messages.error(request, 'Non hai i permessi per modificare questa prenotazione.')
             return redirect('bookings:lista')
 
-        form = FormPrenotazione(request.POST, user=request.user, prenotazione_id=pk)
+        form = BookingForm(request.POST, user=request.user, prenotazione_id=pk)
 
         if form.is_valid():
             # Aggiorna prenotazione
@@ -597,7 +586,7 @@ class EditPrenotazioneView(LoginRequiredMixin, View):
         else:
             messages.error(request, 'Correggi gli errori nel form.')
 
-        risorse = ServizioRisorsa.get_available_resources()
+        risorse = ResourceService.get_available_resources()
         context = {
             'form': form,
             'booking': prenotazione,
@@ -758,7 +747,7 @@ class BookingViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filtra prenotazioni per utente."""
         user = self.request.user
-        if user.is_admin():
+        if user.is_staff:
             return Prenotazione.objects.all().select_related('utente', 'risorsa', 'stato')
         else:
             return Prenotazione.objects.filter(utente=user).select_related('utente', 'risorsa', 'stato')
@@ -789,7 +778,7 @@ class BookingViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         """Approva prenotazione (solo admin)."""
-        if not request.user.is_admin():
+        if not request.user.is_staff:
             return Response({'error': 'Solo amministratori'}, status=403)
         
         booking = self.get_object()
@@ -824,7 +813,7 @@ class SystemStatsView(generics.GenericAPIView):
     
     def get(self, request):
         """Restituisce statistiche sistema."""
-        if not request.user.is_admin():
+        if not request.user.is_staff:
             return Response({'error': 'Solo amministratori'}, status=403)
         
         stats = SystemService.get_system_stats()
@@ -873,7 +862,7 @@ def delete_prenotazione(request, pk):
 
 def database_viewer(request):
     """Wrapper view per visualizzazione database (solo admin)."""
-    if not request.user.is_admin():
+    if not request.user.is_staff:
         messages.error(request, 'Accesso negato. Solo gli amministratori possono visualizzare il database.')
         return redirect('home')
     
@@ -881,7 +870,7 @@ def database_viewer(request):
     stats = SystemService.get_system_stats()
     
     # Dati completi
-    from django.contrib.auth.models import User
+    User = get_user_model()
     utenti = User.objects.all().order_by('username')
     risorse = Risorsa.objects.all().select_related('ubicazione')
     dispositivi = Dispositivo.objects.all().select_related('categoria').order_by('marca', 'nome')
