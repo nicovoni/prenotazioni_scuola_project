@@ -250,3 +250,17 @@ docker-compose run --rm web python manage.py send_test_pin i.nizzo@isufol.it
 Deliverability
 ---------------
 Per migliorare la deliverability (evitare che le email finiscano in spam) configura i record DNS del tuo dominio (`isufol.it`) relativi a SPF, DKIM e DMARC. Se non gestisci il dominio, chiedi all'amministratore di sistema o al provider di hosting per assistenza.
+
+## Note rapide per Render (free tier)
+
+Render free spesso blocca l'egress SMTP (porta 587). Per affidabilità in produzione sul piano gratuito:
+
+- Usare la Brevo HTTP API (porta 443) invece di SMTP quando possibile.
+- Impostare la chiave Brevo come Secret File in Render:
+  - Filename: `email_password.txt` (viene montato in `/etc/secrets/email_password.txt`)
+  - Oppure impostare env var `BREVO_API_KEY`.
+- Il progetto contiene uno helper `send_via_brevo.py` che legge `BREVO_API_KEY` (o legge il secret file) e invia le email via HTTPS.
+- Per far partire le migrazioni automaticamente, copiare `entrypoint.sh` nell'immagine Docker e impostarlo come ENTRYPOINT:
+  - COPY entrypoint.sh /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+  - ENTRYPOINT ["/app/entrypoint.sh"]
+  - CMD mantiene il comando del server (es. gunicorn)

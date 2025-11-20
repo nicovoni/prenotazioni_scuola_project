@@ -22,6 +22,52 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', ADMIN_EMAIL)
 EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 15))  # Reduced timeout for faster failure
 
+# New: support reading password/key from secret file (Render mounts secret files in /etc/secrets/)
+EMAIL_HOST_PASSWORD_FILE = os.environ.get('EMAIL_HOST_PASSWORD_FILE')
+if not EMAIL_HOST_PASSWORD and EMAIL_HOST_PASSWORD_FILE:
+    try:
+        with open(EMAIL_HOST_PASSWORD_FILE, 'r', encoding='utf-8') as f:
+            EMAIL_HOST_PASSWORD = f.read().strip()
+    except Exception:
+        # Best-effort read; if it fails nothing changes (app logic should handle fallback)
+        EMAIL_HOST_PASSWORD = EMAIL_HOST_PASSWORD or ''
+
+# Supporto Brevo HTTP API key (fallback per Render free tier)
+BREVO_API_KEY = os.environ.get('BREVO_API_KEY')
+# If not set explicitly, try to reuse the secret file content (common pattern)
+if not BREVO_API_KEY and EMAIL_HOST_PASSWORD_FILE:
+    try:
+        with open(EMAIL_HOST_PASSWORD_FILE, 'r', encoding='utf-8') as f:
+            candidate = f.read().strip()
+            if candidate:
+                BREVO_API_KEY = candidate
+    except Exception:
+        BREVO_API_KEY = BREVO_API_KEY or None
+
+EMAIL_SEND_VIA_BREVO_API = bool(BREVO_API_KEY)
+
+# Optional: expose the secret-file path and key for other modules
+EMAIL_CONFIG = {
+    'HOST': EMAIL_HOST,
+    'PORT': EMAIL_PORT,
+    'USER': EMAIL_HOST_USER,
+    'PASSWORD': EMAIL_HOST_PASSWORD,
+    'USE_TLS': EMAIL_USE_TLS,
+    'USE_SSL': EMAIL_USE_SSL,
+    'TIMEOUT': EMAIL_TIMEOUT,
+    'SEND_VIA_BREVO_API': EMAIL_SEND_VIA_BREVO_API,
+    'BREVO_API_KEY': BREVO_API_KEY,
+    'EMAIL_HOST_PASSWORD_FILE': EMAIL_HOST_PASSWORD_FILE,
+}
+
+# Small log hint when starting in production (helps debugging Render egress)
+import logging as _logging
+_logger = _logging.getLogger('prenotazioni')
+if EMAIL_SEND_VIA_BREVO_API:
+    _logger.warning('BREVO_API_KEY detected: application may use Brevo HTTP API for sending email (fallback enabled).')
+elif EMAIL_HOST and EMAIL_HOST.endswith('brevo.com') and not EMAIL_HOST_PASSWORD:
+    _logger.warning('EMAIL_HOST set to Brevo but no EMAIL_HOST_PASSWORD found; SMTP may fail on Render free tier. Consider using BREVO_API_KEY secret file and HTTP API fallback.')
+
 # Configurazioni SMTP avanzate per migliorare affidabilità
 EMAIL_BACKEND_CONFIG = {
     'timeout': EMAIL_TIMEOUT,

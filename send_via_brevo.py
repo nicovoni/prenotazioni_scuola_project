@@ -1,27 +1,42 @@
 import os
 import requests
 
-BREVO_KEY = os.environ.get("BREVO_API_KEY")
-if not BREVO_KEY:
-    raise RuntimeError("BREVO_API_KEY non impostata")
+BREVO_API_KEY = os.environ.get('BREVO_API_KEY')
+# If not set as env, try to read the common secret file path used in README
+_secret_file = os.environ.get('EMAIL_HOST_PASSWORD_FILE', '/etc/secrets/email_password.txt')
+if not BREVO_API_KEY and os.path.exists(_secret_file):
+    try:
+        with open(_secret_file, 'r', encoding='utf-8') as f:
+            BREVO_API_KEY = f.read().strip()
+    except Exception:
+        BREVO_API_KEY = None
 
-def send_pin(to_email, subject, html_content, sender_email=None, sender_name="App"):
-    url = "https://api.brevo.com/v3/smtp/email"
+if not BREVO_API_KEY:
+    raise RuntimeError("BREVO_API_KEY non impostata. Impostare BREVO_API_KEY env var o EMAIL_HOST_PASSWORD_FILE con la chiave.")
+
+BREVO_SEND_URL = "https://api.brevo.com/v3/smtp/email"
+DEFAULT_FROM = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@example.com')
+
+def send_pin(to_email, subject, html_content, sender_email=None, sender_name="Sistema Prenotazioni"):
+    """
+    Invia una email via Brevo HTTP API.
+    Lancia requests.HTTPError in caso di errore (chi lo chiama deve gestirlo).
+    """
     headers = {
         "accept": "application/json",
-        "api-key": BREVO_KEY,
+        "api-key": BREVO_API_KEY,
         "Content-Type": "application/json",
     }
-    sender = {"email": sender_email or os.environ.get("DEFAULT_FROM_EMAIL", "noreply@example.com"), "name": sender_name}
+    sender = {"email": sender_email or DEFAULT_FROM, "name": sender_name}
     payload = {
         "sender": sender,
         "to": [{"email": to_email}],
         "subject": subject,
         "htmlContent": html_content
     }
-    r = requests.post(url, json=payload, headers=headers, timeout=10)
-    r.raise_for_status()
-    return r.json()
+    resp = requests.post(BREVO_SEND_URL, json=payload, headers=headers, timeout=10)
+    resp.raise_for_status()
+    return resp.json()
 
 # Esempio d'uso:
 # send_pin("user@example.com", "PIN", "<p>Il tuo PIN: 1234</p>")

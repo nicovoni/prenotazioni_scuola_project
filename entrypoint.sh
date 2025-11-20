@@ -9,8 +9,8 @@ echo "Waiting for DB at ${DATABASE_HOST}:${DATABASE_PORT} (timeout ${DB_WAIT_TIM
 for i in $(seq 1 "${DB_WAIT_TIMEOUT}"); do
   python - <<PY
 import socket, os, sys
-host = os.environ.get("DATABASE_HOST", "db")
-port = int(os.environ.get("DATABASE_PORT", 5432))
+host = os.environ.get("DATABASE_HOST", "${DATABASE_HOST}")
+port = int(os.environ.get("DATABASE_PORT", ${DATABASE_PORT}))
 s = socket.socket()
 s.settimeout(1)
 try:
@@ -30,5 +30,9 @@ done
 
 echo "Running migrations..."
 python manage.py migrate --noinput
+
+# Optionally collectstatic (uncomment if needed)
+# echo "Collecting static files..."
+# python manage.py collectstatic --noinput
 
 exec "$@"
