@@ -8,6 +8,10 @@ from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.utils import timezone
+from django.db import ProgrammingError, OperationalError
+from django.http import JsonResponse
+
+logger = logging.getLogger(__name__)
 
 def send_mail_admins_async(subject, message):
     """Send mail_admins asynchronously to avoid blocking the request."""
@@ -284,7 +288,12 @@ def verify_pin(request):
 
         User = get_user_model()
 
-        user, created = User.objects.get_or_create(username=email, defaults={'email': email})
+        try:
+            user, created = User.objects.get_or_create(username=email, defaults={'email': email})
+        except (ProgrammingError, OperationalError) as e:
+            # DB not ready (migrations not applied) — return a 503 so deploy can finish and ops can run migrations
+            logger.error("Database not ready when verifying PIN: %s", e)
+            return JsonResponse({'error': 'database not ready, try again later'}, status=503)
 
         # Determina ruolo basato sull'email e imposta permessi
         is_admin = email in settings.ADMINS_EMAIL_LIST
