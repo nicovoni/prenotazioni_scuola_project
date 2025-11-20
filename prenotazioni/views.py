@@ -31,7 +31,7 @@ from .services import (
     SystemInitializer
 )
 from .serializers import (
-    RisorsaSerializer, DispositivoSerializer, PrenotazioneSerializer
+    ResourceSerializer, DeviceSerializer, BookingSerializer
 )
 
 
@@ -738,7 +738,7 @@ class DeviceListView(LoginRequiredMixin, View):
 class BookingViewSet(viewsets.ModelViewSet):
     """API REST per prenotazioni."""
     queryset = Prenotazione.objects.all().select_related('utente', 'risorsa', 'stato')
-    serializer_class = PrenotazioneSerializer
+    serializer_class = BookingSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['utente', 'risorsa', 'stato', 'inizio', 'fine']
@@ -790,7 +790,7 @@ class BookingViewSet(viewsets.ModelViewSet):
 class ResourceViewSet(viewsets.ReadOnlyModelViewSet):
     """API REST per risorse (solo lettura)."""
     queryset = Risorsa.objects.filter(attivo=True).select_related('ubicazione')
-    serializer_class = RisorsaSerializer
+    serializer_class = ResourceSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['tipo', 'attivo', 'localizzazione']
@@ -800,7 +800,7 @@ class ResourceViewSet(viewsets.ReadOnlyModelViewSet):
 class DeviceViewSet(viewsets.ReadOnlyModelViewSet):
     """API REST per dispositivi (solo lettura)."""
     queryset = Dispositivo.objects.filter(attivo=True).select_related('categoria')
-    serializer_class = DispositivoSerializer
+    serializer_class = DeviceSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['tipo', 'stato', 'categoria']
