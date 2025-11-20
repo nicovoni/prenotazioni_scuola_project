@@ -54,11 +54,28 @@ if not SECRET_KEY:
         raise ValueError('DJANGO_SECRET_KEY environment variable is required in production')
 
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
-# Aggiungi dominio Render se disponibile
-render_domain = os.environ.get('RENDER_EXTERNAL_URL', '').replace('https://', '').replace('http://', '')
-if render_domain and render_domain not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(render_domain)
+
+# ALLOWED_HOSTS configuration for Render
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'web',  # Docker internal
+]
+
+# Add Render domain if available
+render_external_url = os.environ.get('RENDER_EXTERNAL_URL')
+if render_external_url:
+    domain = render_external_url.replace('https://', '').replace('http://', '')
+    if domain not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(domain)
+
+# Add any additional hosts from environment
+additional_hosts = os.environ.get('ALLOWED_HOSTS')
+if additional_hosts:
+    for host in additional_hosts.split(','):
+        host = host.strip()
+        if host and host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(host)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -284,7 +301,9 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
 
-#  sing dUfaulr  uthsr modl
+# Django Sites framework
+SITE_ID = 1
+
 # AUTH_USER_MODEL = 'auth.User'  # Default
 
 # =========================
