@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir --prefer-binary -r requirements.txt
 COPY . /app/
 
 # Make sure scripts are executable
-RUN chmod +x /app/manage.py /app/entrypoint.sh
+RUN chmod +x /app/manage.py /app/entrypoint.sh /app/delete_migration.py
 
 # Expose port (Render sets PORT env var)
 EXPOSE 10000
