@@ -45,8 +45,8 @@ secrets.json
 # =========================
 *.log
 docker-compose.override.yml
-Dockerfile*
 docker-compose*.yml
+# Dockerfile*  # TEMPORANEAMENTE COMMENTATO - necessario per Render
 .dockerignore
 
 # =========================

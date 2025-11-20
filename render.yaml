@@ -17,7 +17,7 @@ services:
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: ALLOWED_HOSTS
-        value: prenotazioni-scuola.onrender.com
+        value: reserveliceofollonica.onrender.com
       - key: DATABASE_URL
         generateValue: true
       - key: REDIS_URL
@@ -25,7 +25,7 @@ services:
       - key: ADMIN_USERNAME
         generateValue: true
       - key: ADMIN_EMAIL
-        value: admin@prenotazioni-scuola.onrender.com
+        value: admin@reserveliceofollonica.onrender.com
       - key: ADMIN_FIRST_NAME
         value: Amministratore
       - key: ADMIN_LAST_NAME
