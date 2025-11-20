@@ -34,3 +34,5 @@ services:
         generateValue: true
       - key: PYTHONUNBUFFERED
         value: 1
+    # run migrations automatically on deploy
+    releaseCommand: "python manage.py migrate --noinput"

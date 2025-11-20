@@ -3,6 +3,7 @@ import string
 import re
 import logging
 import threading
+import os
 from django.core.mail import send_mail
 from django.conf import settings
 from django.shortcuts import render, redirect
@@ -10,8 +11,12 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db import ProgrammingError, OperationalError
 from django.http import JsonResponse
+from django.contrib.auth import get_user_model
+
+from .brevo_client import send_brevo_email  # new import
 
 logger = logging.getLogger(__name__)
+User = get_user_model()
 
 def send_mail_admins_async(subject, message):
     """Send mail_admins asynchronously to avoid blocking the request."""
@@ -291,9 +296,26 @@ def verify_pin(request):
         try:
             user, created = User.objects.get_or_create(username=email, defaults={'email': email})
         except (ProgrammingError, OperationalError) as e:
-            # DB not ready (migrations not applied) — return a 503 so deploy can finish and ops can run migrations
             logger.error("Database not ready when verifying PIN: %s", e)
             return JsonResponse({'error': 'database not ready, try again later'}, status=503)
+
+        # prepare email
+        subject = "Your PIN"
+        message = "<p>Il tuo PIN: ...</p>"  # ...existing code builds message ...
+        from_email = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@example.com")
+        to_email = email
+
+        # try Django email backend (SMTP) first
+        try:
+            send_mail(subject, "", from_email, [to_email], html_message=message, fail_silently=False)
+        except Exception as smtp_exc:
+            # SMTP/socket failed -> try Brevo HTTP API as fallback
+            logger.error("SMTP send failed (not exposing details): %s", str(smtp_exc))
+            try:
+                send_brevo_email(to_email=to_email, subject=subject, html_content=message, sender_email=from_email)
+            except Exception as brevo_exc:
+                logger.error("Brevo API send failed: %s", brevo_exc)
+                return JsonResponse({'error': 'email sending failed'}, status=502)
 
         # Determina ruolo basato sull'email e imposta permessi
         is_admin = email in settings.ADMINS_EMAIL_LIST
