@@ -4,6 +4,7 @@ set -e
 : "${DATABASE_HOST:=db}"
 : "${DATABASE_PORT:=5432}"
 : "${DB_WAIT_TIMEOUT:=60}"
+: "${INITIALIZE_DB:=false}"   # impostare su "true" su Render per popolare DB vuoto automaticamente
 
 echo "Waiting for DB at ${DATABASE_HOST}:${DATABASE_PORT} (timeout ${DB_WAIT_TIMEOUT}s)..."
 for i in $(seq 1 "${DB_WAIT_TIMEOUT}"); do
@@ -28,11 +29,19 @@ PY
   sleep 1
 done
 
+echo
 echo "Running migrations..."
 python manage.py migrate --noinput
 
-# Optionally collectstatic (uncomment if needed)
-# echo "Collecting static files..."
+if [ "${INITIALIZE_DB}" = "true" ]; then
+  echo "INITIALIZE_DB=true -> running initialize_data management command..."
+  python manage.py initialize_data || {
+    echo "initialize_data failed (non-fatal)"; 
+  }
+fi
+
+# Optional: collectstatic if you use static files
 # python manage.py collectstatic --noinput
 
+# Exec passed command (e.g. gunicorn)
 exec "$@"

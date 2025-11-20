@@ -13,28 +13,27 @@ ADMINS = [("Admin", ADMIN_EMAIL)]
 
 # Configurazione email principale
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp-relay.brevo.com')  # Default Brevo, override with env var
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp-relay.brevo.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('1', 'true', 'yes')
 EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() in ('1', 'true', 'yes')
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', ADMIN_EMAIL)
-EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 15))  # Reduced timeout for faster failure
+EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 15))
 
-# New: support reading password/key from secret file (Render mounts secret files in /etc/secrets/)
-EMAIL_HOST_PASSWORD_FILE = os.environ.get('EMAIL_HOST_PASSWORD_FILE')
+# --- Nuovo: supporto secret file (Render mounts) ---
+EMAIL_HOST_PASSWORD_FILE = os.environ.get('EMAIL_HOST_PASSWORD_FILE')  # es. /etc/secrets/email_password.txt
 if not EMAIL_HOST_PASSWORD and EMAIL_HOST_PASSWORD_FILE:
     try:
         with open(EMAIL_HOST_PASSWORD_FILE, 'r', encoding='utf-8') as f:
             EMAIL_HOST_PASSWORD = f.read().strip()
     except Exception:
-        # Best-effort read; if it fails nothing changes (app logic should handle fallback)
         EMAIL_HOST_PASSWORD = EMAIL_HOST_PASSWORD or ''
 
-# Supporto Brevo HTTP API key (fallback per Render free tier)
+# --- Nuovo: supporto BREVO HTTP API key (fallback) ---
 BREVO_API_KEY = os.environ.get('BREVO_API_KEY')
-# If not set explicitly, try to reuse the secret file content (common pattern)
+# fallback: if not set, try reading same secret file (common pattern)
 if not BREVO_API_KEY and EMAIL_HOST_PASSWORD_FILE:
     try:
         with open(EMAIL_HOST_PASSWORD_FILE, 'r', encoding='utf-8') as f:
@@ -46,7 +45,6 @@ if not BREVO_API_KEY and EMAIL_HOST_PASSWORD_FILE:
 
 EMAIL_SEND_VIA_BREVO_API = bool(BREVO_API_KEY)
 
-# Optional: expose the secret-file path and key for other modules
 EMAIL_CONFIG = {
     'HOST': EMAIL_HOST,
     'PORT': EMAIL_PORT,
@@ -60,13 +58,13 @@ EMAIL_CONFIG = {
     'EMAIL_HOST_PASSWORD_FILE': EMAIL_HOST_PASSWORD_FILE,
 }
 
-# Small log hint when starting in production (helps debugging Render egress)
+# Small runtime hints useful in Render logs
 import logging as _logging
 _logger = _logging.getLogger('prenotazioni')
 if EMAIL_SEND_VIA_BREVO_API:
-    _logger.warning('BREVO_API_KEY detected: application may use Brevo HTTP API for sending email (fallback enabled).')
-elif EMAIL_HOST and EMAIL_HOST.endswith('brevo.com') and not EMAIL_HOST_PASSWORD:
-    _logger.warning('EMAIL_HOST set to Brevo but no EMAIL_HOST_PASSWORD found; SMTP may fail on Render free tier. Consider using BREVO_API_KEY secret file and HTTP API fallback.')
+    _logger.warning('BREVO_API_KEY detected: HTTP API fallback enabled for sending emails.')
+elif EMAIL_HOST and 'brevo' in EMAIL_HOST and not EMAIL_HOST_PASSWORD:
+    _logger.warning('EMAIL_HOST configured for Brevo but no password found; SMTP may fail on Render free tier.')
 
 # Configurazioni SMTP avanzate per migliorare affidabilità
 EMAIL_BACKEND_CONFIG = {
