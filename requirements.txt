@@ -18,3 +18,6 @@ python-dotenv>=1.0.1
 django-extensions>=3.2.3
 django-crispy-forms>=2.3
 crispy-bootstrap5>=2024.2
+
+# Opzionale
+requests>=2.31.0
