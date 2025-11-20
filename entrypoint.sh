@@ -28,13 +28,7 @@ PY
   sleep 1
 done
 
-# Run migrations (non-interactive)
 echo "Running migrations..."
 python manage.py migrate --noinput
 
-# Optional: collectstatic if needed
-# echo "Collecting static files..."
-# python manage.py collectstatic --noinput
-
-# Exec the container CMD
 exec "$@"
