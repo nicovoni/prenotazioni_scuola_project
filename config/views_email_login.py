@@ -13,7 +13,7 @@ from django.db import ProgrammingError, OperationalError
 from django.http import JsonResponse
 from django.contrib.auth import get_user_model
 
-from .brevo_client import send_brevo_email  # new import
+from .brevo_client import send_brevo_email  # safe: brevo_client uses lazy imports
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -233,6 +233,28 @@ def email_login(request):
         return redirect('verify_pin')
     return render(request, 'registration/email_login.html')
 
+# replace the old socket-test _send with this safe helper
+def _send_email(to_email: str, subject: str, html_message: str, from_email: str):
+	"""
+	Tenta prima il backend Django (SMTP), poi fallback a Brevo HTTP API.
+	Lancia eccezione se entrambi falliscono.
+	"""
+	# try Django email backend first
+	try:
+		send_mail(subject, "", from_email, [to_email], html_message=html_message, fail_silently=False)
+		return
+	except Exception as smtp_exc:
+		# log minimal info only
+		logger.warning("SMTP send failed; attempting HTTP fallback")
+		# try Brevo HTTP API fallback
+		try:
+			send_brevo_email(to_email=to_email, subject=subject, html_content=html_message, sender_email=from_email)
+			return
+		except Exception as brevo_exc:
+			logger.error("Brevo HTTP fallback failed: %s", brevo_exc)
+			# re-raise to let caller return appropriate HTTP status
+			raise
+
 def verify_pin(request):
     logger = logging.getLogger('django.security')
     ip = get_client_ip(request)
@@ -305,17 +327,11 @@ def verify_pin(request):
         from_email = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@example.com")
         to_email = email
 
-        # Try Django email backend first (may use SMTP)
         try:
-            send_mail(subject, "", from_email, [to_email], html_message=html_message, fail_silently=False)
-        except Exception as smtp_exc:
-            # SMTP/socket failed -> try Brevo HTTP API as fallback
-            logger.error("SMTP send failed (not exposing details): %s", str(smtp_exc))
-            try:
-                send_brevo_email(to_email=to_email, subject=subject, html_content=html_message, sender_email=from_email)
-            except Exception as brevo_exc:
-                logger.error("Brevo API send failed: %s", brevo_exc)
-                return JsonResponse({'error': 'email sending failed'}, status=502)
+            _send_email(to_email=to_email, subject=subject, html_message=html_message, from_email=from_email)
+        except Exception:
+            # Do not expose internal error details to clients
+            return JsonResponse({'error': 'email sending failed'}, status=502)
 
         # Determina ruolo basato sull'email e imposta permessi
         is_admin = email in settings.ADMINS_EMAIL_LIST
