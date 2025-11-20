@@ -5,10 +5,10 @@ from django.db import connection
 def home(request):
     # Controllo se il sistema è configurato
     try:
-        from prenotazioni.models import Resource
+        from prenotazioni.models import Risorsa
         from django.contrib.auth import get_user_model
         User = get_user_model()
-        if not User.objects.exists() or not Resource.objects.exists():
+        if not User.objects.exists() or not Risorsa.objects.exists():
             return redirect('prenotazioni:configurazione_sistema')
         return render(request, 'home.html')
     except Exception as e:

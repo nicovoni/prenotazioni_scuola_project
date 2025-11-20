@@ -21,8 +21,13 @@ from django.template.loader import render_to_string
 from .models import (
     Risorsa, Dispositivo, Prenotazione, ConfigurazioneSistema as Configuration, SessioneUtente as UserSession,
     LogSistema as SystemLog, TemplateNotifica as NotificationTemplate, NotificaUtente as Notification, ProfiloUtente as UserProfile,
-    UbicazioneRisorsa as ResourceLocation, CategoriaDispositivo as DeviceCategory, StatoPrenotazione as BookingStatus, CaricamentoFile as FileUpload
+    UbicazioneRisorsa as ResourceLocation, CategoriaDispositivo as DeviceCategory, StatoPrenotazione as BookingStatus, CaricamentoFile as FileUpload,
+    InformazioniScuola
 )
+# Alias for compatibility
+Resource = Risorsa
+Booking = Prenotazione
+SchoolInfo = InformazioniScuola
 
 logger = logging.getLogger(__name__)
 

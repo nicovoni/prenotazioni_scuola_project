@@ -1,0 +1,54 @@
+services:
+  - type: web
+    name: prenotazioni-scuola
+    env: python
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py makemigrations
+      python manage.py migrate
+      python manage.py collectstatic --noinput
+      python manage.py initialize_data
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings
+      - key: DJANGO_DEBUG
+        value: false
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        fromService:
+          type: web
+          name: prenotazioni-scuola
+          property: host
+      - key: DATABASE_URL
+        fromDatabase:
+          type: postgresql
+          name: prenotazioni-scuola-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: prenotazioni-scuola-redis
+          property: connectionStringUrl
+      - key: ADMIN_USERNAME
+        generateValue: true
+      - key: ADMIN_EMAIL
+        fromService:
+          type: web
+          name: prenotazioni-scuola
+          property: domain
+      - key: ADMIN_FIRST_NAME
+        value: Amministratore
+      - key: ADMIN_LAST_NAME
+        value: Sistema
+      - key: ADMIN_PASSWORD
+        generateValue: true
+
+  - type: postgresql
+    name: prenotazioni-scuola-db
+    ipAllowList: []
+
+  - type: redis
+    name: prenotazioni-scuola-redis
+    ipAllowList: []

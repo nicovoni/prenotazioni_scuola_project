@@ -54,7 +54,11 @@ if not SECRET_KEY:
         raise ValueError('DJANGO_SECRET_KEY environment variable is required in production')
 
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
+# Aggiungi dominio Render se disponibile
+render_domain = os.environ.get('RENDER_EXTERNAL_URL', '').replace('https://', '').replace('http://', '')
+if render_domain and render_domain not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_domain)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
