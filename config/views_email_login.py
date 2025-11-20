@@ -45,63 +45,18 @@ def send_pin_email_async(email, pin):
             logger.info(f"From: {settings.DEFAULT_FROM_EMAIL}")
             logger.info(f"TLS: {settings.EMAIL_USE_TLS}, Timeout: 10s")
 
-            # Test DNS resolution
-            logger.info("Test risoluzione DNS...")
+            # Build subject and HTML message
+            subject = "Il tuo PIN di accesso"
+            html_message = f"<p>Il tuo PIN di accesso è: <strong>{pin}</strong></p>"
+            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com')
+
+            # Use the resilient send helper which tries SMTP then Brevo HTTP API
             try:
-                import socket
-                ip_address = socket.gethostbyname(settings.EMAIL_HOST)
-                logger.info(f"DNS risolto: {settings.EMAIL_HOST} -> {ip_address}")
-            except Exception as dns_error:
-                logger.error(f"ERRORE DNS: {dns_error}")
-                raise Exception(f"DNS resolution failed: {dns_error}")
-
-            # Test basic connectivity
-            logger.info("Test connessione socket...")
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(5)
-                result = sock.connect_ex((settings.EMAIL_HOST, settings.EMAIL_PORT))
-                sock.close()
-                if result == 0:
-                    logger.info(f"Connessione socket riuscita a {settings.EMAIL_HOST}:{settings.EMAIL_PORT}")
-                else:
-                    logger.error(f"Connessione socket fallita a {settings.EMAIL_HOST}:{settings.EMAIL_PORT} (codice: {result})")
-                    raise Exception(f"Socket connection failed with code: {result}")
-            except Exception as socket_error:
-                logger.error(f"ERRORE connessione socket: {socket_error}")
-                raise Exception(f"Socket connectivity test failed: {socket_error}")
-
-            # Use direct SMTP backend with shorter timeout
-            from django.core.mail.backends.smtp import EmailBackend
-            from django.core.mail import EmailMessage
-
-            logger.info("Creazione backend SMTP...")
-            # Create backend with very short timeout
-            backend = EmailBackend(
-                host=settings.EMAIL_HOST,
-                port=settings.EMAIL_PORT,
-                username=settings.EMAIL_HOST_USER,
-                password=settings.EMAIL_HOST_PASSWORD,
-                use_tls=settings.EMAIL_USE_TLS,
-                timeout=10  # Very short timeout
-            )
-            logger.info("Backend creato, connessione SMTP...")
-
-            email_message = EmailMessage(
-                subject="Il tuo PIN di accesso",
-                body=f"Il tuo PIN di accesso è: {pin}",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[email]
-            )
-            logger.info("Messaggio email creato")
-
-            logger.info("Invio messaggio...")
-            result = backend.send_messages([email_message])
-            logger.info(f"send_messages() restituito: {result}")
-
-            backend.close()
-            logger.info("Connessione chiusa")
-            logger.info(f"=== EMAIL PIN INVIATA CON SUCCESSO A {email} ===")
+                _send_email(to_email=email, subject=subject, html_message=html_message, from_email=from_email)
+                logger.info(f"=== EMAIL PIN INVIATA CON SUCCESSO A {email} ===")
+            except Exception as send_exc:
+                # Log and continue; we do not want to raise in background thread
+                logger.error(f"Invio email fallito per {email}: {send_exc}")
 
         except Exception as e:
             logger.error("=== ERRORE INVIO EMAIL PIN ===")

@@ -23,11 +23,16 @@ RUN addgroup --system django && \
 # Cambia proprietario dei file
 RUN chown -R django:django /app
 
+# Assicura che lo script di entrypoint sia eseguibile
+RUN chmod +x ./entrypoint.sh || true
+
 # Switcha all'utente non-root
 USER django
 
 # Espone la porta che Render fornisce via $PORT
 EXPOSE 8000
 
-# Comando di avvio
+# Usa entrypoint per operazioni di avvio (migrations, inizializzazione)
+ENTRYPOINT ["/app/entrypoint.sh"]
+# Comando di avvio: Gunicorn
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]

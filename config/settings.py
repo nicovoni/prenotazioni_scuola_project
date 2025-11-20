@@ -57,6 +57,9 @@ EMAIL_CONFIG = {
     'SEND_VIA_BREVO_API': EMAIL_SEND_VIA_BREVO_API,
     'BREVO_API_KEY': BREVO_API_KEY,
     'EMAIL_HOST_PASSWORD_FILE': EMAIL_HOST_PASSWORD_FILE,
+    # Brevo-specific tuning
+    'BREVO_TIMEOUT': int(os.environ.get('BREVO_TIMEOUT', os.environ.get('EMAIL_TIMEOUT', EMAIL_TIMEOUT))),
+    'BREVO_RETRIES': int(os.environ.get('BREVO_RETRIES', '3')),
 }
 
 # Small runtime hints useful in Render logs
@@ -65,6 +68,9 @@ if EMAIL_SEND_VIA_BREVO_API:
     _logger.warning('BREVO_API_KEY detected: HTTP API fallback enabled for sending emails.')
 elif EMAIL_HOST and 'brevo' in EMAIL_HOST and not EMAIL_HOST_PASSWORD:
     _logger.warning('EMAIL_HOST configured for Brevo but no password found; SMTP may fail on Render free tier.')
+
+# Provide quick hints about Brevo tuning
+_logger.info(f"EMAIL timeout={EMAIL_TIMEOUT}, BREVO timeout={EMAIL_CONFIG['BREVO_TIMEOUT']}, BREVO retries={EMAIL_CONFIG['BREVO_RETRIES']}")
 
 # Configurazioni SMTP avanzate per migliorare affidabilità
 EMAIL_BACKEND_CONFIG = {
