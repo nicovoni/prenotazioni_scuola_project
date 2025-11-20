@@ -300,19 +300,19 @@ def verify_pin(request):
             return JsonResponse({'error': 'database not ready, try again later'}, status=503)
 
         # prepare email
-        subject = "Your PIN"
-        message = "<p>Il tuo PIN: ...</p>"  # ...existing code builds message ...
+        subject = "Il tuo PIN"
+        html_message = "<p>Il tuo PIN è: ...</p>"  # ...existing code builds the actual content ...
         from_email = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@example.com")
         to_email = email
 
-        # try Django email backend (SMTP) first
+        # Try Django email backend first (may use SMTP)
         try:
-            send_mail(subject, "", from_email, [to_email], html_message=message, fail_silently=False)
+            send_mail(subject, "", from_email, [to_email], html_message=html_message, fail_silently=False)
         except Exception as smtp_exc:
             # SMTP/socket failed -> try Brevo HTTP API as fallback
             logger.error("SMTP send failed (not exposing details): %s", str(smtp_exc))
             try:
-                send_brevo_email(to_email=to_email, subject=subject, html_content=message, sender_email=from_email)
+                send_brevo_email(to_email=to_email, subject=subject, html_content=html_message, sender_email=from_email)
             except Exception as brevo_exc:
                 logger.error("Brevo API send failed: %s", brevo_exc)
                 return JsonResponse({'error': 'email sending failed'}, status=502)
