@@ -401,41 +401,49 @@ class SessioneUtente(models.Model):
         verbose_name='PIN Sessione',
         help_text='Per verifiche PIN'
     )
-    stato_sessione = models.CharField(
-        max_length=20,
-        choices=TIPO_STATO,
-        default='in_attesa',
-        verbose_name='Stato Sessione'
-    )
-    metadati_sessione = models.JSONField(
-        default=dict,
+    nome_utente = models.CharField(
+        max_length=100,
+        verbose_name='Nome Utente',
+        help_text='Nome di battesimo',
         blank=True,
-        verbose_name='Metadati Sessione',
-        help_text='Dati aggiuntivi della sessione'
+        null=True
     )
-    email_destinazione_sessione = models.EmailField(
-        verbose_name='Email Destinazione Sessione'
+    cognome_utente = models.CharField(
+        max_length=100,
+        verbose_name='Cognome Utente',
+        help_text='Cognome',
+        blank=True,
+        null=True
     )
-
-    data_creazione_sessione = models.DateTimeField(auto_now_add=True)
-    data_scadenza_sessione = models.DateTimeField()
-    data_verifica_sessione = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        verbose_name = 'Sessione Utente'
-        verbose_name_plural = 'Sessioni Utente'
-        indexes = [
-            models.Index(fields=['utente_sessione', 'tipo_sessione']),
-            models.Index(fields=['token_sessione']),
-            models.Index(fields=['stato_sessione']),
-            models.Index(fields=['data_scadenza_sessione']),
-        ]
-
-    def __str__(self):
-        return f"{self.utente_sessione.username} - {self.tipo_sessione} ({self.stato_sessione})"
-
-    @property
-    def sessione_scaduta(self):
+    sesso_utente = models.CharField(
+        max_length=10,
+        choices=SCELTE_SESSO,
+        blank=True,
+        null=True,
+        verbose_name='Sesso Utente'
+    )
+    data_nascita_utente = models.DateField(
+        null=True, blank=True,
+        verbose_name='Data Nascita Utente'
+    )
+    codice_fiscale_utente = models.CharField(
+        max_length=16,
+        blank=True,
+        null=True,
+        verbose_name='Codice Fiscale Utente'
+    )
+    telefono_utente = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name='Telefono Utente'
+    )
+    email_personale_utente = models.EmailField(
+        blank=True,
+        null=True,
+        verbose_name='Email Personale Utente',
+        help_text='Email alternativa per comunicazioni'
+    )
         return timezone.now() > self.data_scadenza_sessione
 
     @property
