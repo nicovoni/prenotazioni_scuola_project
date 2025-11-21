@@ -1175,8 +1175,12 @@ def create_notification(user, template_name, context, **kwargs):
 def create_user_profile_signal(sender, instance, created, **kwargs):
     """Crea profilo automaticamente quando viene creato un utente."""
     if created:
-        # Il campo sul modello `ProfiloUtente` si chiama `utente`
-        ProfiloUtente.objects.create(utente=instance)
+        # Valorizza i campi obbligatori con dati di User o stringa vuota
+        ProfiloUtente.objects.create(
+            utente=instance,
+            nome_utente=getattr(instance, 'first_name', '') or '',
+            cognome_utente=getattr(instance, 'last_name', '') or ''
+        )
 
 
 def save_user_profile_signal(sender, instance, **kwargs):
