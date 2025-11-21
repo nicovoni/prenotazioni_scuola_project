@@ -444,6 +444,7 @@ class SessioneUtente(models.Model):
         verbose_name='Email Personale Utente',
         help_text='Email alternativa per comunicazioni'
     )
+    def sessione_scaduta(self):
         return timezone.now() > self.data_scadenza_sessione
 
     @property
