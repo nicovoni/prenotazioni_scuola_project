@@ -4,11 +4,18 @@ from django.dispatch import receiver
 
 
 # Pulizia automatica dei record ProfiloUtente dopo le migrazioni
+import django
+from django.db import connection
+
 @receiver(post_migrate)
 def clean_profilo_utente_null_fields(sender, **kwargs):
-    from .models import ProfiloUtente
-    ProfiloUtente.objects.filter(nome_utente__isnull=True).update(nome_utente="")
-    ProfiloUtente.objects.filter(cognome_utente__isnull=True).update(cognome_utente="")
+    table_name = 'prenotazioni_profiloutente'
+    with connection.cursor() as cursor:
+        tables = connection.introspection.table_names()
+    if table_name in tables:
+        from .models import ProfiloUtente
+        ProfiloUtente.objects.filter(nome_utente__isnull=True).update(nome_utente="")
+        ProfiloUtente.objects.filter(cognome_utente__isnull=True).update(cognome_utente="")
 # =====================================================
 # SCELTE GLOBALI
 # =====================================================
