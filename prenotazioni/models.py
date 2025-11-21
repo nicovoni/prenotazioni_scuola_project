@@ -370,10 +370,10 @@ class ProfiloUtente(models.Model):
 # =====================================================
 
 class SessioneUtente(models.Model):
-        data_creazione_sessione = models.DateTimeField(auto_now_add=True, verbose_name='Data Creazione Sessione')
-        data_scadenza_sessione = models.DateTimeField(null=True, blank=True, verbose_name='Data Scadenza Sessione')
-        data_verifica_sessione = models.DateTimeField(null=True, blank=True, verbose_name='Data Verifica Sessione')
-        stato_sessione = models.CharField(max_length=20, choices=TIPO_STATO, default='in_attesa', verbose_name='Stato Sessione')
+    data_creazione_sessione = models.DateTimeField(auto_now_add=True, verbose_name='Data Creazione Sessione')
+    data_scadenza_sessione = models.DateTimeField(null=True, blank=True, verbose_name='Data Scadenza Sessione')
+    data_verifica_sessione = models.DateTimeField(null=True, blank=True, verbose_name='Data Verifica Sessione')
+    stato_sessione = models.CharField(max_length=20, choices=TIPO_STATO, default='in_attesa', verbose_name='Stato Sessione')
     metadati_sessione = models.JSONField(
         default=dict,
         blank=True,
