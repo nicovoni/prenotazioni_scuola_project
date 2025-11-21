@@ -14,6 +14,3 @@ class PrenotazioniConfig(AppConfig):
         Codice eseguito quando l'app è pronta.
         """
         import prenotazioni.models  # noqa
-        from prenotazioni.models import ProfiloUtente
-        ProfiloUtente.objects.filter(nome_utente__isnull=True).update(nome_utente="")
-        ProfiloUtente.objects.filter(cognome_utente__isnull=True).update(cognome_utente="")

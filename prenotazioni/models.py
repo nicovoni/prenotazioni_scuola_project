@@ -1,12 +1,14 @@
-from django.apps import AppConfig
 
-class PrenotazioniConfig(AppConfig):
-    name = "prenotazioni"
+from django.db.models.signals import post_migrate
+from django.dispatch import receiver
 
-    def ready(self):
-        from .models import ProfiloUtente
-        ProfiloUtente.objects.filter(nome_utente__isnull=True).update(nome_utente="")
-        ProfiloUtente.objects.filter(cognome_utente__isnull=True).update(cognome_utente="")
+
+# Pulizia automatica dei record ProfiloUtente dopo le migrazioni
+@receiver(post_migrate)
+def clean_profilo_utente_null_fields(sender, **kwargs):
+    from .models import ProfiloUtente
+    ProfiloUtente.objects.filter(nome_utente__isnull=True).update(nome_utente="")
+    ProfiloUtente.objects.filter(cognome_utente__isnull=True).update(cognome_utente="")
 # =====================================================
 # SCELTE GLOBALI
 # =====================================================
