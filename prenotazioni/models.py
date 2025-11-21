@@ -370,22 +370,6 @@ class ProfiloUtente(models.Model):
 # =====================================================
 
 class SessioneUtente(models.Model):
-    data_creazione_sessione = models.DateTimeField(auto_now_add=True, verbose_name='Data Creazione Sessione')
-    data_scadenza_sessione = models.DateTimeField(null=True, blank=True, verbose_name='Data Scadenza Sessione')
-    data_verifica_sessione = models.DateTimeField(null=True, blank=True, verbose_name='Data Verifica Sessione')
-    stato_sessione = models.CharField(max_length=20, choices=TIPO_STATO, default='in_attesa', verbose_name='Stato Sessione')
-    metadati_sessione = models.JSONField(
-        default=dict,
-        blank=True,
-        verbose_name='Metadati Sessione',
-        help_text='Dati aggiuntivi della sessione'
-    )
-    email_destinazione_sessione = models.EmailField(
-        blank=True,
-        null=True,
-        verbose_name='Email Destinazione Sessione',
-        help_text='Email destinatario per notifiche o verifiche'
-    )
     """
     Gestione sessioni utente e stati di verifica.
     """
@@ -404,6 +388,23 @@ class SessioneUtente(models.Model):
         ('annullato', 'Annullato'),
         ('fallito', 'Fallito'),
     ]
+
+    data_creazione_sessione = models.DateTimeField(auto_now_add=True, verbose_name='Data Creazione Sessione')
+    data_scadenza_sessione = models.DateTimeField(null=True, blank=True, verbose_name='Data Scadenza Sessione')
+    data_verifica_sessione = models.DateTimeField(null=True, blank=True, verbose_name='Data Verifica Sessione')
+    stato_sessione = models.CharField(max_length=20, choices=TIPO_STATO, default='in_attesa', verbose_name='Stato Sessione')
+    metadati_sessione = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Metadati Sessione',
+        help_text='Dati aggiuntivi della sessione'
+    )
+    email_destinazione_sessione = models.EmailField(
+        blank=True,
+        null=True,
+        verbose_name='Email Destinazione Sessione',
+        help_text='Email destinatario per notifiche o verifiche'
+    )
 
     utente_sessione = models.ForeignKey(
         User,
