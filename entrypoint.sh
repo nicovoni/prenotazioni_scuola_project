@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-done
 echo
 echo "Running migrations..."
 
