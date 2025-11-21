@@ -1,3 +1,12 @@
+from django.apps import AppConfig
+
+class PrenotazioniConfig(AppConfig):
+    name = "prenotazioni"
+
+    def ready(self):
+        from .models import ProfiloUtente
+        ProfiloUtente.objects.filter(nome_utente__isnull=True).update(nome_utente="")
+        ProfiloUtente.objects.filter(cognome_utente__isnull=True).update(cognome_utente="")
 # =====================================================
 # SCELTE GLOBALI
 # =====================================================
