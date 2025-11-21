@@ -370,6 +370,18 @@ class ProfiloUtente(models.Model):
 # =====================================================
 
 class SessioneUtente(models.Model):
+        metadati_sessione = models.JSONField(
+            default=dict,
+            blank=True,
+            verbose_name='Metadati Sessione',
+            help_text='Dati aggiuntivi della sessione'
+        )
+        email_destinazione_sessione = models.EmailField(
+            blank=True,
+            null=True,
+            verbose_name='Email Destinazione Sessione',
+            help_text='Email destinatario per notifiche o verifiche'
+        )
     """
     Gestione sessioni utente e stati di verifica.
     """
