@@ -1,3 +1,12 @@
+# =====================================================
+# SCELTE GLOBALI
+# =====================================================
+
+SCELTE_SESSO = [
+    ('M', 'Maschio'),
+    ('F', 'Femmina'),
+    ('ALTRO', 'Altro'),
+]
 """
 Sistema di prenotazioni scolastiche - NUOVA ARCHITETTURA MIGLIORATA
 
