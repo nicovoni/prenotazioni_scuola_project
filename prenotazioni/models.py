@@ -504,7 +504,7 @@ class CategoriaDispositivo(models.Model):
     """
     Categorie di dispositivi per organizzazione gerarchica.
     """
-    nome = models.CharField(max_length=100, unique=True)
+    nome = models.CharField(max_length=100, unique=True, default="")
     descrizione = models.TextField(blank=True)
     icona = models.CharField(max_length=50, blank=True, help_text='Nome icona Bootstrap')
     colore = models.CharField(max_length=7, default='#007bff', help_text='Codice colore HEX')
@@ -564,7 +564,7 @@ class Dispositivo(models.Model):
     ]
 
     # Identificazione
-    nome = models.CharField(max_length=100, verbose_name='Nome')
+    nome = models.CharField(max_length=100, verbose_name='Nome', default="")
     modello = models.CharField(max_length=100, blank=True)
     marca = models.CharField(max_length=100, verbose_name='Marca/Produttore')
     serie = models.CharField(max_length=100, blank=True, help_text='Numero di serie')
@@ -680,7 +680,7 @@ class Risorsa(models.Model):
     ]
 
     # Identificazione
-    nome = models.CharField(max_length=100, verbose_name='Nome')
+    nome = models.CharField(max_length=100, verbose_name='Nome', default="")
     codice = models.CharField(max_length=20, unique=True, verbose_name='Codice')
     descrizione = models.TextField(blank=True)
 
