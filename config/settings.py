@@ -148,15 +148,13 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-
-    # Session and common middleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.middleware.gzip.GZipMiddleware',
+    # 'django.middleware.gzip.GZipMiddleware',  # Disabilitato per risparmio CPU
 ]
 
 # Security settings
@@ -238,30 +236,14 @@ WHITENOISE_AUTOREFRESH = True
 # =========================
 # Optimized Caching & Performance
 # =========================
-# Use LocMemCache for free tier, Redis if available
-REDIS_URL = os.environ.get('REDIS_URL')
-if REDIS_URL:
-    CACHES = {
-        'default': {
-            'BACKEND': 'django_redis.cache.RedisCache',
-            'LOCATION': REDIS_URL,
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-                'CONNECTION_POOL_KWARGS': {
-                    'max_connections': 10,
-                    'decode_responses': True,
-                }
-            },
-            'KEY_PREFIX': 'prenotazioni',
-        }
+
+# Usa solo LocMemCache per Render free tier
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'booking-system-cache',
     }
-else:
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-            'LOCATION': 'booking-system-cache',
-        }
-    }
+}
 
 # Session caching for better performance
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
@@ -270,40 +252,30 @@ SESSION_CACHE_ALIAS = 'default'
 # =========================
 # Optimized Logging Configuration
 # =========================
+
+# Logging minimale per Render free tier
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'formatters': {
-        'simple': {
-            'format': '[%(asctime)s] %(levelname)s %(message)s',
-            'datefmt': '%Y-%m-%d %H:%M:%S',
-        },
-    },
     'handlers': {
         'console': {
-            'level': 'WARNING' if not DEBUG else 'INFO',
+            'level': 'ERROR',
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
         },
     },
     'root': {
         'handlers': ['console'],
-        'level': 'WARNING' if not DEBUG else 'INFO',
+        'level': 'ERROR',
     },
     'loggers': {
         'django': {
             'handlers': ['console'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
-        'django.security': {
-            'handlers': ['console'],
-            'level': 'WARNING',
+            'level': 'ERROR',
             'propagate': False,
         },
         'prenotazioni': {
             'handlers': ['console'],
-            'level': 'WARNING' if not DEBUG else 'INFO',
+            'level': 'ERROR',
             'propagate': False,
         },
     },

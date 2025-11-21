@@ -18,48 +18,32 @@
             <div class="feature-icon mb-3">
                 <div class="icon-bg bg-primary bg-gradient mx-auto d-flex align-items-center justify-content-center rounded-circle" 
                      style="width: 80px; height: 80px;">
-                    <i class="bi bi-calendar-event text-white fs-1"></i>
+                    <i class="bi bi-calendar-event text-white fs-1" loading="lazy" aria-label="Icona calendario eventi" aria-hidden="false"></i>
                 </div>
             </div>
             <h3 class="fw-bold mb-2">{{ prenotazioni_totali|default:0 }}</h3>
             <p class="text-muted mb-3">Prenotazioni Totali</p>
-            <div class="progress-modern">
-                <div class="progress-bar-modern" style="width: {{ prenotazioni_percentuale|default:0 }}%"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-4 col-md-6" data-aos="zoom-in" data-aos-delay="200">
-        <div class="content-card text-center hover-lift">
-            <div class="feature-icon mb-3">
-                <div class="icon-bg bg-success bg-gradient mx-auto d-flex align-items-center justify-content-center rounded-circle" 
-                     style="width: 80px; height: 80px;">
-                    <i class="bi bi-check-circle text-white fs-1"></i>
+            <div class="row g-4">
+                {% for news in news_list|slice:':2' %}
+                <div class="col-lg-6">
+                    <div class="news-card p-3 glass rounded-3 mb-3 hover-lift">
+                        <div class="d-flex align-items-start">
+                            <div class="news-icon me-3">
+                                <i class="{{ news.icon }} fs-4"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="fw-bold mb-1">{{ news.title }}</h6>
+                                <p class="text-muted small mb-2">{{ news.text }}</p>
+                                <small class="text-muted">
+                                    <i class="bi bi-clock me-1"></i>
+                                    {{ news.date }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+                {% endfor %}
             </div>
-            <h3 class="fw-bold mb-2">{{ prenotazioni_attive|default:0 }}</h3>
-            <p class="text-muted mb-3">Prenotazioni Attive</p>
-            <div class="progress-modern">
-                <div class="progress-bar-modern bg-success" style="width: {{ attive_percentuale|default:0 }}%"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-4 col-md-6" data-aos="zoom-in" data-aos-delay="300">
-        <div class="content-card text-center hover-lift">
-            <div class="feature-icon mb-3">
-                <div class="icon-bg bg-warning bg-gradient mx-auto d-flex align-items-center justify-content-center rounded-circle" 
-                     style="width: 80px; height: 80px;">
-                    <i class="bi bi-clock text-white fs-1"></i>
-                </div>
-            </div>
-            <h3 class="fw-bold mb-2">{{ risorse_disponibili|default:0 }}</h3>
-            <p class="text-muted mb-3">Risorse Disponibili</p>
-            <div class="progress-modern">
-                <div class="progress-bar-modern bg-warning" style="width: {{ risorse_percentuale|default:0 }}%"></div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <div class="content-card" data-aos="fade-up" data-aos-delay="300">
@@ -82,7 +66,7 @@
                 <div class="feature-icon mb-3">
                     <div class="icon-bg bg-primary bg-gradient d-inline-flex align-items-center justify-content-center rounded-circle" 
                          style="width: 60px; height: 60px;">
-                        <i class="bi bi-building text-white fs-4"></i>
+                        <i class="bi bi-building text-white fs-4" loading="lazy" aria-label="Icona edificio laboratorio" aria-hidden="false"></i>
                     </div>
                 </div>
                 <h4 class="fw-bold mb-3" style="color: #2d3748;">🏫 Laboratori</h4>
@@ -101,7 +85,7 @@
                 <div class="feature-icon mb-3">
                     <div class="icon-bg bg-success bg-gradient d-inline-flex align-items-center justify-content-center rounded-circle" 
                          style="width: 60px; height: 60px;">
-                        <i class="bi bi-phone text-white fs-4"></i>
+                        <i class="bi bi-phone text-white fs-4" loading="lazy" aria-label="Icona dispositivo" aria-hidden="false"></i>
                     </div>
                 </div>
                 <h4 class="fw-bold mb-3" style="color: #2d3748;">📱 Dispositivi</h4>
@@ -120,7 +104,7 @@
                 <div class="feature-icon mb-3">
                     <div class="icon-bg bg-warning bg-gradient d-inline-flex align-items-center justify-content-center rounded-circle" 
                          style="width: 60px; height: 60px;">
-                        <i class="bi bi-calendar3 text-white fs-4"></i>
+                        <i class="bi bi-calendar3 text-white fs-4" loading="lazy" aria-label="Icona calendario organizzazione" aria-hidden="false"></i>
                     </div>
                 </div>
                 <h4 class="fw-bold mb-3" style="color: #2d3748;">📅 Organizzazione</h4>
@@ -163,7 +147,7 @@
     <div class="col-lg-4">
         <div class="content-card text-center">
             <div class="weather-widget mb-3">
-                <i class="bi bi-sun text-warning fs-1" id="weather-icon"></i>
+                <i class="bi bi-sun text-warning fs-1" id="weather-icon" aria-label="Icona meteo" aria-hidden="false"></i>
             </div>
             <h5 class="fw-bold">Condizioni Meteo</h5>
             <p class="text-muted">Perfette per le attività didattiche</p>

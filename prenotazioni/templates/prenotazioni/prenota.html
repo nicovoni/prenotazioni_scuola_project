@@ -104,7 +104,7 @@ Nuova Prenotazione - Sistema Prenotazioni
                         </tr>
                     </thead>
                     <tbody>
-                        {% for risorsa in risorse %}
+                        {% for risorsa in risorse|slice:':5' %}
                         <tr>
                             <td>{{ risorsa.nome }}</td>
                             <td>

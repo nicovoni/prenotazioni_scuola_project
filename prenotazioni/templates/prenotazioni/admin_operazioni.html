@@ -109,15 +109,34 @@
     border: none;
     border-radius: 10px;
 }
-.card-header {
-    border-radius: 10px 10px 0 0 !important;
-}
-.btn-danger {
-    border: none;
-    padding: 12px 30px;
-}
-.btn-danger:hover {
-    background-color: #dc3545;
-}
-</style>
-{% endblock %}
+            {% for card in admin_cards|slice:':3' %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header {{ card.header_class }}">
+                    <h5 class="card-title mb-0">{{ card.title }}</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ card.text }}</p>
+                    {% if card.list %}
+                    <ul class="list-unstyled ms-3">
+                        {% for item in card.list %}
+                        <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    {% if card.button_url %}
+                    <a href="{{ card.button_url }}" class="btn {{ card.button_class }}">
+                        {{ card.button_text }}
+                    </a>
+                    {% endif %}
+                    {% if card.form %}
+                    <form method="post" onsubmit="return confirm('{{ card.form.confirm_message }}');">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reset">
+                        <button type="submit" class="btn btn-danger btn-lg">
+                            {{ card.form.button_text }}
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}

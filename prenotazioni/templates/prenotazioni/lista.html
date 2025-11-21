@@ -12,7 +12,7 @@
         <div class="stats-card glass p-3 rounded-3 mt-3 mt-lg-0" data-aos="fade-left" data-aos-delay="200">
             <div class="d-flex align-items-center gap-3">
                 <div class="stat-icon bg-primary bg-gradient rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                    <i class="bi bi-calendar-event text-white fs-4"></i>
+                    <i class="bi bi-calendar-event text-white fs-4" aria-label="Icona calendario prenotazioni" aria-hidden="false"></i>
                 </div>
                 <div>
                     <h3 class="mb-0 fw-bold">{{ prenotazioni|length }}</h3>
@@ -118,7 +118,7 @@
                     </tr>
                 </thead>
                 <tbody id="prenotazioniTableBody">
-                    {% for p in prenotazioni %}
+                    {% for p in prenotazioni|slice:':10' %}
                         <tr class="table-row-modern" data-aos="fade-up" data-aos-delay="{{ forloop.counter0 * 50 }}" 
                             data-user="{% if is_admin_view %}{{ p.utente.username }}{% endif %}"
                             data-risorsa="{{ p.risorsa.nome }}"
@@ -148,7 +148,7 @@
                             <td>
                                 <div class="risorsa-cell">
                                     <div class="fw-semibold d-flex align-items-center">
-                                        <i class="bi {% if p.risorsa.tipo == 'lab' %}bi-building{% else %}bi-phone{% endif %} me-2 text-primary"></i>
+                                        <i class="bi {% if p.risorsa.tipo == 'lab' %}bi-building{% else %}bi-phone{% endif %} me-2 text-primary" aria-label="Icona risorsa" aria-hidden="false"></i>
                                         {{ p.risorsa.nome }}
                                     </div>
                                     <small class="text-muted">
@@ -171,11 +171,11 @@
                             <td>
                                 <div class="time-cell">
                                     <div class="fw-semibold">
-                                        <i class="bi bi-clock me-1"></i>
+                                        <i class="bi bi-clock me-1" aria-label="Icona orario" aria-hidden="false"></i>
                                         {{ p.inizio.time|time:"H:i" }} - {{ p.fine.time|time:"H:i" }}
                                     </div>
                                     <small class="text-muted">
-                                        <i class="bi bi-hourglass-split me-1"></i>
+                                        <i class="bi bi-hourglass-split me-1" aria-label="Icona durata" aria-hidden="false"></i>
                                         {{ p.durata_ore }} ore
                                     </small>
                                 </div>
@@ -195,17 +195,17 @@
                             <td>
                                 {% if p.is_passata %}
                                     <span class="badge bg-secondary badge-modern">
-                                        <i class="bi bi-clock-history me-1"></i>
+                                        <i class="bi bi-clock-history me-1" aria-label="Icona passata" aria-hidden="false"></i>
                                         Passata
                                     </span>
                                 {% elif p.is_in_corso %}
                                     <span class="badge bg-success badge-modern pulse">
-                                        <i class="bi bi-play-circle me-1"></i>
+                                        <i class="bi bi-play-circle me-1" aria-label="Icona in corso" aria-hidden="false"></i>
                                         In corso
                                     </span>
                                 {% else %}
                                     <span class="badge bg-primary badge-modern">
-                                        <i class="bi bi-calendar-check me-1"></i>
+                                        <i class="bi bi-calendar-check me-1" aria-label="Icona programmata" aria-hidden="false"></i>
                                         Programmata
                                     </span>
                                 {% endif %}
@@ -219,18 +219,18 @@
                                                class="btn btn-outline-primary btn-sm hover-lift" 
                                                data-bs-toggle="tooltip" 
                                                title="Modifica prenotazione">
-                                                <i class="bi bi-pencil"></i>
+                                                <i class="bi bi-pencil" aria-label="Modifica prenotazione" aria-hidden="false"></i>
                                             </a>
                                             <button class="btn btn-outline-danger btn-sm hover-lift" 
                                                     onclick="confirmDelete({{ p.id }})" 
                                                     data-bs-toggle="tooltip" 
                                                     title="Elimina prenotazione">
-                                                <i class="bi bi-trash"></i>
+                                                <i class="bi bi-trash" aria-label="Elimina prenotazione" aria-hidden="false"></i>
                                             </button>
                                         </div>
                                     {% else %}
                                         <span class="text-muted small">
-                                            <i class="bi bi-dash-circle"></i>
+                                            <i class="bi bi-dash-circle" aria-label="Non disponibile" aria-hidden="false"></i>
                                             Non disponibile
                                         </span>
                                     {% endif %}
@@ -245,7 +245,7 @@
         <!-- Empty State (shown when filters return no results) -->
         <div id="emptyState" class="text-center py-5" style="display: none;">
             <div class="empty-state-icon mb-3">
-                <i class="bi bi-search text-muted" style="font-size: 4rem;"></i>
+                <i class="bi bi-search text-muted" style="font-size: 4rem;" aria-label="Icona ricerca" aria-hidden="false"></i>
             </div>
             <h4 class="text-muted mb-2">Nessuna prenotazione trovata</h4>
             <p class="text-muted">Prova a modificare i filtri di ricerca</p>
@@ -257,7 +257,7 @@
             <div class="empty-illustration mb-4">
                 <div class="empty-icon-bg mx-auto d-flex align-items-center justify-content-center rounded-circle" 
                      style="width: 120px; height: 120px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                    <i class="bi bi-calendar-x text-white" style="font-size: 3rem;"></i>
+                    <i class="bi bi-calendar-x text-white" style="font-size: 3rem;" aria-label="Icona nessuna prenotazione" aria-hidden="false"></i>
                 </div>
             </div>
             <h3 class="text-muted mb-3">Nessuna prenotazione</h3>
@@ -552,6 +552,16 @@
     }
 
     // Filter functionality
+
+    // Debounce utility
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+
     function filterTable() {
         const searchTerm = document.getElementById('searchInput').value.toLowerCase();
         const statusFilter = document.getElementById('statusFilter').value;
@@ -567,17 +577,17 @@
             const risorsaText = row.dataset.risorsa ? row.dataset.risorsa.toLowerCase() : '';
             const dataText = row.dataset.data || '';
             const statoText = row.dataset.stato || '';
-            
+
             // Search in user and risorsa cells
             const textContent = (userText + ' ' + risorsaText).toLowerCase();
-            
+
             let showRow = textContent.includes(searchTerm);
-            
+
             // Status filter
             if (statusFilter && statoText !== statusFilter) {
                 showRow = false;
             }
-            
+
             // Date filter
             if (dateFilter && dataText !== dateFilter) {
                 showRow = false;
@@ -601,6 +611,18 @@
             table.style.display = '';
         }
     }
+
+    // Apply debounce to search/filter inputs
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchInput');
+        const statusFilter = document.getElementById('statusFilter');
+        const dateFilter = document.getElementById('dateFilter');
+        const debouncedFilter = debounce(filterTable, 250);
+
+        if (searchInput) searchInput.addEventListener('keyup', debouncedFilter);
+        if (statusFilter) statusFilter.addEventListener('change', debouncedFilter);
+        if (dateFilter) dateFilter.addEventListener('change', debouncedFilter);
+    });
 
     function clearFilters() {
         document.getElementById('searchInput').value = '';

@@ -685,7 +685,7 @@ class NotificationService:
         pending_notifications = Notification.objects.filter(
             stato='pending',
             prossimo_tentativo__lte=timezone.now()
-        ).select_related('utente', 'template')[:50]  # Processa in batch
+        ).select_related('utente', 'template')[:10]  # Batch ridotto per Render free tier
         
         for notification in pending_notifications:
             try:

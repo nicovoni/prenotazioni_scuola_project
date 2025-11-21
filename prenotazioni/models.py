@@ -1175,8 +1175,6 @@ def log_booking_deletion_signal(sender, instance, **kwargs):
         related_booking=instance
     )
 
-# Connect signals
+
+# Signals essenziali: solo creazione profilo utente
 post_save.connect(create_user_profile_signal, sender=User)
-post_save.connect(save_user_profile_signal, sender=User)
-post_save.connect(log_booking_action_signal, sender=Prenotazione)
-post_delete.connect(log_booking_deletion_signal, sender=Prenotazione)

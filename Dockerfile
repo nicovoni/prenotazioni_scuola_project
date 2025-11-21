@@ -32,7 +32,8 @@ USER django
 # Espone la porta che Render fornisce via $PORT
 EXPOSE 8000
 
+
 # Usa entrypoint per operazioni di avvio (migrations, inizializzazione)
 ENTRYPOINT ["/app/entrypoint.sh"]
-# Comando di avvio: Gunicorn
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
+# Comando di avvio: Gunicorn con 1 worker per Render free tier
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1", "--timeout", "90"]
