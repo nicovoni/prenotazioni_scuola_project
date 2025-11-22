@@ -5,7 +5,9 @@ from django.dispatch import receiver
 
 # Pulizia automatica dei record ProfiloUtente dopo le migrazioni
 import django
+import logging
 from django.db import connection
+from django.db import ProgrammingError, OperationalError
 
 @receiver(post_migrate)
 def clean_profilo_utente_null_fields(sender, **kwargs):
@@ -1194,11 +1196,17 @@ def create_user_profile_signal(sender, instance, created, **kwargs):
     """Crea profilo automaticamente quando viene creato un utente."""
     if created:
         # Valorizza i campi obbligatori con dati di User o stringa vuota
-        ProfiloUtente.objects.create(
-            utente=instance,
-            nome_utente=getattr(instance, 'first_name', '') or '',
-            cognome_utente=getattr(instance, 'last_name', '') or ''
-        )
+        try:
+            ProfiloUtente.objects.create(
+                utente=instance,
+                nome_utente=getattr(instance, 'first_name', '') or '',
+                cognome_utente=getattr(instance, 'last_name', '') or ''
+            )
+        except (ProgrammingError, OperationalError) as e:
+            logger = logging.getLogger('prenotazioni')
+            logger.error('Could not create ProfiloUtente on user creation (db not ready?): %s', e)
+            # Silently skip profile creation when DB/table isn't available yet.
+            return
 
 
 def save_user_profile_signal(sender, instance, **kwargs):
