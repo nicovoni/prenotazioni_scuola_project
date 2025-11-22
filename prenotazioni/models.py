@@ -1241,5 +1241,14 @@ def log_booking_deletion_signal(sender, instance, **kwargs):
     )
 
 
-# Signals essenziali: solo creazione profilo utente
-post_save.connect(create_user_profile_signal, sender=User)
+# Signals registration helper
+def connect_signals():
+    """Connect signals when the app is ready.
+
+    This helper is called from `AppConfig.ready()` so we can avoid
+    registering signals during management commands like `migrate`.
+    """
+    try:
+        post_save.connect(create_user_profile_signal, sender=User)
+    except Exception:
+        logging.getLogger('prenotazioni').exception('Failed to connect signals')

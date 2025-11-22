@@ -13,4 +13,17 @@ class PrenotazioniConfig(AppConfig):
         """
         Codice eseguito quando l'app è pronta.
         """
-        import prenotazioni.models  # noqa
+        import sys
+        import logging
+        # Do not connect runtime signals during management commands that operate on the DB schema
+        management_cmds = {'makemigrations', 'migrate', 'collectstatic', 'test', 'shell', 'flush'}
+        if any(cmd in sys.argv for cmd in management_cmds):
+            logging.getLogger('prenotazioni').info('Skipping signal registration during management command: %s', sys.argv)
+            return
+
+        try:
+            import prenotazioni.models as models  # noqa
+            if hasattr(models, 'connect_signals'):
+                models.connect_signals()
+        except Exception:
+            logging.getLogger('prenotazioni').exception('Failed to connect prenotazioni signals')

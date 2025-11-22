@@ -408,7 +408,7 @@ class PrenotaResourceView(LoginRequiredMixin, View):
             'is_edit': False
         }
 
-        return render(request, 'bookings/prenota.html', context)
+        return render(request, 'prenotazioni/prenota.html', context)
 
     def post(self, request):
         """Processa creazione prenotazione."""
@@ -444,7 +444,7 @@ class PrenotaResourceView(LoginRequiredMixin, View):
             'is_edit': False
         }
 
-        return render(request, 'bookings/prenota.html', context)
+        return render(request, 'prenotazioni/prenota.html', context)
 
 
 class ListaPrenotazioniView(LoginRequiredMixin, View):
@@ -509,7 +509,7 @@ class ListaPrenotazioniView(LoginRequiredMixin, View):
             }
         }
         
-        return render(request, 'bookings/lista.html', context)
+        return render(request, 'prenotazioni/lista.html', context)
 
 
 class EditPrenotazioneView(LoginRequiredMixin, View):
@@ -548,7 +548,7 @@ class EditPrenotazioneView(LoginRequiredMixin, View):
             'is_edit': True
         }
 
-        return render(request, 'bookings/prenota.html', context)
+        return render(request, 'prenotazioni/prenota.html', context)
 
     def post(self, request, pk):
         """Processa modifica prenotazione."""
@@ -592,7 +592,7 @@ class EditPrenotazioneView(LoginRequiredMixin, View):
             'is_edit': True
         }
 
-        return render(request, 'bookings/prenota.html', context)
+        return render(request, 'prenotazioni/prenota.html', context)
 
 
 class DeletePrenotazioneView(LoginRequiredMixin, View):
@@ -614,7 +614,7 @@ class DeletePrenotazioneView(LoginRequiredMixin, View):
             'booking': prenotazione
         }
 
-        return render(request, 'bookings/delete_confirm.html', context)
+        return render(request, 'prenotazioni/delete_confirm.html', context)
 
     def post(self, request, pk):
         """Processa eliminazione."""
