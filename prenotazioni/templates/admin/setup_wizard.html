@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Setup Wizard{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="page-header">
+        <h1 class="page-title">⚙️ Setup Wizard</h1>
+        <p class="page-subtitle">Configurazione guidata del sistema di prenotazioni</p>
+    </div>
+    <div class="content-card">
+        {% if step == '1' %}
+            <h3>👑 Step 1: Crea Amministratore</h3>
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" name="username" id="username" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" name="email" id="email" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" name="password" id="password" class="form-control" required>
+                </div>
+                <button type="submit" name="step1" class="btn btn-primary">Crea Admin</button>
+            </form>
+        {% elif step == 'school' %}
+            <h3>🏫 Step 2: Informazioni Scuola</h3>
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="nome" class="form-label">Nome Scuola</label>
+                    <input type="text" name="nome" id="nome" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label for="codice_meccanografico" class="form-label">Codice Meccanografico</label>
+                    <input type="text" name="codice_meccanografico" id="codice_meccanografico" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="sito_web" class="form-label">Sito Web</label>
+                    <input type="url" name="sito_web" id="sito_web" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="indirizzo" class="form-label">Indirizzo</label>
+                    <input type="text" name="indirizzo" id="indirizzo" class="form-control" required>
+                </div>
+                <button type="submit" name="step_school" class="btn btn-primary">Salva Informazioni</button>
+            </form>
+        {% elif step == 'device' %}
+            <h3>💻 Step 3: Configura Dispositivi</h3>
+            <p>Qui puoi aggiungere la logica per la configurazione dei dispositivi.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
