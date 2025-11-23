@@ -101,12 +101,14 @@ class HomeView(LoginRequiredMixin, View):
         user = request.user
         from django.contrib.auth import get_user_model
         User = get_user_model()
+        from .models import Risorsa, Prenotazione
         from django.db import connection
-        from .models import Risorsa
-        # Se non esistono admin, resetta il database
-        if not User.objects.filter(is_superuser=True).exists():
+        # Reset solo se il database è davvero vuoto
+        utenti = User.objects.count()
+        risorse = Risorsa.objects.count()
+        prenotazioni = Prenotazione.objects.count()
+        if utenti == 0 and risorse == 0 and prenotazioni == 0:
             with connection.cursor() as cursor:
-                # Elimina tutte le tabelle del database
                 table_names = connection.introspection.table_names()
                 for table in table_names:
                     cursor.execute(f'DROP TABLE IF EXISTS "{table}" CASCADE;')
@@ -182,9 +184,11 @@ def health_check(request):
 
 class ConfigurazioneSistemaView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Vista per configurazione iniziale e gestione configurazioni."""
-    
     def test_func(self):
-        return self.request.user.is_staff
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        # Consenti accesso se utente è admin oppure se non esistono admin
+        return self.request.user.is_staff or not User.objects.filter(is_superuser=True).exists()
     
     def get(self, request):
         """Mostra stato configurazione sistema."""
