@@ -1,3 +1,58 @@
+from django.contrib.auth import get_user_model
+
+def setup_amministratore(request):
+    """View di setup amministratore e prima configurazione."""
+    from django.contrib.auth import get_user_model
+    from django.contrib import messages
+    from django.shortcuts import render, redirect
+    from .models import Risorsa, InformazioniScuola
+    User = get_user_model()
+
+    # Se non esistono risorse e nessun admin
+    if Risorsa.objects.count() == 0 and not User.objects.filter(is_superuser=True).exists():
+        step = request.GET.get('step', '1')
+        context = {'step': step}
+
+        if request.method == 'POST':
+            # Step 1: Crea admin
+            if 'step1' in request.POST:
+                username = request.POST.get('username')
+                email = request.POST.get('email')
+                password = request.POST.get('password')
+                if username and email and password:
+                    if User.objects.filter(username=username).exists():
+                        messages.error(request, 'Username già esistente.')
+                    elif User.objects.filter(email=email).exists():
+                        messages.error(request, 'Email già esistente.')
+                    else:
+                        user = User.objects.create_user(username=username, email=email, password=password, is_staff=True, is_superuser=True)
+                        messages.success(request, 'Utente amministratore creato! Ora puoi configurare la scuola.')
+                        return redirect('/setup/?step=school')
+                else:
+                    messages.error(request, 'Compila tutti i campi.')
+                context['step'] = '1'
+            # Step school: salva info scuola
+            elif 'step_school' in request.POST:
+                nome = request.POST.get('nome')
+                codice = request.POST.get('codice_meccanografico')
+                sito = request.POST.get('sito_web')
+                indirizzo = request.POST.get('indirizzo')
+                if nome and indirizzo:
+                    InformazioniScuola.objects.update_or_create(id=1, defaults={
+                        'nome_completo_scuola': nome,
+                        'codice_meccanografico_scuola': codice or '',
+                        'sito_web_scuola': sito or '',
+                        'indirizzo_scuola': indirizzo
+                    })
+                    messages.success(request, 'Informazioni scuola salvate!')
+                    return redirect('/setup/?step=device')
+                else:
+                    messages.error(request, 'Compila i campi obbligatori.')
+                context['step'] = 'school'
+            # Step device e risorse: puoi aggiungere qui la logica per dispositivi e risorse
+        return render(request, 'prenotazioni/configurazione_sistema.html', context)
+    # Altrimenti redirect alla home
+    return redirect('home')
 """
 Views Django per la nuova architettura del sistema di prenotazioni.
 

@@ -27,3 +27,4 @@ class PrenotazioniConfig(AppConfig):
                 models.connect_signals()
         except Exception:
             logging.getLogger('prenotazioni').exception('Failed to connect prenotazioni signals')
+
