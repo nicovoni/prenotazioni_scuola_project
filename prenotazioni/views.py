@@ -8,8 +8,8 @@ def setup_amministratore(request):
     from .models import Risorsa, InformazioniScuola
     User = get_user_model()
 
-    # Se non esistono risorse e nessun admin
-    if Risorsa.objects.count() == 0 and not User.objects.filter(is_superuser=True).exists():
+    # Mostra il wizard se NON esiste alcun utente admin
+    if not User.objects.filter(is_superuser=True).exists():
         step = request.GET.get('step', '1')
         context = {'step': step}
 
@@ -51,7 +51,7 @@ def setup_amministratore(request):
                 context['step'] = 'school'
             # Step device e risorse: puoi aggiungere qui la logica per dispositivi e risorse
         return render(request, 'prenotazioni/configurazione_sistema.html', context)
-    # Altrimenti redirect alla home
+    # Se esiste almeno un admin, redirect alla home
     return redirect('home')
 """
 Views Django per la nuova architettura del sistema di prenotazioni.
