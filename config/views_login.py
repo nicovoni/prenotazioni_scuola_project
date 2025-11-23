@@ -25,7 +25,7 @@ def custom_login(request):
             login(request, user)
             # Se non esistono admin e risorse, redirect a configurazione iniziale
             if not User.objects.filter(is_superuser=True).exists() and Risorsa.objects.count() == 0:
-                return redirect('/api/setup/')
+                return redirect('/setup/')
             return redirect('home')
         else:
             messages.error(request, "Credenziali non valide. Riprova.")
