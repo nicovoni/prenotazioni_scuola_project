@@ -29,26 +29,39 @@
         <!-- Barra di avanzamento wizard -->
         <div class="mb-4">
             <div class="progress" style="height: 24px;">
-                {% set step_labels = [
-                    '👑 Admin',
-                    '🏫 Scuola',
-                    '📱 Dispositivi',
-                    '📋 Risorse',
-                    '✅ Fine'
-                ] %}
-                {% set step_index = wizard_steps.index(current_step) if current_step in wizard_steps else 0 %}
-                {% for idx, label in step_labels|enumerate %}
-                    <div class="progress-bar {% if idx <= step_index %}bg-success{% else %}bg-light text-dark{% endif %}"
-                        role="progressbar" style="width: 20%; font-size: 1rem;"
-                        aria-valuenow="{{ idx+1 }}" aria-valuemin="1" aria-valuemax="5">
-                        {{ label }}
-                    </div>
-                {% endfor %}
+                {% comment %} Barra di progresso del wizard {% endcomment %}
+                <div class="progress-bar {% if current_step == '1' %}bg-success{% else %}bg-light text-dark{% endif %}"
+                    role="progressbar" style="width: 20%; font-size: 1rem;"
+                    aria-valuenow="1" aria-valuemin="1" aria-valuemax="5">
+                    👑 Admin
+                </div>
+                <div class="progress-bar {% if current_step == 'school' %}bg-success{% else %}bg-light text-dark{% endif %}"
+                    role="progressbar" style="width: 20%; font-size: 1rem;"
+                    aria-valuenow="2" aria-valuemin="1" aria-valuemax="5">
+                    🏫 Scuola
+                </div>
+                <div class="progress-bar {% if current_step == 'device' %}bg-success{% else %}bg-light text-dark{% endif %}"
+                    role="progressbar" style="width: 20%; font-size: 1rem;"
+                    aria-valuenow="3" aria-valuemin="1" aria-valuemax="5">
+                    📱 Dispositivi
+                </div>
+                <div class="progress-bar {% if current_step == 'resources' %}bg-success{% else %}bg-light text-dark{% endif %}"
+                    role="progressbar" style="width: 20%; font-size: 1rem;"
+                    aria-valuenow="4" aria-valuemin="1" aria-valuemax="5">
+                    📋 Risorse
+                </div>
+                <div class="progress-bar {% if current_step == 'done' %}bg-success{% else %}bg-light text-dark{% endif %}"
+                    role="progressbar" style="width: 20%; font-size: 1rem;"
+                    aria-valuenow="5" aria-valuemin="1" aria-valuemax="5">
+                    ✅ Fine
+                </div>
             </div>
             <div class="d-flex justify-content-between mt-1">
-                {% for label in step_labels %}
-                    <small>{{ label }}</small>
-                {% endfor %}
+                <small>👑 Admin</small>
+                <small>🏫 Scuola</small>
+                <small>📱 Dispositivi</small>
+                <small>📋 Risorse</small>
+                <small>✅ Fine</small>
             </div>
         </div>
 
