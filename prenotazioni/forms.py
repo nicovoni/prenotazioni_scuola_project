@@ -25,6 +25,20 @@ User = get_user_model()
 # CONFIGURAZIONE E SETUP
 # =====================================================
 
+class AdminUserForm(forms.Form):
+    """Form semplificato per creazione admin iniziale."""
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={'class': 'form-control'}),
+        label='Email Admin'
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').lower()
+        if User.objects.filter(email=email).exists():
+            raise ValidationError('Email già registrata.')
+        return email
+
+
 class ConfigurationForm(forms.ModelForm):
     """Form per gestire configurazioni di sistema."""
 

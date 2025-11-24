@@ -701,13 +701,8 @@ class NotificationService:
                 related_booking=related_booking
             )
 
-            # Enqueue Celery task to send this notification asynchronously
-            try:
-                from config.celery import app as celery_app
-                # Use explicit task name defined in prenotazioni.tasks
-                celery_app.send_task('prenotazioni.tasks.send_notification', args=[notification.id])
-            except Exception:
-                logger.exception('Impossibile inviare task Celery per notifica %s', getattr(notification, 'id', None))
+            # Notifiche sincrone senza Celery per semplicità
+            # Celery e Redis rimossi dalla versione semplificata
 
             return notification
         except Exception:
