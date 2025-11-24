@@ -159,7 +159,7 @@ from .models import (
     Risorsa, Dispositivo, Prenotazione, ConfigurazioneSistema, SessioneUtente, LogSistema, NotificaUtente, UbicazioneRisorsa, CategoriaDispositivo, StatoPrenotazione, InformazioniScuola
 )
 from .forms import (
-    ConfigurationForm, SchoolInfoForm, UserProfileForm, PinVerificationForm, EmailLoginForm, DeviceWizardForm, BookingForm, ConfirmDeleteForm, RisorseConfigurazioneForm
+    ConfigurationForm, SchoolInfoForm, PinVerificationForm, EmailLoginForm, DeviceWizardForm, BookingForm, ConfirmDeleteForm, RisorseConfigurazioneForm
 )
 from .services import (
     ConfigurationService, UserSessionService, EmailService, BookingService,
@@ -422,36 +422,11 @@ class AdminOperazioniView(LoginRequiredMixin, UserPassesTestMixin, View):
 # GESTIONE UTENTI E PROFILI
 # =====================================================
 
-class UserProfileView(LoginRequiredMixin, View):
-    """Gestione profilo utente."""
-    
-    def get(self, request):
-        """Mostra profilo utente."""
-        user = request.user
-        profile = getattr(user, 'profilo_utente', None)
 
-        context = {
-            'user': user,
-            'profile': profile,
-            'recent_bookings': BookingService.get_user_bookings(user)[:5]
-        }
-        
-        return render(request, 'users/profile.html', context)
-    
-    @method_decorator(csrf_protect)
-    def post(self, request):
-        """Aggiorna profilo utente."""
-        user = request.user
-        profile = getattr(user, 'profilo_utente', None)
+# class UserProfileView(LoginRequiredMixin, View):
+#     """Gestione profilo utente."""
+#     # Questa vista è stata rimossa perché UserProfileForm non esiste più.
 
-        form = UserProfileForm(request.POST, instance=profile)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Profilo aggiornato con successo.')
-        else:
-            messages.error(request, 'Errore nell\'aggiornamento del profilo.')
-        
-        return redirect('users:profile')
 
 
 class EmailLoginView(View):
