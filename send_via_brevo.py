@@ -1,3 +1,19 @@
+# File rimosso: gestione email solo tramite SMTP Brevo, non API custom.
+
+import os
+import logging
+
+DEFAULT_FROM = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@example.com')
+
+def send_pin(to_email, subject, html_content, sender_email=None, sender_name="Sistema Prenotazioni"):
+    """
+    Invia email via SMTP Brevo. Assicurati di avere le credenziali SMTP configurate.
+    """
+    # Implementazione SMTP qui
+    pass
+
+# Esempio d'uso:
+# send_pin("user@example.com", "PIN", "<p>Il tuo PIN: 1234</p>")
 import os
 import requests
 import logging

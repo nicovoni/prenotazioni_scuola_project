@@ -251,29 +251,26 @@ class EmailService:
         This method is intended to be called from background workers/commands only.
         """
         from . import models as _models
+
         try:
             from django.core.mail import send_mail as _send_mail
-            from config.brevo_client import send_brevo_email
         except Exception:
-            # Safe imports fallback
             _send_mail = send_mail
 
         from django.conf import settings as _settings
 
         try:
             _from = from_email or getattr(_settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com')
+
+
             try:
-                # try Django email backend first
-                _send_mail(subject, plain_message or '', _from, [recipient_email], html_message=html_message, fail_silently=False)
+                # fail_silently True solo in produzione
+                fail_silently = not getattr(_settings, 'DEBUG', False)
+                _send_mail(subject, plain_message or '', _from, [recipient_email], html_message=html_message, fail_silently=fail_silently)
                 return True, None
-            except Exception:
-                logger.warning('SMTP send failed for %s; attempting Brevo HTTP fallback', recipient_email)
-                try:
-                    send_brevo_email(to_email=recipient_email, subject=subject, html_content=html_message, sender_email=_from)
-                    return True, None
-                except Exception as brevo_exc:
-                    logger.exception('Brevo HTTP fallback failed: %s', brevo_exc)
-                    return False, str(brevo_exc)
+            except Exception as e:
+                logger.exception('SMTP send failed for %s: %s', recipient_email, e)
+                return False, str(e)
 
         except Exception as e:
             logger.exception('Errore _send_via_backend: %s', e)

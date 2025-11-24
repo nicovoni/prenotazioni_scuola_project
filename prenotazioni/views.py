@@ -139,7 +139,6 @@ Aggiornate per supportare la nuova struttura database e servizi migliorati.
 from django.views.generic.edit import View
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_protect
-from ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
 from django.contrib.auth.mixins import UserPassesTestMixin, LoginRequiredMixin
 import logging
@@ -178,7 +177,6 @@ from .serializers import (
 
 class HomeView(LoginRequiredMixin, View):
     """Homepage del sistema con dashboard personalizzato."""
-    @method_decorator(ratelimit(key='user_or_ip', rate='20/m', block=True))
     def get(self, request):
         """Mostra dashboard personalizzato per ruolo."""
         user = request.user
@@ -238,7 +236,6 @@ class HomeView(LoginRequiredMixin, View):
 
 
 @login_required
-@ratelimit(key='ip', rate='10/m', block=True)
 def health_check(request):
     """Endpoint health check per monitoring."""
     try:
@@ -274,7 +271,6 @@ class ConfigurazioneSistemaView(LoginRequiredMixin, UserPassesTestMixin, View):
         # Consenti accesso se utente è admin oppure se non esistono admin
         return self.request.user.is_staff or not User.objects.filter(is_superuser=True).exists()
     
-    @method_decorator(ratelimit(key='user_or_ip', rate='10/m', block=True))
     def get(self, request):
         """Mostra stato configurazione sistema."""
         # Controlla se sistema già configurato
@@ -295,7 +291,6 @@ class ConfigurazioneSistemaView(LoginRequiredMixin, UserPassesTestMixin, View):
         return render(request, 'admin/configurazioni.html', context)
 
     @method_decorator(csrf_protect)
-    @method_decorator(ratelimit(key='user_or_ip', rate='5/m', block=True))
     def post(self, request):
         """Gestisce creazione/modifica configurazioni."""
         action = request.POST.get('action')
@@ -375,7 +370,6 @@ class AdminOperazioniView(LoginRequiredMixin, UserPassesTestMixin, View):
     def test_func(self):
         return self.request.user.is_staff
     
-    @method_decorator(ratelimit(key='user_or_ip', rate='10/m', block=True))
     def get(self, request):
         """Mostra dashboard operazioni admin."""
         stats = SystemService.get_system_stats()
@@ -404,7 +398,6 @@ class AdminOperazioniView(LoginRequiredMixin, UserPassesTestMixin, View):
         return render(request, 'admin/operazioni.html', context)
     
     @method_decorator(csrf_protect)
-    @method_decorator(ratelimit(key='user_or_ip', rate='5/m', block=True))
     def post(self, request):
         """Gestisce azioni amministrative."""
         action = request.POST.get('action')
@@ -432,7 +425,6 @@ class AdminOperazioniView(LoginRequiredMixin, UserPassesTestMixin, View):
 class UserProfileView(LoginRequiredMixin, View):
     """Gestione profilo utente."""
     
-    @method_decorator(ratelimit(key='user_or_ip', rate='10/m', block=True))
     def get(self, request):
         """Mostra profilo utente."""
         user = request.user
@@ -447,7 +439,6 @@ class UserProfileView(LoginRequiredMixin, View):
         return render(request, 'users/profile.html', context)
     
     @method_decorator(csrf_protect)
-    @method_decorator(ratelimit(key='user_or_ip', rate='5/m', block=True))
     def post(self, request):
         """Aggiorna profilo utente."""
         user = request.user
@@ -466,14 +457,12 @@ class UserProfileView(LoginRequiredMixin, View):
 class EmailLoginView(View):
     """Login tramite email con PIN."""
     
-    @method_decorator(ratelimit(key='ip', rate='10/m', block=True))
     def get(self, request):
         """Mostra form login email."""
         form = EmailLoginForm()
         return render(request, 'registration/email_login.html', {'form': form})
     
     @method_decorator(csrf_protect)
-    @method_decorator(ratelimit(key='ip', rate='5/m', block=True))
     def post(self, request):
         """Processa richiesta PIN."""
         form = EmailLoginForm(request.POST)
@@ -517,7 +506,6 @@ class EmailLoginView(View):
 class PinVerificationView(View):
     """Verifica PIN per login."""
     
-    @method_decorator(ratelimit(key='ip', rate='10/m', block=True))
     def get(self, request):
         """Mostra form verifica PIN."""
         if 'login_session_token' not in request.session:
@@ -528,7 +516,6 @@ class PinVerificationView(View):
         return render(request, 'registration/verify_pin.html', {'form': form})
     
     @method_decorator(csrf_protect)
-    @method_decorator(ratelimit(key='ip', rate='5/m', block=True))
     def post(self, request):
         """Verifica PIN."""
         form = PinVerificationForm(request.POST)
@@ -567,7 +554,6 @@ class PinVerificationView(View):
 class PrenotaResourceView(LoginRequiredMixin, View):
     """Creazione nuova prenotazione."""
     
-    @method_decorator(ratelimit(key='user', rate='10/m', block=True))
     def get(self, request):
         """Mostra form prenotazione."""
         form = BookingForm(user=request.user)
@@ -582,7 +568,6 @@ class PrenotaResourceView(LoginRequiredMixin, View):
         return render(request, 'prenotazioni/prenota.html', context)
 
     @method_decorator(csrf_protect)
-    @method_decorator(ratelimit(key='user', rate='5/m', block=True))
     def post(self, request):
         """Processa creazione prenotazione."""
         form = BookingForm(request.POST, user=request.user)
@@ -623,7 +608,6 @@ class PrenotaResourceView(LoginRequiredMixin, View):
 class ListaPrenotazioniView(LoginRequiredMixin, View):
     """Lista prenotazioni con filtri."""
     
-    @method_decorator(ratelimit(key='user', rate='10/m', block=True))
     def get(self, request):
         """Mostra lista prenotazioni."""
         user = request.user
@@ -689,7 +673,6 @@ class ListaPrenotazioniView(LoginRequiredMixin, View):
 class EditPrenotazioneView(LoginRequiredMixin, View):
     """Modifica prenotazione esistente."""
     
-    @method_decorator(ratelimit(key='user', rate='10/m', block=True))
     def get(self, request, pk):
         """Mostra form modifica."""
         prenotazione = get_object_or_404(Prenotazione, pk=pk)
@@ -726,7 +709,6 @@ class EditPrenotazioneView(LoginRequiredMixin, View):
         return render(request, 'prenotazioni/prenota.html', context)
 
     @method_decorator(csrf_protect)
-    @method_decorator(ratelimit(key='user', rate='5/m', block=True))
     def post(self, request, pk):
         """Processa modifica prenotazione."""
         prenotazione = get_object_or_404(Prenotazione, pk=pk)
@@ -775,7 +757,6 @@ class EditPrenotazioneView(LoginRequiredMixin, View):
 class DeletePrenotazioneView(LoginRequiredMixin, View):
     """Elimina prenotazione."""
 
-    @method_decorator(ratelimit(key='user', rate='10/m', block=True))
     def get(self, request, pk):
         """Mostra conferma eliminazione."""
         prenotazione = get_object_or_404(Prenotazione, pk=pk)
@@ -795,7 +776,6 @@ class DeletePrenotazioneView(LoginRequiredMixin, View):
         return render(request, 'prenotazioni/delete_confirm.html', context)
 
     @method_decorator(csrf_protect)
-    @method_decorator(ratelimit(key='user', rate='5/m', block=True))
     def post(self, request, pk):
         """Processa eliminazione."""
         prenotazione = get_object_or_404(Prenotazione, pk=pk)
@@ -832,7 +812,6 @@ class DeletePrenotazioneView(LoginRequiredMixin, View):
 class ResourceListView(LoginRequiredMixin, View):
     """Lista risorse disponibili."""
     
-    @method_decorator(ratelimit(key='user', rate='10/m', block=True))
     def get(self, request):
         """Mostra lista risorse con filtri."""
         resource_type = request.GET.get('type', '')
@@ -870,7 +849,6 @@ class ResourceListView(LoginRequiredMixin, View):
 class DeviceListView(LoginRequiredMixin, View):
     """Lista dispositivi disponibili."""
     
-    @method_decorator(ratelimit(key='user', rate='10/m', block=True))
     def get(self, request):
         """Mostra lista dispositivi con filtri."""
         device_type = request.GET.get('type', '')
@@ -953,7 +931,6 @@ class BookingViewSet(viewsets.ModelViewSet):
         serializer.save(utente=self.request.user)
 
     @action(detail=True, methods=['post'])
-    @ratelimit(key='user', rate='5/m', block=True)
     def cancel(self, request, pk=None):
         """Cancella prenotazione."""
         booking = self.get_object()
@@ -973,7 +950,6 @@ class BookingViewSet(viewsets.ModelViewSet):
             return Response({'error': message}, status=400)
 
     @action(detail=True, methods=['post'])
-    @ratelimit(key='user', rate='5/m', block=True)
     def approve(self, request, pk=None):
         """Approva prenotazione (solo admin)."""
         if not request.user.is_staff:
@@ -1014,7 +990,6 @@ class SystemStatsView(generics.GenericAPIView):
     """API per statistiche sistema."""
     permission_classes = [IsAuthenticated]
     
-    @ratelimit(key='user', rate='5/m', block=True)
     def get(self, request):
         """Restituisce statistiche sistema."""
         if not request.user.is_staff:

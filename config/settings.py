@@ -4,27 +4,44 @@ import dj_database_url
 import logging as _logging
 from datetime import timedelta
 
-# BASE_DIR e variabili di progetto
+
+# === Percorso base del progetto ===
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ===================
-# Email configurazione (Brevo/Sendinblue o Gmail)
-# ===================
+###########################################################
+# EMAIL: Configurazione SMTP Brevo (o provider compatibile)
+###########################################################
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'n.cantalupo@isufol.it')
 ADMINS = [("Admin", ADMIN_EMAIL)]
 
-# Configurazione email principale
+
+## Configurazione email principale robusta
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp-relay.brevo.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+try:
+    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+except Exception:
+    EMAIL_PORT = 587
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('1', 'true', 'yes')
 EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() in ('1', 'true', 'yes')
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', ADMIN_EMAIL)
-EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 15))
+try:
+    EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 15))
+except Exception:
+    EMAIL_TIMEOUT = 15
 
-# --- Nuovo: supporto secret file (Render mounts) ---
+# Log warning se mancano variabili email essenziali
+_logger = _logging.getLogger('prenotazioni')
+if not EMAIL_HOST_USER:
+    _logger.warning('EMAIL_HOST_USER non impostato: le email potrebbero non essere inviate correttamente.')
+if not EMAIL_HOST_PASSWORD and not os.environ.get('EMAIL_HOST_PASSWORD_FILE'):
+    _logger.warning('EMAIL_HOST_PASSWORD non impostata: le email potrebbero non essere inviate.')
+if not DEFAULT_FROM_EMAIL:
+    _logger.warning('DEFAULT_FROM_EMAIL non impostata: usare ADMIN_EMAIL come fallback.')
+
+## Supporto secret file (Render mounts)
 EMAIL_HOST_PASSWORD_FILE = os.environ.get('EMAIL_HOST_PASSWORD_FILE')  # es. /etc/secrets/email_password.txt
 if not EMAIL_HOST_PASSWORD and EMAIL_HOST_PASSWORD_FILE:
     try:
@@ -34,54 +51,17 @@ if not EMAIL_HOST_PASSWORD and EMAIL_HOST_PASSWORD_FILE:
         _logging.getLogger('prenotazioni').exception('Failed reading EMAIL_HOST_PASSWORD_FILE: %s', EMAIL_HOST_PASSWORD_FILE)
         EMAIL_HOST_PASSWORD = EMAIL_HOST_PASSWORD or ''
 
-# --- Nuovo: supporto BREVO HTTP API key (fallback) ---
-BREVO_API_KEY = os.environ.get('BREVO_API_KEY')
-# fallback: if not set, try reading same secret file (common pattern)
-if not BREVO_API_KEY and EMAIL_HOST_PASSWORD_FILE:
-    try:
-        with open(EMAIL_HOST_PASSWORD_FILE, 'r', encoding='utf-8') as f:
-            candidate = f.read().strip()
-            if candidate:
-                BREVO_API_KEY = candidate
-    except Exception:
-        _logging.getLogger('prenotazioni').exception('Failed reading BREVO API candidate from file: %s', EMAIL_HOST_PASSWORD_FILE)
-        BREVO_API_KEY = BREVO_API_KEY or None
 
-EMAIL_SEND_VIA_BREVO_API = bool(BREVO_API_KEY)
 
-EMAIL_CONFIG = {
-    'HOST': EMAIL_HOST,
-    'PORT': EMAIL_PORT,
-    'USER': EMAIL_HOST_USER,
-    'PASSWORD': EMAIL_HOST_PASSWORD,
-    'USE_TLS': EMAIL_USE_TLS,
-    'USE_SSL': EMAIL_USE_SSL,
-    'TIMEOUT': EMAIL_TIMEOUT,
-    'SEND_VIA_BREVO_API': EMAIL_SEND_VIA_BREVO_API,
-    'BREVO_API_KEY': BREVO_API_KEY,
-    'EMAIL_HOST_PASSWORD_FILE': EMAIL_HOST_PASSWORD_FILE,
-    # Brevo-specific tuning
-    'BREVO_TIMEOUT': int(os.environ.get('BREVO_TIMEOUT', os.environ.get('EMAIL_TIMEOUT', EMAIL_TIMEOUT))),
-    'BREVO_RETRIES': int(os.environ.get('BREVO_RETRIES', '3')),
-}
+# Solo SMTP Brevo: rimosso supporto API HTTP e fallback
 
-# Small runtime hints useful in Render logs
-_logger = _logging.getLogger('prenotazioni')
-if EMAIL_SEND_VIA_BREVO_API:
-    _logger.warning('BREVO_API_KEY detected: HTTP API fallback enabled for sending emails.')
-elif EMAIL_HOST and 'brevo' in EMAIL_HOST and not EMAIL_HOST_PASSWORD:
-    _logger.warning('EMAIL_HOST configured for Brevo but no password found; SMTP may fail on Render free tier.')
-
-# Provide quick hints about Brevo tuning
-_logger.info(f"EMAIL timeout={EMAIL_TIMEOUT}, BREVO timeout={EMAIL_CONFIG['BREVO_TIMEOUT']}, BREVO retries={EMAIL_CONFIG['BREVO_RETRIES']}")
-
-# Configurazioni SMTP avanzate per migliorare affidabilità
+## Configurazioni SMTP avanzate per migliorare affidabilità
 EMAIL_BACKEND_CONFIG = {
     'timeout': EMAIL_TIMEOUT,
     'fail_silently': False,
 }
 
-# Configurazioni specifiche per provider
+## Configurazioni specifiche per provider
 if EMAIL_HOST == 'smtp-relay.brevo.com':
     # Brevo (Sendinblue) SMTP settings
     EMAIL_USE_TLS = True
@@ -98,7 +78,9 @@ elif EMAIL_HOST == 'smtp.gmail.com':
     # EMAIL_HOST_USER should be your Gmail address
     # EMAIL_HOST_PASSWORD should be an App Password (not regular password)
 
-# Use environment variable with secure fallback only for development
+###########################################################
+# SICUREZZA: Secret key e debug
+###########################################################
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 if not SECRET_KEY:
     if os.environ.get('DJANGO_DEBUG', 'False') == 'True':
@@ -108,7 +90,9 @@ if not SECRET_KEY:
 
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 
-# ALLOWED_HOSTS configuration for Render
+###########################################################
+# HOSTS: configurazione allowed hosts
+###########################################################
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
@@ -130,6 +114,9 @@ if additional_hosts:
         if host and host not in ALLOWED_HOSTS:
             ALLOWED_HOSTS.append(host)
 
+###########################################################
+# APPS: installate
+###########################################################
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -147,6 +134,9 @@ INSTALLED_APPS = [
     'prenotazioni',
 ]
 
+###########################################################
+# MIDDLEWARE
+###########################################################
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -160,7 +150,9 @@ MIDDLEWARE = [
     # 'django.middleware.gzip.GZipMiddleware',  # Disabilitato per risparmio CPU
 ]
 
-# Security settings
+###########################################################
+# SICUREZZA: impostazioni avanzate solo in produzione
+###########################################################
 if not DEBUG:
     # Production security settings
     SECURE_BROWSER_XSS_FILTER = True
@@ -188,6 +180,9 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SECURE_REDIRECT_EXEMPT = []
 
+###########################################################
+# URL e TEMPLATES
+###########################################################
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
@@ -206,6 +201,9 @@ TEMPLATES = [
     },
 ]
 
+###########################################################
+# DATABASE: configurazione
+###########################################################
 DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
@@ -215,6 +213,9 @@ DATABASES = {
     )
 }
 
+###########################################################
+# PASSWORD: validatori
+###########################################################
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -222,6 +223,9 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+###########################################################
+# LOCALIZZAZIONE
+###########################################################
 LANGUAGE_CODE = 'it-it'
 TIME_ZONE = 'Europe/Rome'
 USE_I18N = True
@@ -230,15 +234,15 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# =========================
-# Whitenoise static files optimization
-# =========================
+###########################################################
+# STATIC FILES: Whitenoise ottimizzazione
+###########################################################
 WHITENOISE_USE_FINDERS = True
 WHITENOISE_AUTOREFRESH = True
 
-# =========================
-# Optimized Caching & Performance
-# =========================
+###########################################################
+# CACHE E PERFORMANCE
+###########################################################
 
 # Usa solo LocMemCache per Render free tier
 CACHES = {
@@ -252,37 +256,64 @@ CACHES = {
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
 
-# =========================
-# Optimized Logging Configuration
-# =========================
 
-# Logging minimale per Render free tier
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'level': 'ERROR',
-            'class': 'logging.StreamHandler',
+###########################################################
+# LOGGING: minimale in produzione, dettagliato in debug
+###########################################################
+if DEBUG:
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'console': {
+                'level': 'INFO',
+                'class': 'logging.StreamHandler',
+            },
         },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'ERROR',
-    },
-    'loggers': {
-        'django': {
+        'root': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        'loggers': {
+            'django': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+            'prenotazioni': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+        },
+    }
+else:
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'console': {
+                'level': 'ERROR',
+                'class': 'logging.StreamHandler',
+            },
+        },
+        'root': {
             'handlers': ['console'],
             'level': 'ERROR',
-            'propagate': False,
         },
-        'prenotazioni': {
-            'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': False,
+        'loggers': {
+            'django': {
+                'handlers': ['console'],
+                'level': 'ERROR',
+                'propagate': False,
+            },
+            'prenotazioni': {
+                'handlers': ['console'],
+                'level': 'ERROR',
+                'propagate': False,
+            },
         },
-    },
-}
+    }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -381,29 +412,6 @@ CORS_ALLOW_HEADERS = [
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024   # 10MB
 
-# =========================
-# Celery / Background tasks configuration
-# =========================
-# Broker (use CELERY_BROKER_URL or REDIS_URL environment variable), fallback to local Redis
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
-# Use the broker also as result backend by default
-CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', CELERY_BROKER_URL)
 
-# Serialization
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-
-# Timezone for Celery
-CELERY_TIMEZONE = TIME_ZONE
-
-# Beat schedule: process pending notifications periodically
-# Runs `prenotazioni.tasks.process_pending_notifications` every 60 seconds by default.
-CELERY_BEAT_SCHEDULE = {
-    'process-pending-notifications-every-minute': {
-        'task': 'prenotazioni.tasks.process_pending_notifications',
-        'schedule': timedelta(seconds=int(os.environ.get('NOTIFICATION_PROCESS_INTERVAL_SECONDS', '60'))),
-        'options': {'queue': os.environ.get('CELERY_NOTIFICATION_QUEUE', 'notifications')},
-    },
-}
+# Async Celery/Redis rimosso: notifiche solo sincrone o via comando manuale
 

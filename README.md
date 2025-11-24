@@ -249,22 +249,12 @@ docker-compose run --rm web python manage.py send_test_pin i.nizzo@isufol.it
 
 Deliverability
 ---------------
+
 Per migliorare la deliverability (evitare che le email finiscano in spam) configura i record DNS del tuo dominio (`isufol.it`) relativi a SPF, DKIM e DMARC. Se non gestisci il dominio, chiedi all'amministratore di sistema o al provider di hosting per assistenza.
 
 ## Note rapide per Render (free tier)
 
-Render free spesso blocca l'egress SMTP (porta 587). Raccomandazioni rapide:
-
-- Usare la Brevo HTTP API (porta 443) invece di SMTP quando possibile.  
-- Metti la chiave Brevo come Secret File su Render:
-  - Filename: `email_password.txt` (Render la monta in `/etc/secrets/email_password.txt`)
-  - Oppure imposta `BREVO_API_KEY` come env var.
-- Il progetto fornisce l'helper `send_via_brevo.py` che usa `BREVO_API_KEY` (o legge il secret file) per inviare email via HTTPS.
-- Per applicare migrazioni automaticamente all'avvio, copia `entrypoint.sh` nell'immagine Docker e impostalo come ENTRYPOINT:
-  - COPY entrypoint.sh /app/entrypoint.sh && chmod +x /app/entrypoint.sh
-  - ENTRYPOINT ["/app/entrypoint.sh"]
-  - CMD deve restare il comando del server (es. gunicorn)
-- Se preferisci SMTP, assicurati che `EMAIL_HOST_PASSWORD_FILE` o `EMAIL_HOST_PASSWORD` sia impostato correttamente.
+Render free può bloccare l'egress SMTP (porta 587). Se hai problemi, verifica la configurazione SMTP e le variabili d'ambiente. Il sistema ora usa solo SMTP Brevo (porta 587) per l'invio email.
 
 ### Popolare il DB vuoto (Neon / Render)
 
@@ -292,8 +282,4 @@ Se il database è vuoto (es. Neon) esegui questi passi:
    - Imposta la variabile d'ambiente su Render:
      - INITIALIZE_DB=true
      - EMAIL_HOST_PASSWORD_FILE=/etc/secrets/email_password.txt (se usi Secret File)
-     - oppure BREVO_API_KEY come env var (oppure usa Secret File)
    - Al deploy l'entrypoint farà migrate e (se INITIALIZE_DB=true) lancerà `initialize_data`.
-
-3. Se SMTP fallisce su Render free (porta 587 bloccata):
-   - Usa `BREVO_API_KEY` e lo helper `send_via_brevo.py` incluso nel repository per inviare email via HTTPS.

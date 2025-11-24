@@ -1,40 +1,13 @@
-# Dipendenze essenziali per Sistema di Prenotazioni Scolastiche
-djangorestframework>=3.15.2
-django-filter>=25.1
-django-cors-headers>=4.5.0
-
-# Database
-psycopg2-binary>=2.9.9
-dj-database-url>=2.3.0
-django-redis>=5.4.0
-
-# Deployment
-gunicorn>=23.0.0
-whitenoise>=6.7.0
-python-dotenv>=1.0.1
-
-# Utilità
-django-extensions>=3.2.3
-django-crispy-forms>=2.3
-crispy-bootstrap5>=2024.2
-
-# Opzionale
-requests>=2.31.0
-
+django>=5.1,<6
 django>=5.1,<6
 djangorestframework>=3.15.2
 django-filter>=25.1
 django-cors-headers>=4.5.0
-
-# Database
+# Dipendenze essenziali per Django + SMTP Brevo
 psycopg2-binary>=2.9.9
 dj-database-url>=2.3.0
-
-# Deployment
 gunicorn>=23.0.0
 whitenoise>=6.7.0
-
-# Opzionale (solo se usato in produzione)
-requests>=2.31.0
-celery>=5.3.0
-redis>=4.5.0
+django-extensions>=3.2.3
+django-crispy-forms>=2.3
+crispy-bootstrap5>=2024.2
