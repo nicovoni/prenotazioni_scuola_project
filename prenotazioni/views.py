@@ -65,17 +65,15 @@ def setup_amministratore(request):
                 context['step'] = '1'
             # Step school: salva info scuola
             elif 'step_school' in request.POST:
-                nome = request.POST.get('nome')
-                codice = request.POST.get('codice_meccanografico')
-                sito = request.POST.get('sito_web')
-                indirizzo = request.POST.get('indirizzo')
-                if nome and indirizzo:
-                    InformazioniScuola.objects.update_or_create(id=1, defaults={
-                        'nome_completo_scuola': nome,
-                        'codice_meccanografico_scuola': codice or '',
-                        'sito_web_scuola': sito or '',
-                        'indirizzo_scuola': indirizzo
-                    })
+                # Bind the SchoolInfoForm and validate only the full school name
+                school_instance = InformazioniScuola.objects.filter(id=1).first()
+                from .forms import SchoolInfoForm
+                bound_form = SchoolInfoForm(request.POST, instance=school_instance)
+
+                # We require only the full school name for setup
+                if bound_form.is_valid():
+                    # Save only the provided field(s)
+                    bound_form.save()
                     messages.success(request, 'Informazioni scuola salvate!')
 
                     # If skipping user creation, promote the logged-in staff user to superuser
@@ -90,8 +88,10 @@ def setup_amministratore(request):
 
                     return redirect('/setup/?step=device')
                 else:
-                    messages.error(request, 'Compila i campi obbligatori.')
-                context['step'] = 'school'
+                    messages.error(request, 'Compila il nome completo della scuola (obbligatorio).')
+                    # Reattach the bound form with errors to the context so template shows validation
+                    context['form_school'] = bound_form
+                    context['step'] = 'school'
             # Step device e risorse: puoi aggiungere qui la logica per dispositivi e risorse
         return render(request, 'prenotazioni/configurazione_sistema.html', context)
     # Se esiste almeno un admin, redirect alla home
