@@ -88,46 +88,46 @@
 
                         <!-- Campo obbligatorio: Nome scuola -->
                         <div class="form-group mb-4">
-                            <label for="{{ form_school.nome.id_for_label }}" class="form-label">
-                                {{ form_school.nome.label }} <span class="text-danger">*</span>
+                            <label for="{{ form_school.nome_completo_scuola.id_for_label }}" class="form-label">
+                                {{ form_school.nome_completo_scuola.label }} <span class="text-danger">*</span>
                             </label>
-                            {{ form_school.nome }}
-                            {% if form_school.nome.errors %}
+                            {{ form_school.nome_completo_scuola }}
+                            {% if form_school.nome_completo_scuola.errors %}
                                 <div class="text-danger small">
-                                    {% for error in form_school.nome.errors %}{{ error }}{% endfor %}
+                                    {% for error in form_school.nome_completo_scuola.errors %}{{ error }}{% endfor %}
                                 </div>
                             {% endif %}
                         </div>
 
                         <!-- Codice meccanografico -->
                         <div class="form-group mb-3">
-                            <label for="{{ form_school.codice_meccanografico.id_for_label }}" class="form-label">{{ form_school.codice_meccanografico.label }}</label>
-                            {{ form_school.codice_meccanografico }}
-                            {% if form_school.codice_meccanografico.errors %}
+                            <label for="{{ form_school.codice_meccanografico_scuola.id_for_label }}" class="form-label">{{ form_school.codice_meccanografico_scuola.label }}</label>
+                            {{ form_school.codice_meccanografico_scuola }}
+                            {% if form_school.codice_meccanografico_scuola.errors %}
                                 <div class="text-danger small">
-                                    {% for error in form_school.codice_meccanografico.errors %}{{ error }}{% endfor %}
+                                    {% for error in form_school.codice_meccanografico_scuola.errors %}{{ error }}{% endfor %}
                                 </div>
                             {% endif %}
                         </div>
 
                         <!-- Sito web scuola -->
                         <div class="form-group mb-3">
-                            <label for="{{ form_school.sito_web.id_for_label }}" class="form-label">{{ form_school.sito_web.label }}</label>
-                            {{ form_school.sito_web }}
-                            {% if form_school.sito_web.errors %}
+                            <label for="{{ form_school.sito_web_scuola.id_for_label }}" class="form-label">{{ form_school.sito_web_scuola.label }}</label>
+                            {{ form_school.sito_web_scuola }}
+                            {% if form_school.sito_web_scuola.errors %}
                                 <div class="text-danger small">
-                                    {% for error in form_school.sito_web.errors %}{{ error }}{% endfor %}
+                                    {% for error in form_school.sito_web_scuola.errors %}{{ error }}{% endfor %}
                                 </div>
                             {% endif %}
                         </div>
 
                         <!-- Indirizzo completo -->
                         <div class="form-group mb-4">
-                            <label for="{{ form_school.indirizzo.id_for_label }}" class="form-label">{{ form_school.indirizzo.label }} <span class="text-danger">*</span></label>
-                            {{ form_school.indirizzo }}
-                            {% if form_school.indirizzo.errors %}
+                            <label for="{{ form_school.indirizzo_scuola.id_for_label }}" class="form-label">{{ form_school.indirizzo_scuola.label }} <span class="text-danger">*</span></label>
+                            {{ form_school.indirizzo_scuola }}
+                            {% if form_school.indirizzo_scuola.errors %}
                                 <div class="text-danger small">
-                                    {% for error in form_school.indirizzo.errors %}{{ error }}{% endfor %}
+                                    {% for error in form_school.indirizzo_scuola.errors %}{{ error }}{% endfor %}
                                 </div>
                             {% endif %}
                         </div>
@@ -164,10 +164,10 @@
             <script>
                 // Simple preview update (optional enhancement)
                 document.addEventListener('DOMContentLoaded', function() {
-                    const nomeInput = document.querySelector('#{{ form_school.nome.id_for_label }}');
-                    const codiceInput = document.querySelector('#{{ form_school.codice_meccanografico.id_for_label }}');
-                    const sitoInput = document.querySelector('#{{ form_school.sito_web.id_for_label }}');
-                    const indirizzoInput = document.querySelector('#{{ form_school.indirizzo.id_for_label }}');
+                    const nomeInput = document.querySelector('#{{ form_school.nome_completo_scuola.id_for_label }}');
+                    const codiceInput = document.querySelector('#{{ form_school.codice_meccanografico_scuola.id_for_label }}');
+                    const sitoInput = document.querySelector('#{{ form_school.sito_web_scuola.id_for_label }}');
+                    const indirizzoInput = document.querySelector('#{{ form_school.indirizzo_scuola.id_for_label }}');
                     const previewDiv = document.querySelector('#school-preview');
 
                     function updatePreview() {
