@@ -1,0 +1,11 @@
+<html>
+  <body>
+    <p>Ciao {{ user.first_name }},</p>
+    <p>Ti ricordiamo la prenotazione per <strong>{{ resource.nome }}</strong> che inizia tra <strong>{{ hours_until }}</strong> ore.</p>
+    <ul>
+      <li>Data: {{ booking.inizio|date:"d/m/Y" }}</li>
+      <li>Orario: {{ booking.inizio|time:"H:i" }} - {{ booking.fine|time:"H:i" }}</li>
+    </ul>
+    <p>A presto,<br>{{ school_info.nome_breve_scuola }}</p>
+  </body>
+</html>

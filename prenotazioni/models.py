@@ -490,7 +490,12 @@ class SessioneUtente(models.Model):
         verbose_name='Email Personale Utente',
         help_text='Email alternativa per comunicazioni'
     )
+    @property
     def sessione_scaduta(self):
+        # Restituisce True se la sessione è scaduta. Se la data di scadenza
+        # non è impostata, consideriamo la sessione NON scaduta.
+        if not self.data_scadenza_sessione:
+            return False
         return timezone.now() > self.data_scadenza_sessione
 
     @property
@@ -950,6 +955,69 @@ class Prenotazione(models.Model):
         return True, "Prenotazione cancellata con successo"
 
 
+    @property
+    def durata_minuti(self):
+        if self.inizio and self.fine:
+            return int((self.fine - self.inizio).total_seconds() / 60)
+        return 0
+
+    @property
+    def durata_ore(self):
+        minutes = self.durata_minuti
+        return round(minutes / 60, 2) if minutes else 0
+
+    @property
+    def is_passata(self):
+        return self.fine < timezone.now() if self.fine else False
+
+    @property
+    def is_futura(self):
+        return self.inizio > timezone.now() if self.inizio else False
+
+    @property
+    def is_in_corso(self):
+        now = timezone.now()
+        return (self.inizio <= now <= self.fine) if (self.inizio and self.fine) else False
+
+    def can_be_cancelled_by(self, user):
+        """Semplice controllo permessi per cancellare la prenotazione."""
+        if user is None:
+            return False
+        # Admin può sempre cancellare
+        if getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False):
+            return True
+        # L'utente che ha creato la prenotazione può cancellarla se non è già cancellata
+        if self.utente == user and self.cancellato_il is None:
+            return True
+        return False
+
+    def can_be_modified_by(self, user):
+        """Controllo permessi per modificare la prenotazione.
+
+        Per default l'utente creatore può modificare se l'inizio è nel futuro,
+        gli admin possono sempre modificare.
+        """
+        if user is None:
+            return False
+        if getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False):
+            return True
+        if self.utente == user and (self.inizio is None or self.inizio > timezone.now()) and self.cancellato_il is None:
+            return True
+        return False
+
+    def approve(self, approvatore):
+        """Segna la prenotazione come approvata da un admin/operatore."""
+        try:
+            self.approvazione_richiesta = True
+            self.approvato_da = approvatore
+            self.data_approvazione = timezone.now()
+            self.save()
+            return True
+        except Exception:
+            logging.getLogger('prenotazioni').exception('Errore in approve() for booking %s', getattr(self, 'id', None))
+            return False
+
+
 # =====================================================
 # SISTEMA DI LOG E MONITORAGGIO
 # =====================================================
@@ -1228,17 +1296,21 @@ def log_booking_action_signal(sender, instance, created, **kwargs):
                 related_booking=instance
             )
         except Exception:
-            # Non bloccare il flusso se il logging fallisce
-            pass
+            # Log full exception but do not block flow
+            logging.getLogger('prenotazioni').exception('Failed to log booking_created signal for booking %s', getattr(instance, 'id', None))
 
 def log_booking_deletion_signal(sender, instance, **kwargs):
     """Log cancellazione prenotazioni."""
-    log_user_action(
-        utente=instance.utente,
-        action_type='booking_cancelled',
-        message=f"Prenotazione cancellata: {instance.risorsa.nome}",
-        related_booking=instance
-    )
+    # Passa l'utente come primo argomento al helper `log_user_action`.
+    try:
+        log_user_action(
+            instance.utente,
+            'booking_cancelled',
+            f"Prenotazione cancellata: {instance.risorsa.nome}",
+            related_booking=instance
+        )
+    except Exception:
+        logging.getLogger('prenotazioni').exception('Failed to log booking_cancelled for booking %s', getattr(instance, 'id', None))
 
 
 # Signals registration helper

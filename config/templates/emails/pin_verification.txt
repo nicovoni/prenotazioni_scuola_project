@@ -1,0 +1,9 @@
+Ciao {{ user.first_name }},
+
+Il tuo codice PIN per accedere a {{ school_name }} è: {{ pin }}
+Scade tra: {{ expires_in }}.
+
+Se non hai richiesto questo codice, ignora questa email.
+
+Saluti,
+{{ school_name }}

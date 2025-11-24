@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
+import logging
 
 def home(request):
     # Controllo se il sistema è configurato
@@ -11,6 +12,7 @@ def home(request):
             return redirect('prenotazioni:configurazione_sistema')
         return render(request, 'home.html')
     except Exception:
+        logging.getLogger('prenotazioni').exception('Error while checking initial setup in home view')
         # Se le tabelle non esistono, redirect alla configurazione
         # Questo permette al sito di funzionare durante il deploy
         return redirect('prenotazioni:configurazione_sistema')

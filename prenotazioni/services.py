@@ -806,12 +806,20 @@ class ResourceService:
             query = query.filter(tipo=resource_type)
         
         if start and end:
-            # Filtra risorse senza conflitti
-            available_resources = []
-            for resource in query:
-                if not BookingService.check_conflicts(resource, start, end):
-                    available_resources.append(resource.id)
-            query = query.filter(id__in=available_resources)
+            # Evitiamo N+1 query: calcoliamo in un'unica query le risorse
+            # che hanno prenotazioni in conflitto nell'intervallo e le
+            # escludiamo solo se non hanno allow_overbooking.
+            from django.db.models import Q
+
+            conflicting_ids = Prenotazione.objects.filter(
+                inizio__lt=end,
+                fine__gt=start,
+                cancellato_il__isnull=True
+            ).values_list('risorsa_id', flat=True).distinct()
+
+            if conflicting_ids:
+                # Escludi le risorse in conflitto che NON permettono overbooking
+                query = query.exclude(Q(id__in=conflicting_ids) & Q(allow_overbooking=False))
         
         return query.select_related('localizzazione').order_by('tipo', 'nome')
     

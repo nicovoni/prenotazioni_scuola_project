@@ -1,0 +1,9 @@
+Ciao {{ user.first_name }},
+
+La tua prenotazione per {{ resource.nome }} è stata confermata.
+
+Data: {{ booking.inizio|date:"d/m/Y" }}
+Orario: {{ booking.inizio|time:"H:i" }} - {{ booking.fine|time:"H:i" }}
+
+Grazie,
+{{ school_info.nome_breve_scuola }}

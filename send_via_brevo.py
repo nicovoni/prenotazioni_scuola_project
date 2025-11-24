@@ -1,5 +1,6 @@
 import os
 import requests
+import logging
 
 # Prima prova env var, poi file di secret montato da Render (es. /etc/secrets/email_password.txt)
 BREVO_API_KEY = os.environ.get('BREVO_API_KEY')
@@ -9,6 +10,7 @@ if not BREVO_API_KEY and os.path.exists(_secret_file):
         with open(_secret_file, 'r', encoding='utf-8') as f:
             BREVO_API_KEY = f.read().strip()
     except Exception:
+        logging.getLogger('prenotazioni').exception('Failed reading secret file for BREVO_API_KEY: %s', _secret_file)
         BREVO_API_KEY = None
 
 if not BREVO_API_KEY:

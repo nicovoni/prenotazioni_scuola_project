@@ -1,0 +1,9 @@
+Ciao {{ user.first_name }},
+
+Ti ricordiamo la prenotazione per {{ resource.nome }} che inizia tra {{ hours_until }} ore.
+
+Data: {{ booking.inizio|date:"d/m/Y" }}
+Orario: {{ booking.inizio|time:"H:i" }} - {{ booking.fine|time:"H:i" }}
+
+A presto,
+{{ school_info.nome_breve_scuola }}

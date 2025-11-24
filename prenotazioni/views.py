@@ -397,7 +397,7 @@ class EmailLoginView(View):
                 pin = UserSessionService.generate_pin()
                 session = UserSessionService.create_session(
                     user=user,
-                    tipo='pin_login',
+                    tipo='login_pin',
                     email_destinazione=email,
                     pin=pin
                 )

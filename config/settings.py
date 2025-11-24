@@ -30,6 +30,7 @@ if not EMAIL_HOST_PASSWORD and EMAIL_HOST_PASSWORD_FILE:
         with open(EMAIL_HOST_PASSWORD_FILE, 'r', encoding='utf-8') as f:
             EMAIL_HOST_PASSWORD = f.read().strip()
     except Exception:
+        _logging.getLogger('prenotazioni').exception('Failed reading EMAIL_HOST_PASSWORD_FILE: %s', EMAIL_HOST_PASSWORD_FILE)
         EMAIL_HOST_PASSWORD = EMAIL_HOST_PASSWORD or ''
 
 # --- Nuovo: supporto BREVO HTTP API key (fallback) ---
@@ -42,6 +43,7 @@ if not BREVO_API_KEY and EMAIL_HOST_PASSWORD_FILE:
             if candidate:
                 BREVO_API_KEY = candidate
     except Exception:
+        _logging.getLogger('prenotazioni').exception('Failed reading BREVO API candidate from file: %s', EMAIL_HOST_PASSWORD_FILE)
         BREVO_API_KEY = BREVO_API_KEY or None
 
 EMAIL_SEND_VIA_BREVO_API = bool(BREVO_API_KEY)
