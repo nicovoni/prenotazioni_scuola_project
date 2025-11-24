@@ -50,13 +50,24 @@ def send_pin_email_async(email, pin):
             html_message = f"<p>Il tuo PIN di accesso è: <strong>{pin}</strong></p>"
             from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com')
 
-            # Use the resilient send helper which tries SMTP then Brevo HTTP API
+            # Prefer enqueueing the notification for known User accounts, otherwise fallback to send directly.
             try:
-                _send_email(to_email=email, subject=subject, html_message=html_message, from_email=from_email)
-                logger.info(f"=== EMAIL PIN INVIATA CON SUCCESSO A {email} ===")
-            except Exception as send_exc:
-                # Log and continue; we do not want to raise in background thread
-                logger.error(f"Invio email fallito per {email}: {send_exc}")
+                from django.contrib.auth import get_user_model
+                from prenotazioni.services import NotificationService
+                User = get_user_model()
+                user = User.objects.filter(email=email).first()
+                if user:
+                    NotificationService.enqueue_email_for_user(user, subject, html_message)
+                    logger.info(f"=== EMAIL PIN ENQUEUED PER {email} ===")
+                else:
+                    # Unknown recipient: send directly via resilient helper (still background)
+                    try:
+                        _send_email(to_email=email, subject=subject, html_message=html_message, from_email=from_email)
+                        logger.info(f"=== EMAIL PIN INVIATA CON SUCCESSO A {email} ===")
+                    except Exception as send_exc:
+                        logger.error(f"Invio email fallito per {email}: {send_exc}")
+            except Exception as e:
+                logger.exception('Errore invio PIN asincrono: %s', e)
 
         except Exception as e:
             logger.error("=== ERRORE INVIO EMAIL PIN ===")
@@ -283,11 +294,15 @@ def verify_pin(request):
         from_email = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@example.com")
         to_email = email
 
+        # Invia l'email in background per non bloccare la risposta di login.
+        # L'invio è comunque loggato; eventuali errori non impediscono l'accesso.
+        # Enqueue an email notification for delivery by the notification worker
         try:
-            _send_email(to_email=to_email, subject=subject, html_message=html_message, from_email=from_email)
-        except Exception:
-            # Do not expose internal error details to clients
-            return JsonResponse({'error': 'email sending failed'}, status=502)
+            from prenotazioni.services import NotificationService
+            # We have a User instance (user), created/retrieved above
+            NotificationService.enqueue_email_for_user(user, subject, html_message)
+        except Exception as e:
+            logging.getLogger('django.security').exception('Errore enqueue notifica email post-verifica PIN: %s', e)
 
         # Determina ruolo basato sull'email e imposta permessi
         is_admin = email in settings.ADMINS_EMAIL_LIST

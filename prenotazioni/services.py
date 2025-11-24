@@ -202,46 +202,81 @@ class EmailService:
     @classmethod
     def send_email(cls, subject, message, recipient_list, template_name=None, context=None):
         """Invia email con supporto template."""
-        try:
-            if template_name and context:
-                # Usa template
-                html_message = render_to_string(f'emails/{template_name}.html', context)
-                plain_message = render_to_string(f'emails/{template_name}.txt', context)
+        # Instead of sending immediately, enqueue notifications for known User recipients.
+        # We expect `recipient_list` to contain user emails; try to resolve User instances.
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        if template_name and context:
+            html_message = render_to_string(f'emails/{template_name}.html', context)
+            plain_message = render_to_string(f'emails/{template_name}.txt', context)
+        else:
+            html_message = message
+            plain_message = message
+
+        enqueued = 0
+        for recipient in recipient_list:
+            # recipient may be an email string or a User instance
+            user_obj = None
+            if hasattr(recipient, 'email') and getattr(recipient, 'email', None):
+                user_obj = recipient
             else:
-                html_message = message
-                plain_message = message
-            
-            # Invia email
-            send_mail(
-                subject=subject,
-                message=plain_message,
-                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', settings.ADMIN_EMAIL),
-                recipient_list=recipient_list,
-                html_message=html_message,
-                fail_silently=False
-            )
-            
-            # Log invio
+                user_obj = User.objects.filter(email=recipient).first()
+
+            if not user_obj:
+                # If no User found for this email, log and skip enqueueing.
+                logger.warning('No User found for email %s; skipping enqueue', recipient)
+                continue
+
+            notif = NotificationService.enqueue_email_for_user(user_obj, subject, html_message)
+            if notif:
+                enqueued += 1
+
+        # Log enqueued notifications
+        try:
+            log_user_action(None, 'email_enqueued', f"Email enqueued for {enqueued} recipients", dettagli={
+                'subject': subject,
+                'recipients_count': enqueued,
+                'template': template_name
+            })
+        except Exception:
+            pass
+
+        return True, None
+
+    @classmethod
+    def _send_via_backend(cls, subject, plain_message, html_message, recipient_email, from_email=None):
+        """Low-level synchronous send used by notification worker. Returns (success, error_message).
+
+        This method is intended to be called from background workers/commands only.
+        """
+        from . import models as _models
+        try:
+            from django.core.mail import send_mail as _send_mail
+            from config.brevo_client import send_brevo_email
+        except Exception:
+            # Safe imports fallback
+            _send_mail = send_mail
+
+        from django.conf import settings as _settings
+
+        try:
+            _from = from_email or getattr(_settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com')
             try:
-                log_user_action(None, 'email_sent', f"Email inviata a {len(recipient_list)} destinatari", dettagli={
-                    'subject': subject,
-                    'recipients': recipient_list,
-                    'template': template_name
-                })
+                # try Django email backend first
+                _send_mail(subject, plain_message or '', _from, [recipient_email], html_message=html_message, fail_silently=False)
+                return True, None
             except Exception:
-                pass
-            
-            return True, None
-            
+                logger.warning('SMTP send failed for %s; attempting Brevo HTTP fallback', recipient_email)
+                try:
+                    send_brevo_email(to_email=recipient_email, subject=subject, html_content=html_message, sender_email=_from)
+                    return True, None
+                except Exception as brevo_exc:
+                    logger.exception('Brevo HTTP fallback failed: %s', brevo_exc)
+                    return False, str(brevo_exc)
+
         except Exception as e:
-            error_msg = f"Errore invio email: {str(e)}"
-            logger.error(error_msg)
-            
-            try:
-                log_user_action(None, 'system_error', error_msg, livello='ERROR', dettagli={'subject': subject, 'recipients': recipient_list})
-            except Exception:
-                pass
-            
+            logger.exception('Errore _send_via_backend: %s', e)
             return False, str(e)
     
     @classmethod
@@ -646,6 +681,41 @@ class NotificationService:
             # Note: Since User model doesn't have role field, we skip admin notifications
             # In a full implementation, this would need to be handled differently
             pass
+
+        @classmethod
+        def enqueue_email_for_user(cls, user, subject, html_message, related_booking=None, tipo='custom_email'):
+            """Crea una `NotificaUtente` in stato `pending` per inviare un'email.
+
+            La notifica verrà processata dal worker/command che chiama `send_pending_notifications`.
+            """
+            try:
+                # create notification record
+                notification = Notification.objects.create(
+                    utente=user,
+                    template=None,
+                    tipo=tipo,
+                    canale='email',
+                    titolo=subject,
+                    messaggio=html_message,
+                    dati_aggiuntivi={},
+                    stato='pending',
+                    tentativo_corrente=0,
+                    prossimo_tentativo=timezone.now(),
+                    related_booking=related_booking
+                )
+
+                # Enqueue Celery task to send this notification asynchronously
+                try:
+                    from config.celery import app as celery_app
+                    # Use explicit task name defined in prenotazioni.tasks
+                    celery_app.send_task('prenotazioni.tasks.send_notification', args=[notification.id])
+                except Exception:
+                    logger.exception('Impossibile inviare task Celery per notifica %s', getattr(notification, 'id', None))
+
+                return notification
+            except Exception:
+                logger.exception('Impossibile enqueuere notifica email per utente %s', getattr(user, 'id', None))
+                return None
     
     @classmethod
     def create_booking_update_notifications(cls, booking):
@@ -713,18 +783,24 @@ class NotificationService:
     def _send_notification(cls, notification):
         """Invia singola notifica."""
         if notification.canale == 'email':
-            success, error = EmailService.send_email(
-                subject=notification.titolo,
-                message=notification.messaggio,
-                recipient_list=[notification.utente.email]
-            )
-            
-            if success:
-                notification.stato = 'sent'
-                notification.inviata_il = timezone.now()
-            else:
+            # Use the low-level send via EmailService to perform the actual delivery
+            try:
+                success, error = EmailService._send_via_backend(
+                    subject=notification.titolo,
+                    plain_message=notification.messaggio,
+                    html_message=notification.messaggio,
+                    recipient_email=notification.utente.email
+                )
+
+                if success:
+                    notification.stato = 'sent'
+                    notification.inviata_il = timezone.now()
+                else:
+                    notification.stato = 'failed'
+                    notification.errore_messaggio = error
+            except Exception as e:
                 notification.stato = 'failed'
-                notification.errore_messaggio = error
+                notification.errore_messaggio = str(e)
         else:
             # Altri canali da implementare (SMS, push, etc.)
             notification.stato = 'sent'

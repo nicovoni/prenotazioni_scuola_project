@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import dj_database_url
 import logging as _logging
+from datetime import timedelta
 
 # BASE_DIR e variabili di progetto
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -379,3 +380,30 @@ CORS_ALLOW_HEADERS = [
 # File upload settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024   # 10MB
+
+# =========================
+# Celery / Background tasks configuration
+# =========================
+# Broker (use CELERY_BROKER_URL or REDIS_URL environment variable), fallback to local Redis
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
+# Use the broker also as result backend by default
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', CELERY_BROKER_URL)
+
+# Serialization
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+# Timezone for Celery
+CELERY_TIMEZONE = TIME_ZONE
+
+# Beat schedule: process pending notifications periodically
+# Runs `prenotazioni.tasks.process_pending_notifications` every 60 seconds by default.
+CELERY_BEAT_SCHEDULE = {
+    'process-pending-notifications-every-minute': {
+        'task': 'prenotazioni.tasks.process_pending_notifications',
+        'schedule': timedelta(seconds=int(os.environ.get('NOTIFICATION_PROCESS_INTERVAL_SECONDS', '60'))),
+        'options': {'queue': os.environ.get('CELERY_NOTIFICATION_QUEUE', 'notifications')},
+    },
+}
+
