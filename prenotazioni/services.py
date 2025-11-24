@@ -682,40 +682,40 @@ class NotificationService:
             # In a full implementation, this would need to be handled differently
             pass
 
-        @classmethod
-        def enqueue_email_for_user(cls, user, subject, html_message, related_booking=None, tipo='custom_email'):
-            """Crea una `NotificaUtente` in stato `pending` per inviare un'email.
+    @classmethod
+    def enqueue_email_for_user(cls, user, subject, html_message, related_booking=None, tipo='custom_email'):
+        """Crea una `NotificaUtente` in stato `pending` per inviare un'email.
 
-            La notifica verrà processata dal worker/command che chiama `send_pending_notifications`.
-            """
+        La notifica verrà processata dal worker/command che chiama `send_pending_notifications`.
+        """
+        try:
+            # create notification record
+            notification = Notification.objects.create(
+                utente=user,
+                template=None,
+                tipo=tipo,
+                canale='email',
+                titolo=subject,
+                messaggio=html_message,
+                dati_aggiuntivi={},
+                stato='pending',
+                tentativo_corrente=0,
+                prossimo_tentativo=timezone.now(),
+                related_booking=related_booking
+            )
+
+            # Enqueue Celery task to send this notification asynchronously
             try:
-                # create notification record
-                notification = Notification.objects.create(
-                    utente=user,
-                    template=None,
-                    tipo=tipo,
-                    canale='email',
-                    titolo=subject,
-                    messaggio=html_message,
-                    dati_aggiuntivi={},
-                    stato='pending',
-                    tentativo_corrente=0,
-                    prossimo_tentativo=timezone.now(),
-                    related_booking=related_booking
-                )
-
-                # Enqueue Celery task to send this notification asynchronously
-                try:
-                    from config.celery import app as celery_app
-                    # Use explicit task name defined in prenotazioni.tasks
-                    celery_app.send_task('prenotazioni.tasks.send_notification', args=[notification.id])
-                except Exception:
-                    logger.exception('Impossibile inviare task Celery per notifica %s', getattr(notification, 'id', None))
-
-                return notification
+                from config.celery import app as celery_app
+                # Use explicit task name defined in prenotazioni.tasks
+                celery_app.send_task('prenotazioni.tasks.send_notification', args=[notification.id])
             except Exception:
-                logger.exception('Impossibile enqueuere notifica email per utente %s', getattr(user, 'id', None))
-                return None
+                logger.exception('Impossibile inviare task Celery per notifica %s', getattr(notification, 'id', None))
+
+            return notification
+        except Exception:
+            logger.exception('Impossibile enqueuere notifica email per utente %s', getattr(user, 'id', None))
+            return None
     
     @classmethod
     def create_booking_update_notifications(cls, booking):

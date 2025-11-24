@@ -18,11 +18,27 @@ def setup_amministratore(request):
             default_step = 'school'
             skip_user_creation = True
         else:
-            default_step = '1'
+            default_step = 1
             skip_user_creation = False
 
+        # Normalize numeric steps to integers so templates comparing with integer work
+        if step in ('1', '2', '3'):
+            step = int(step)
+
         step = step or default_step
-        context = {'step': step, 'skip_user_creation': skip_user_creation}
+
+        # Prepare forms expected by the template
+        from .forms import AdminUserForm, SchoolInfoForm
+        form_admin = AdminUserForm()
+        school_instance = InformazioniScuola.objects.filter(id=1).first()
+        form_school = SchoolInfoForm(instance=school_instance)
+
+        context = {
+            'step': step,
+            'skip_user_creation': skip_user_creation,
+            'form_admin': form_admin,
+            'form_school': form_school
+        }
 
         # If skipping creation, provide admin email in context
         if skip_user_creation:
