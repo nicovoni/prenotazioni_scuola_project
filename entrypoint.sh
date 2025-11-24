@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
-tables = set(connection.introspection.table_names())
 
 
 # Controllo variabili essenziali
