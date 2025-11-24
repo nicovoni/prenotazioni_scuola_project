@@ -54,7 +54,19 @@ class ConfigurationForm(forms.ModelForm):
 
 class SchoolInfoForm(forms.ModelForm):
     """Form per informazioni complete della scuola."""
-    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only the full school name and address are required during setup
+        if 'nome_completo_scuola' in self.fields:
+            self.fields['nome_completo_scuola'].required = True
+        if 'indirizzo_scuola' in self.fields:
+            self.fields['indirizzo_scuola'].required = True
+        # codice and sito are optional but validated if provided
+        if 'codice_meccanografico_scuola' in self.fields:
+            self.fields['codice_meccanografico_scuola'].required = False
+        if 'sito_web_scuola' in self.fields:
+            self.fields['sito_web_scuola'].required = False
+
     class Meta:
         model = InformazioniScuola
         fields = [
@@ -83,10 +95,40 @@ class SchoolInfoForm(forms.ModelForm):
         }
 
     def clean_codice_meccanografico_scuola(self):
-        codice = self.cleaned_data['codice_meccanografico_scuola'].upper()
+        codice = self.cleaned_data.get('codice_meccanografico_scuola')
+        if not codice:
+            return ''
+        codice = codice.upper()
         if len(codice) != 10:
             raise ValidationError("Il codice meccanografico deve essere di esattamente 10 caratteri.")
         return codice
+
+    def clean_sito_web_scuola(self):
+        sito = self.cleaned_data.get('sito_web_scuola')
+        if not sito:
+            return ''
+        # Basic URL parsing by using django's URLField validation already applied; enforce domain edu.it
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(sito)
+            hostname = parsed.hostname or ''
+        except Exception:
+            raise ValidationError('URL non valido.')
+
+        if not hostname.lower().endswith('edu.it'):
+            raise ValidationError('Il sito web della scuola deve appartenere al dominio *.edu.it')
+
+        return sito
+
+    def clean_indirizzo_scuola(self):
+        indirizzo = self.cleaned_data.get('indirizzo_scuola')
+        if not indirizzo:
+            raise ValidationError('L\'indirizzo completo della scuola è obbligatorio.')
+        # Simple heuristic: require at least street and city separated by a comma and sufficient length
+        parts = [p.strip() for p in indirizzo.split(',') if p.strip()]
+        if len(indirizzo) < 10 or len(parts) < 2:
+            raise ValidationError('Inserisci un indirizzo completo compatibile con Google Maps (es: "Via Roma 1, 57023 Follonica").')
+        return indirizzo
 
 
 # =====================================================

@@ -25,7 +25,8 @@ def custom_login(request):
             login(request, user)
             # Se non esistono admin e risorse, redirect a configurazione iniziale
             if not User.objects.filter(is_superuser=True).exists() and Risorsa.objects.count() == 0:
-                return redirect('/setup/')
+                from django.urls import reverse
+                return redirect(reverse('prenotazioni:setup_amministratore'))
             return redirect('home')
         else:
             messages.error(request, "Credenziali non valide. Riprova.")

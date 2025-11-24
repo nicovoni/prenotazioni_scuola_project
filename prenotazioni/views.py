@@ -59,7 +59,8 @@ def setup_amministratore(request):
                         # create as staff (we'll promote to superuser after setup completion)
                         user = User.objects.create_user(username=username, email=email, password=password, is_staff=True)
                         messages.success(request, 'Utente amministratore creato! Ora puoi configurare la scuola.')
-                        return redirect('/setup/?step=school')
+                        from django.urls import reverse
+                        return redirect(reverse('prenotazioni:setup_amministratore') + '?step=school')
                 else:
                     messages.error(request, 'Compila tutti i campi.')
                 context['step'] = '1'
@@ -86,7 +87,8 @@ def setup_amministratore(request):
                         except Exception:
                             messages.error(request, 'Impossibile promuovere l\'utente a superuser automaticamente.')
 
-                    return redirect('/setup/?step=device')
+                    from django.urls import reverse
+                    return redirect(reverse('prenotazioni:setup_amministratore') + '?step=device')
                 else:
                     messages.error(request, 'Compila il nome completo della scuola (obbligatorio).')
                     # Reattach the bound form with errors to the context so template shows validation
