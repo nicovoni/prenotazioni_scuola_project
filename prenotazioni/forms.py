@@ -4,11 +4,13 @@ Form Django per la nuova architettura del sistema di prenotazioni.
 Aggiornati per supportare la nuova struttura database migliorata.
 """
 
+
 from django import forms
 from django.utils import timezone
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
+from django.views.decorators.csrf import csrf_protect
 
 from .models import (
     Risorsa as Resource, Dispositivo as Device, Prenotazione as Booking, ConfigurazioneSistema,
@@ -121,144 +123,118 @@ class SchoolInfoForm(forms.ModelForm):
         return sito
 
     def clean_indirizzo_scuola(self):
-        indirizzo = self.cleaned_data.get('indirizzo_scuola')
-        if not indirizzo:
-            raise ValidationError('L\'indirizzo completo della scuola è obbligatorio.')
-        # Simple heuristic: require at least street and city separated by a comma and sufficient length
-        parts = [p.strip() for p in indirizzo.split(',') if p.strip()]
-        if len(indirizzo) < 10 or len(parts) < 2:
-            raise ValidationError('Inserisci un indirizzo completo compatibile con Google Maps (es: "Via Roma 1, 57023 Follonica").')
-        return indirizzo
-
-
-# =====================================================
-# GESTIONE UTENTI
-# =====================================================
-
-class UserProfileForm(forms.ModelForm):
-    """Form per profilo utente esteso."""
-
-    class Meta:
-        model = ProfiloUtente
-        fields = [
-            'nome_utente', 'cognome_utente', 'sesso_utente', 'data_nascita_utente', 'codice_fiscale_utente',
-            'telefono_utente', 'email_personale_utente', 'numero_matricola_utente', 'classe_utente',
-            'dipartimento_utente', 'materia_insegnamento_utente', 'preferenze_notifica_utente',
-            'preferenze_lingua_utente', 'fuso_orario_utente'
-        ]
-        widgets = {
-            'nome_utente': forms.TextInput(attrs={'class': 'form-control'}),
-            'cognome_utente': forms.TextInput(attrs={'class': 'form-control'}),
-            'sesso_utente': forms.Select(attrs={'class': 'form-select'}),
-            'data_nascita_utente': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'codice_fiscale_utente': forms.TextInput(attrs={'class': 'form-control'}),
-            'telefono_utente': forms.TextInput(attrs={'class': 'form-control'}),
-            'email_personale_utente': forms.EmailInput(attrs={'class': 'form-control'}),
-            'numero_matricola_utente': forms.TextInput(attrs={'class': 'form-control'}),
-            'classe_utente': forms.TextInput(attrs={'class': 'form-control'}),
-            'dipartimento_utente': forms.TextInput(attrs={'class': 'form-control'}),
-            'materia_insegnamento_utente': forms.TextInput(attrs={'class': 'form-control'}),
-            'preferenze_notifica_utente': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'preferenze_lingua_utente': forms.Select(attrs={'class': 'form-select'}),
-            'fuso_orario_utente': forms.TextInput(attrs={'class': 'form-control'}),
-        }
-
-    def clean_codice_fiscale_utente(self):
-        cf = self.cleaned_data['codice_fiscale_utente'].upper()
-        if cf and len(cf) != 16:
-            raise ValidationError("Il codice fiscale deve essere di 16 caratteri.")
-        return cf
-
-
-class UtenteForm(forms.ModelForm):
-    """Form per utente di sistema."""
-
-    password_confirm = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
-        label='Conferma Password'
-    )
-
-    class Meta:
-        model = User
-        fields = ['username', 'email', 'first_name', 'last_name']
-        widgets = {
-            'username': forms.TextInput(attrs={'class': 'form-control'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control'}),
-            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
-        }
-
-    def clean(self):
-        cleaned_data = super().clean()
-        password = cleaned_data.get('password')
-        password_confirm = cleaned_data.get('password_confirm')
-        
-        if password and password_confirm and password != password_confirm:
-            raise ValidationError("Le password non coincidono.")
-        
-        return cleaned_data
-
-
-class AdminUserForm(forms.Form):
-    """Form per creazione primo utente amministratore."""
-    
-    email = forms.EmailField(
-        widget=forms.EmailInput(attrs={'class': 'form-control'}),
-        label="Email amministratore",
-        help_text=f"Email per la verifica PIN - deve essere del dominio @{settings.SCHOOL_EMAIL_DOMAIN if hasattr(settings, 'SCHOOL_EMAIL_DOMAIN') else 'isufol.it'}"
-    )
-    
-    nome = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'form-control'}),
-        label="Nome"
-    )
-    
-    cognome = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'form-control'}),
-        label="Cognome"
-    )
-
-    def clean_email(self):
-        """Validazione email formato istituzionale."""
-        import re
-        email = self.cleaned_data['email']
-        domain = getattr(settings, 'SCHOOL_EMAIL_DOMAIN', 'isufol.it')
-        
-        try:
-            local_part, domain_part = email.split('@')
-        except ValueError:
-            raise ValidationError("Email non valida.")
-        
-        if domain_part.lower() != domain.lower():
-            raise ValidationError(
-                f"Sono accettate solo email del dominio @{domain}."
+        @csrf_protect
+        class BookingForm(forms.Form):
+            """Form principale per prenotazioni."""
+            RISORSA_CHOICES = []  # Popolato dinamicamente
+            risorsa = forms.ModelChoiceField(
+                queryset=Resource.objects.none(),
+                empty_label="Seleziona una risorsa",
+                widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_risorsa'})
             )
-        
-        # Validazione formato: iniziale.cognome[optional_number]
-        local_regex = r"^[A-Za-z]\.[A-Za-zÀ-ÖØ-öø-ÿ']+[0-9]*$"
-        if not re.match(local_regex, local_part):
-            raise ValidationError(
-                "Formato email non valido. Esempi: g.rossi@isufol.it o g.rossi1@isufol.it"
+            data = forms.DateField(
+                widget=forms.DateInput(attrs={
+                    'class': 'form-control',
+                    'type': 'date',
+                    'min': timezone.now().date().isoformat()
+                })
             )
-        
-        return email
+            ora_inizio = forms.TimeField(
+                widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
+            )
+            ora_fine = forms.TimeField(
+                widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
+            )
+            quantita = forms.IntegerField(
+                min_value=1,
+                widget=forms.NumberInput(attrs={'class': 'form-control', 'min': '1'})
+            )
+            scopo = forms.CharField(
+                max_length=200,
+                required=False,
+                widget=forms.TextInput(attrs={'class': 'form-control'})
+            )
+            note = forms.CharField(
+                required=False,
+                widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3})
+            )
+            priorita = forms.ChoiceField(
+                choices=Booking.PRIORITA,
+                widget=forms.Select(attrs={'class': 'form-select'}),
+                initial='normale'
+            )
+            setup_needed = forms.BooleanField(
+                required=False,
+                widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+                help_text="Richiede assistenza tecnica per il setup"
+            )
+            cleanup_needed = forms.BooleanField(
+                required=False,
+                widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+                help_text="Richiede assistenza per il riordino"
+            )
 
+            def __init__(self, *args, **kwargs):
+                self.user = kwargs.pop('user', None)
+                self.prenotazione_id = kwargs.pop('prenotazione_id', None)
+                super().__init__(*args, **kwargs)
+                # Filtra risorse disponibili
+                self.fields['risorsa'].queryset = Resource.objects.filter(
+                    attivo=True, manutenzione=False, bloccato=False
+                ).order_by('tipo', 'nome')
 
-# =====================================================
-# GESTIONE SESSIONI E VERIFICHE
-# =====================================================
-
-class UserSessionForm(forms.ModelForm):
-    """Form per gestione sessioni utente."""
-
-    class Meta:
-        model = UserSession
-        fields = ['tipo_sessione', 'metadati_sessione', 'email_destinazione_sessione']
-        widgets = {
-            'tipo_sessione': forms.Select(attrs={'class': 'form-select'}),
-            'metadati_sessione': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'email_destinazione_sessione': forms.EmailInput(attrs={'class': 'form-control'}),
-        }
+            def clean(self):
+                """Validazione completa del form."""
+                cleaned_data = super().clean()
+                risorsa = cleaned_data.get('risorsa')
+                data = cleaned_data.get('data')
+                ora_inizio = cleaned_data.get('ora_inizio')
+                ora_fine = cleaned_data.get('ora_fine')
+                quantita = cleaned_data.get('quantita')
+                if not all([risorsa, data, ora_inizio, ora_fine, quantita]):
+                    return cleaned_data
+                # Validazione orari
+                if ora_inizio >= ora_fine:
+                    raise ValidationError("L'orario di fine deve essere successivo a quello di inizio.")
+                # Validazione orari consentiti (configurabili)
+                configuration_start = getattr(settings, 'BOOKING_START_HOUR', '08:00')
+                configuration_end = getattr(settings, 'BOOKING_END_HOUR', '18:00')
+                ora_inizio_str = ora_inizio.strftime('%H:%M')
+                ora_fine_str = ora_fine.strftime('%H:%M')
+                if ora_inizio_str < configuration_start or ora_fine_str > configuration_end:
+                    raise ValidationError(
+                        f"Le prenotazioni sono consentite solo tra le {configuration_start} e le {configuration_end}."
+                    )
+                # Validazione durata
+                try:
+                    inizio_dt = timezone.datetime.combine(data, ora_inizio)
+                    fine_dt = timezone.datetime.combine(data, ora_fine)
+                    inizio_dt = timezone.make_aware(inizio_dt)
+                    fine_dt = timezone.make_aware(fine_dt)
+                    durata_minuti = int((fine_dt - inizio_dt).total_seconds() // 60)
+                    durata_min_config = getattr(settings, 'DURATA_MINIMA_PRENOTAZIONE_MINUTI', 30)
+                    durata_max_config = getattr(settings, 'DURATA_MASSIMA_PRENOTAZIONE_MINUTI', 180)
+                    if durata_minuti < durata_min_config:
+                        raise ValidationError(f"La durata minima è di {durata_min_config} minuti.")
+                    if durata_minuti > durata_max_config:
+                        raise ValidationError(f"La durata massima è di {durata_max_config} minuti.")
+                    # Validazione anticipo
+                    giorni_anticipo = getattr(settings, 'GIORNI_ANTICIPO_PRENOTAZIONE', 2)
+                    if (data - timezone.now().date()).days < giorni_anticipo:
+                        raise ValidationError(f"La prenotazione deve essere fatta almeno {giorni_anticipo} giorni prima.")
+                    # Validazione disponibilità
+                    from .services import BookingService
+                    is_available, disponibile, errors = BookingService.check_resource_availability(
+                        risorsa.id, inizio_dt, fine_dt, quantita, exclude_booking_id=self.prenotazione_id
+                    )
+                    if not is_available:
+                        raise ValidationError(errors[0] if errors else "Risorsa non disponibile.")
+                    # Salva datetime per uso successivo
+                    cleaned_data['inizio'] = inizio_dt
+                    cleaned_data['fine'] = fine_dt
+                except ValueError as e:
+                    raise ValidationError(f"Errore nei dati temporali: {e}")
+                return cleaned_data
 
 
 class PinVerificationForm(forms.Form):

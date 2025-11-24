@@ -274,6 +274,19 @@ class ProfiloUtente(models.Model):
         verbose_name='Cognome Utente',
         help_text='Cognome'
     )
+    ruolo_utente = models.CharField(
+        max_length=30,
+        choices=[
+            ('admin', 'Amministratore'),
+            ('docente', 'Docente'),
+            ('studente', 'Studente'),
+            ('assistente', 'Assistente'),
+            ('altro', 'Altro'),
+        ],
+        default='studente',
+        verbose_name='Ruolo Utente',
+        help_text='Ruolo principale dell’utente nel sistema'
+    )
     sesso_utente = models.CharField(
         max_length=10,
         choices=SCELTE_SESSO,
@@ -633,6 +646,15 @@ class Dispositivo(models.Model):
         ]
     )
     attivo = models.BooleanField(default=True)
+    cancellato_il = models.DateTimeField(null=True, blank=True, help_text='Soft-delete: data di cancellazione')
+    def clean(self):
+        """Validazione coerenza dati dispositivo."""
+        if self.codice_inventario and len(self.codice_inventario) < 3:
+            from django.core.exceptions import ValidationError
+            raise ValidationError({'codice_inventario': 'Il codice inventario deve essere di almeno 3 caratteri.'})
+        if self.data_scadenza_garanzia and self.data_acquisto and self.data_scadenza_garanzia < self.data_acquisto:
+            from django.core.exceptions import ValidationError
+            raise ValidationError({'data_scadenza_garanzia': 'La data di scadenza garanzia non può essere precedente alla data di acquisto.'})
 
     # Localizzazione
     edificio = models.CharField(max_length=50, blank=True)
@@ -760,6 +782,34 @@ class Risorsa(models.Model):
     attivo = models.BooleanField(default=True)
     manutenzione = models.BooleanField(default=False)
     bloccato = models.BooleanField(default=False)
+    cancellato_il = models.DateTimeField(null=True, blank=True, help_text='Soft-delete: data di cancellazione')
+    def clean(self):
+        """Validazione coerenza dispositivi associati."""
+        if self.is_carrello() or self.is_laboratorio():
+            if self.dispositivi.count() == 0:
+                from django.core.exceptions import ValidationError
+                raise ValidationError({'dispositivi': 'Devi associare almeno un dispositivo a questa risorsa.'})
+        if self.capacita_massima is not None and self.capacita_massima < 1:
+            from django.core.exceptions import ValidationError
+            raise ValidationError({'capacita_massima': 'La capacità massima deve essere almeno 1.'})
+    def delete(self, using=None, keep_parents=False):
+        """Soft-delete: marca la risorsa come cancellata."""
+        from django.utils import timezone
+        self.cancellato_il = timezone.now()
+        self.attivo = False
+        self.save()
+    def hard_delete(self, using=None, keep_parents=False):
+        """Elimina fisicamente la risorsa dal database."""
+        super().delete(using=using, keep_parents=keep_parents)
+    def delete(self, using=None, keep_parents=False):
+        """Soft-delete: marca il dispositivo come cancellato."""
+        from django.utils import timezone
+        self.cancellato_il = timezone.now()
+        self.attivo = False
+        self.save()
+    def hard_delete(self, using=None, keep_parents=False):
+        """Elimina fisicamente il dispositivo dal database."""
+        super().delete(using=using, keep_parents=keep_parents)
 
     # Preferenze prenotazione
     prenotazione_anticipo_minimo = models.PositiveIntegerField(default=1)
@@ -1268,7 +1318,8 @@ def create_user_profile_signal(sender, instance, created, **kwargs):
             ProfiloUtente.objects.create(
                 utente=instance,
                 nome_utente=getattr(instance, 'first_name', '') or '',
-                cognome_utente=getattr(instance, 'last_name', '') or ''
+                cognome_utente=getattr(instance, 'last_name', '') or '',
+                ruolo_utente='admin' if getattr(instance, 'is_staff', False) else 'studente'
             )
         except (ProgrammingError, OperationalError) as e:
             logger = logging.getLogger('prenotazioni')

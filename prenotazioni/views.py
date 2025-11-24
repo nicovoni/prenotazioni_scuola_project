@@ -5,99 +5,131 @@ def setup_amministratore(request):
     from django.contrib.auth import get_user_model
     from django.contrib import messages
     from django.shortcuts import render, redirect
-    from .models import Risorsa, InformazioniScuola
+    from .models import Risorsa, InformazioniScuola, Dispositivo
+    from .forms import AdminUserForm, SchoolInfoForm, DeviceWizardForm, RisorseConfigurazioneForm
+    from django.urls import reverse
     User = get_user_model()
-    # Mostra il wizard se NON esiste alcun utente admin
-    if not User.objects.filter(is_superuser=True).exists():
-        # If a logged-in user exists and was promoted to staff as the first user,
-        # skip the user-creation step and prefill admin email.
-        step = request.GET.get('step', None)
 
-        # Decide default step: if logged-in staff (but not superuser) -> start at school step
+    # Step logic
+    if User.objects.filter(is_superuser=True).exists():
+        return redirect('home')
+
+    # Step management
+    step = request.GET.get('step')
+    session = request.session
+    wizard_steps = ['1', 'school', 'device', 'resources', 'done']
+    # Default step
+    if not step:
         if request.user.is_authenticated and request.user.is_staff and not request.user.is_superuser:
-            default_step = 'school'
-            skip_user_creation = True
+            step = 'school'
+            session['skip_user_creation'] = True
         else:
-            default_step = 1
-            skip_user_creation = False
+            step = '1'
+            session['skip_user_creation'] = False
 
-        # Normalize numeric steps to integers so templates comparing with integer work
-        if step in ('1', '2', '3'):
-            step = int(step)
+    skip_user_creation = session.get('skip_user_creation', False)
+    context = {'step': step, 'skip_user_creation': skip_user_creation}
 
-        step = step or default_step
-
-        # Prepare forms expected by the template
-        from .forms import AdminUserForm, SchoolInfoForm
+    # Step 1: Crea admin
+    if step == '1':
         form_admin = AdminUserForm()
-        school_instance = InformazioniScuola.objects.filter(id=1).first()
-        form_school = SchoolInfoForm(instance=school_instance)
-
-        context = {
-            'step': step,
-            'skip_user_creation': skip_user_creation,
-            'form_admin': form_admin,
-            'form_school': form_school
-        }
-
-        # If skipping creation, provide admin email in context
+        context['form_admin'] = form_admin
+        if request.method == 'POST' and not skip_user_creation:
+            form_admin = AdminUserForm(request.POST)
+            context['form_admin'] = form_admin
+            if form_admin.is_valid():
+                email = form_admin.cleaned_data['email']
+                username = email.split('@')[0]
+                password = User.objects.make_random_password()
+                if User.objects.filter(email=email).exists():
+                    messages.error(request, 'Email già esistente.')
+                else:
+                    user = User.objects.create_user(username=username, email=email, password=password, is_staff=True)
+                    # Qui potresti inviare una mail con la password generata
+                    session['admin_email'] = email
+                    messages.success(request, f'Utente amministratore creato! Email: {email}.')
+                    return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=school")
+            else:
+                messages.error(request, 'Correggi gli errori nel form.')
         if skip_user_creation:
             context['admin_email'] = request.user.email
 
+    # Step 2: Info scuola
+    elif step == 'school':
+        school_instance = InformazioniScuola.objects.filter(id=1).first()
+        form_school = SchoolInfoForm(instance=school_instance)
+        context['form_school'] = form_school
+        if skip_user_creation:
+            context['admin_email'] = request.user.email
+        else:
+            context['admin_email'] = session.get('admin_email')
         if request.method == 'POST':
-            # Step 1: Crea admin (only when not skipping user creation)
-            if 'step1' in request.POST and not skip_user_creation:
-                username = request.POST.get('username')
-                email = request.POST.get('email')
-                password = request.POST.get('password')
-                if username and email and password:
-                    if User.objects.filter(username=username).exists():
-                        messages.error(request, 'Username già esistente.')
-                    elif User.objects.filter(email=email).exists():
-                        messages.error(request, 'Email già esistente.')
-                    else:
-                        # create as staff (we'll promote to superuser after setup completion)
-                        user = User.objects.create_user(username=username, email=email, password=password, is_staff=True)
-                        messages.success(request, 'Utente amministratore creato! Ora puoi configurare la scuola.')
-                        from django.urls import reverse
-                        return redirect(reverse('prenotazioni:setup_amministratore') + '?step=school')
+            form_school = SchoolInfoForm(request.POST, instance=school_instance)
+            context['form_school'] = form_school
+            if form_school.is_valid():
+                form_school.save()
+                messages.success(request, 'Informazioni scuola salvate!')
+                # Promuovi utente a superuser se necessario
+                if skip_user_creation and request.user.is_authenticated:
+                    try:
+                        request.user.is_superuser = True
+                        request.user.is_staff = True
+                        request.user.save()
+                        messages.success(request, 'Il tuo account è stato promosso ad amministratore.')
+                    except Exception:
+                        messages.error(request, 'Impossibile promuovere l\'utente a superuser automaticamente.')
+                return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=device")
+            else:
+                messages.error(request, 'Correggi gli errori nel form.')
+
+    # Step 3: Catalogo dispositivi
+    elif step == 'device':
+        form_device = DeviceWizardForm()
+        dispositivi_esistenti = Dispositivo.objects.all().order_by('marca', 'nome')
+        context['form_device'] = form_device
+        context['dispositivi_esistenti'] = dispositivi_esistenti
+        if request.method == 'POST':
+            if 'add_device' in request.POST:
+                form_device = DeviceWizardForm(request.POST)
+                context['form_device'] = form_device
+                if form_device.is_valid():
+                    form_device.save()
+                    messages.success(request, 'Dispositivo aggiunto!')
+                    return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=device")
                 else:
-                    messages.error(request, 'Compila tutti i campi.')
-                context['step'] = '1'
-            # Step school: salva info scuola
-            elif 'step_school' in request.POST:
-                # Bind the SchoolInfoForm and validate only the full school name
-                school_instance = InformazioniScuola.objects.filter(id=1).first()
-                from .forms import SchoolInfoForm
-                bound_form = SchoolInfoForm(request.POST, instance=school_instance)
-
-                # We require only the full school name for setup
-                if bound_form.is_valid():
-                    # Save only the provided field(s)
-                    bound_form.save()
-                    messages.success(request, 'Informazioni scuola salvate!')
-
-                    # If skipping user creation, promote the logged-in staff user to superuser
-                    if skip_user_creation and request.user.is_authenticated:
-                        try:
-                            request.user.is_superuser = True
-                            request.user.is_staff = True
-                            request.user.save()
-                            messages.success(request, 'Il tuo account è stato promosso ad amministratore.')
-                        except Exception:
-                            messages.error(request, 'Impossibile promuovere l\'utente a superuser automaticamente.')
-
-                    from django.urls import reverse
-                    return redirect(reverse('prenotazioni:setup_amministratore') + '?step=device')
+                    messages.error(request, 'Correggi gli errori nel form dispositivo.')
+            elif 'step_device_continue' in request.POST:
+                if Dispositivo.objects.exists():
+                    return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=resources")
                 else:
-                    messages.error(request, 'Compila il nome completo della scuola (obbligatorio).')
-                    # Reattach the bound form with errors to the context so template shows validation
-                    context['form_school'] = bound_form
-                    context['step'] = 'school'
-            # Step device e risorse: puoi aggiungere qui la logica per dispositivi e risorse
-        return render(request, 'prenotazioni/configurazione_sistema.html', context)
-    # Se esiste almeno un admin, redirect alla home
-    return redirect('home')
+                    messages.error(request, 'Devi catalogare almeno un dispositivo per continuare.')
+
+    # Step 4: Configura risorse
+    elif step == 'resources':
+        num_risorse = session.get('num_risorse', 3)
+        dispositivi_disponibili = Dispositivo.objects.all()
+        form_risorse = RisorseConfigurazioneForm(num_risorse=num_risorse, dispositivi_disponibili=dispositivi_disponibili)
+        context['form_risorse'] = form_risorse
+        context['num_risorse'] = range(1, num_risorse + 1)
+        if request.method == 'POST':
+            form_risorse = RisorseConfigurazioneForm(request.POST, num_risorse=num_risorse, dispositivi_disponibili=dispositivi_disponibili)
+            context['form_risorse'] = form_risorse
+            if form_risorse.is_valid():
+                # Salva risorse (implementazione dettagliata da aggiungere)
+                messages.success(request, 'Risorse configurate!')
+                return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=done")
+            else:
+                messages.error(request, 'Correggi gli errori nel form risorse.')
+
+    # Step 5: Fine
+    elif step == 'done':
+        context['wizard_completed'] = True
+
+    # Barra avanzamento e step attivo
+    context['wizard_steps'] = wizard_steps
+    context['current_step'] = step
+
+    return render(request, 'prenotazioni/configurazione_sistema.html', context)
 """
 Views Django per la nuova architettura del sistema di prenotazioni.
 
@@ -106,6 +138,11 @@ Aggiornate per supportare la nuova struttura database e servizi migliorati.
 
 from django.views.generic.edit import View
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_protect
+from ratelimit.decorators import ratelimit
+from django.utils.decorators import method_decorator
+from django.contrib.auth.mixins import UserPassesTestMixin, LoginRequiredMixin
+import logging
 from django.contrib import messages
 from django.shortcuts import redirect, render, get_object_or_404
 from django.utils import timezone
@@ -141,6 +178,7 @@ from .serializers import (
 
 class HomeView(LoginRequiredMixin, View):
     """Homepage del sistema con dashboard personalizzato."""
+    @method_decorator(ratelimit(key='user_or_ip', rate='20/m', block=True))
     def get(self, request):
         """Mostra dashboard personalizzato per ruolo."""
         user = request.user
@@ -200,6 +238,7 @@ class HomeView(LoginRequiredMixin, View):
 
 
 @login_required
+@ratelimit(key='ip', rate='10/m', block=True)
 def health_check(request):
     """Endpoint health check per monitoring."""
     try:
@@ -235,6 +274,7 @@ class ConfigurazioneSistemaView(LoginRequiredMixin, UserPassesTestMixin, View):
         # Consenti accesso se utente è admin oppure se non esistono admin
         return self.request.user.is_staff or not User.objects.filter(is_superuser=True).exists()
     
+    @method_decorator(ratelimit(key='user_or_ip', rate='10/m', block=True))
     def get(self, request):
         """Mostra stato configurazione sistema."""
         # Controlla se sistema già configurato
@@ -254,6 +294,8 @@ class ConfigurazioneSistemaView(LoginRequiredMixin, UserPassesTestMixin, View):
         }
         return render(request, 'admin/configurazioni.html', context)
 
+    @method_decorator(csrf_protect)
+    @method_decorator(ratelimit(key='user_or_ip', rate='5/m', block=True))
     def post(self, request):
         """Gestisce creazione/modifica configurazioni."""
         action = request.POST.get('action')
@@ -333,6 +375,7 @@ class AdminOperazioniView(LoginRequiredMixin, UserPassesTestMixin, View):
     def test_func(self):
         return self.request.user.is_staff
     
+    @method_decorator(ratelimit(key='user_or_ip', rate='10/m', block=True))
     def get(self, request):
         """Mostra dashboard operazioni admin."""
         stats = SystemService.get_system_stats()
@@ -360,6 +403,8 @@ class AdminOperazioniView(LoginRequiredMixin, UserPassesTestMixin, View):
         
         return render(request, 'admin/operazioni.html', context)
     
+    @method_decorator(csrf_protect)
+    @method_decorator(ratelimit(key='user_or_ip', rate='5/m', block=True))
     def post(self, request):
         """Gestisce azioni amministrative."""
         action = request.POST.get('action')
@@ -387,6 +432,7 @@ class AdminOperazioniView(LoginRequiredMixin, UserPassesTestMixin, View):
 class UserProfileView(LoginRequiredMixin, View):
     """Gestione profilo utente."""
     
+    @method_decorator(ratelimit(key='user_or_ip', rate='10/m', block=True))
     def get(self, request):
         """Mostra profilo utente."""
         user = request.user
@@ -400,6 +446,8 @@ class UserProfileView(LoginRequiredMixin, View):
         
         return render(request, 'users/profile.html', context)
     
+    @method_decorator(csrf_protect)
+    @method_decorator(ratelimit(key='user_or_ip', rate='5/m', block=True))
     def post(self, request):
         """Aggiorna profilo utente."""
         user = request.user
@@ -418,11 +466,14 @@ class UserProfileView(LoginRequiredMixin, View):
 class EmailLoginView(View):
     """Login tramite email con PIN."""
     
+    @method_decorator(ratelimit(key='ip', rate='10/m', block=True))
     def get(self, request):
         """Mostra form login email."""
         form = EmailLoginForm()
         return render(request, 'registration/email_login.html', {'form': form})
     
+    @method_decorator(csrf_protect)
+    @method_decorator(ratelimit(key='ip', rate='5/m', block=True))
     def post(self, request):
         """Processa richiesta PIN."""
         form = EmailLoginForm(request.POST)
@@ -466,6 +517,7 @@ class EmailLoginView(View):
 class PinVerificationView(View):
     """Verifica PIN per login."""
     
+    @method_decorator(ratelimit(key='ip', rate='10/m', block=True))
     def get(self, request):
         """Mostra form verifica PIN."""
         if 'login_session_token' not in request.session:
@@ -475,6 +527,8 @@ class PinVerificationView(View):
         form = PinVerificationForm()
         return render(request, 'registration/verify_pin.html', {'form': form})
     
+    @method_decorator(csrf_protect)
+    @method_decorator(ratelimit(key='ip', rate='5/m', block=True))
     def post(self, request):
         """Verifica PIN."""
         form = PinVerificationForm(request.POST)
@@ -513,6 +567,7 @@ class PinVerificationView(View):
 class PrenotaResourceView(LoginRequiredMixin, View):
     """Creazione nuova prenotazione."""
     
+    @method_decorator(ratelimit(key='user', rate='10/m', block=True))
     def get(self, request):
         """Mostra form prenotazione."""
         form = BookingForm(user=request.user)
@@ -526,6 +581,8 @@ class PrenotaResourceView(LoginRequiredMixin, View):
 
         return render(request, 'prenotazioni/prenota.html', context)
 
+    @method_decorator(csrf_protect)
+    @method_decorator(ratelimit(key='user', rate='5/m', block=True))
     def post(self, request):
         """Processa creazione prenotazione."""
         form = BookingForm(request.POST, user=request.user)
@@ -566,6 +623,7 @@ class PrenotaResourceView(LoginRequiredMixin, View):
 class ListaPrenotazioniView(LoginRequiredMixin, View):
     """Lista prenotazioni con filtri."""
     
+    @method_decorator(ratelimit(key='user', rate='10/m', block=True))
     def get(self, request):
         """Mostra lista prenotazioni."""
         user = request.user
@@ -631,6 +689,7 @@ class ListaPrenotazioniView(LoginRequiredMixin, View):
 class EditPrenotazioneView(LoginRequiredMixin, View):
     """Modifica prenotazione esistente."""
     
+    @method_decorator(ratelimit(key='user', rate='10/m', block=True))
     def get(self, request, pk):
         """Mostra form modifica."""
         prenotazione = get_object_or_404(Prenotazione, pk=pk)
@@ -666,6 +725,8 @@ class EditPrenotazioneView(LoginRequiredMixin, View):
 
         return render(request, 'prenotazioni/prenota.html', context)
 
+    @method_decorator(csrf_protect)
+    @method_decorator(ratelimit(key='user', rate='5/m', block=True))
     def post(self, request, pk):
         """Processa modifica prenotazione."""
         prenotazione = get_object_or_404(Prenotazione, pk=pk)
@@ -714,6 +775,7 @@ class EditPrenotazioneView(LoginRequiredMixin, View):
 class DeletePrenotazioneView(LoginRequiredMixin, View):
     """Elimina prenotazione."""
 
+    @method_decorator(ratelimit(key='user', rate='10/m', block=True))
     def get(self, request, pk):
         """Mostra conferma eliminazione."""
         prenotazione = get_object_or_404(Prenotazione, pk=pk)
@@ -732,6 +794,8 @@ class DeletePrenotazioneView(LoginRequiredMixin, View):
 
         return render(request, 'prenotazioni/delete_confirm.html', context)
 
+    @method_decorator(csrf_protect)
+    @method_decorator(ratelimit(key='user', rate='5/m', block=True))
     def post(self, request, pk):
         """Processa eliminazione."""
         prenotazione = get_object_or_404(Prenotazione, pk=pk)
@@ -768,6 +832,7 @@ class DeletePrenotazioneView(LoginRequiredMixin, View):
 class ResourceListView(LoginRequiredMixin, View):
     """Lista risorse disponibili."""
     
+    @method_decorator(ratelimit(key='user', rate='10/m', block=True))
     def get(self, request):
         """Mostra lista risorse con filtri."""
         resource_type = request.GET.get('type', '')
@@ -805,6 +870,7 @@ class ResourceListView(LoginRequiredMixin, View):
 class DeviceListView(LoginRequiredMixin, View):
     """Lista dispositivi disponibili."""
     
+    @method_decorator(ratelimit(key='user', rate='10/m', block=True))
     def get(self, request):
         """Mostra lista dispositivi con filtri."""
         device_type = request.GET.get('type', '')
@@ -857,11 +923,18 @@ class SmallResultsSetPagination(PageNumberPagination):
     page_size_query_param = 'page_size'
     max_page_size = 20
 
+from rest_framework.permissions import BasePermission
+
+# Permesso custom: solo admin o owner
+class IsAdminOrOwner(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return request.user.is_staff or obj.utente == request.user
+
 class BookingViewSet(viewsets.ModelViewSet):
     """API REST per prenotazioni ottimizzata."""
     queryset = Prenotazione.objects.all().select_related('utente', 'risorsa').only('id', 'utente', 'risorsa', 'inizio', 'fine', 'stato')
     serializer_class = BookingSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminOrOwner]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['utente', 'risorsa', 'stato']
     search_fields = ['scopo']
@@ -880,6 +953,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         serializer.save(utente=self.request.user)
 
     @action(detail=True, methods=['post'])
+    @ratelimit(key='user', rate='5/m', block=True)
     def cancel(self, request, pk=None):
         """Cancella prenotazione."""
         booking = self.get_object()
@@ -899,6 +973,7 @@ class BookingViewSet(viewsets.ModelViewSet):
             return Response({'error': message}, status=400)
 
     @action(detail=True, methods=['post'])
+    @ratelimit(key='user', rate='5/m', block=True)
     def approve(self, request, pk=None):
         """Approva prenotazione (solo admin)."""
         if not request.user.is_staff:
@@ -939,6 +1014,7 @@ class SystemStatsView(generics.GenericAPIView):
     """API per statistiche sistema."""
     permission_classes = [IsAuthenticated]
     
+    @ratelimit(key='user', rate='5/m', block=True)
     def get(self, request):
         """Restituisce statistiche sistema."""
         if not request.user.is_staff:
