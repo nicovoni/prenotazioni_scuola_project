@@ -1,4 +1,2 @@
 
-
-# File rimosso: gestione email solo SMTP, non serve più API HTTP Brevo.
-		raise
+# File rimosso definitivamente: gestione email solo SMTP, non serve più API HTTP Brevo.

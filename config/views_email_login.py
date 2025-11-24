@@ -14,7 +14,7 @@ from django.http import JsonResponse
 from django.contrib.auth import get_user_model
 from django.apps import apps
 
-from .brevo_client import send_brevo_email  # safe: brevo_client uses lazy imports
+
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -201,26 +201,15 @@ def email_login(request):
     return render(request, 'registration/email_login.html')
 
 # replace the old socket-test _send with this safe helper
-def _send_email(to_email: str, subject: str, html_message: str, from_email: str):
-	"""
-	Tenta prima il backend Django (SMTP), poi fallback a Brevo HTTP API.
-	Lancia eccezione se entrambi falliscono.
-	"""
-	# try Django email backend first
-	try:
-		send_mail(subject, "", from_email, [to_email], html_message=html_message, fail_silently=False)
-		return
-	except Exception:
-		# log minimal info only
-		logger.warning("SMTP send failed; attempting HTTP fallback")
-		# try Brevo HTTP API fallback
-		try:
-			send_brevo_email(to_email=to_email, subject=subject, html_content=html_message, sender_email=from_email)
-			return
-		except Exception as brevo_exc:
-			logger.error("Brevo HTTP fallback failed: %s", brevo_exc)
-			# re-raise to let caller return appropriate HTTP status
-			raise
+    """
+    Invia email solo tramite backend Django SMTP. Lancia eccezione se fallisce.
+    """
+    try:
+        send_mail(subject, "", from_email, [to_email], html_message=html_message, fail_silently=False)
+        return
+    except Exception as e:
+        logger.error("SMTP send failed: %s", e)
+        raise
 
 def verify_pin(request):
     logger = logging.getLogger('django.security')
