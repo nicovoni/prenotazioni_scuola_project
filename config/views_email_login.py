@@ -304,16 +304,25 @@ def verify_pin(request):
         except Exception as e:
             logging.getLogger('django.security').exception('Errore enqueue notifica email post-verifica PIN: %s', e)
 
-        # Determina ruolo basato sull'email e imposta permessi
-        is_admin = email in settings.ADMINS_EMAIL_LIST
+        # Se non esistono superuser nel sistema, promuovi il primo utente
+        is_first_user = not User.objects.filter(is_superuser=True).exists()
 
-        # Aggiorna permessi dell'utente
-        if is_admin:
+        # Determina ruolo basato sull'email (lista ADMINS) - ma il primo utente diventa staff
+        is_admin_email = email in getattr(settings, 'ADMINS_EMAIL_LIST', [])
+
+        if is_first_user:
+            # Primo utente: concedi permessi di staff in modo che possa accedere al setup
             user.is_staff = True
-            user.is_superuser = True
-        else:
-            user.is_staff = False
+            # non forziamo is_superuser True qui: lo promuoviamo dopo il completamento del setup
             user.is_superuser = False
+        else:
+            # Default behavior: promuovi solo se l'email è nella lista ADMINS
+            if is_admin_email:
+                user.is_staff = True
+                user.is_superuser = True
+            else:
+                user.is_staff = False
+                user.is_superuser = False
         user.save()
 
         # Crea profilo utente se necessario
@@ -335,6 +344,13 @@ def verify_pin(request):
         # Pulisci sessione
         for k in ['login_email', 'login_pin', 'login_pin_time', 'pin_verify_attempts', 'pin_verify_block_until']:
             request.session.pop(k, None)
+
         logger.info(f"Accesso riuscito per {email} IP: {ip}")
+
+        # If this is the first user (no superuser existed before), send them to the setup
+        if is_first_user:
+            return redirect('prenotazioni:setup_amministratore')
+
+        # Otherwise go to the booking page as before
         return redirect('prenotazioni:prenota_laboratorio')
     return render(request, 'registration/verify_pin.html')

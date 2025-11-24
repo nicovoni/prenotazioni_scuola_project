@@ -7,15 +7,30 @@ def setup_amministratore(request):
     from django.shortcuts import render, redirect
     from .models import Risorsa, InformazioniScuola
     User = get_user_model()
-
     # Mostra il wizard se NON esiste alcun utente admin
     if not User.objects.filter(is_superuser=True).exists():
-        step = request.GET.get('step', '1')
-        context = {'step': step}
+        # If a logged-in user exists and was promoted to staff as the first user,
+        # skip the user-creation step and prefill admin email.
+        step = request.GET.get('step', None)
+
+        # Decide default step: if logged-in staff (but not superuser) -> start at school step
+        if request.user.is_authenticated and request.user.is_staff and not request.user.is_superuser:
+            default_step = 'school'
+            skip_user_creation = True
+        else:
+            default_step = '1'
+            skip_user_creation = False
+
+        step = step or default_step
+        context = {'step': step, 'skip_user_creation': skip_user_creation}
+
+        # If skipping creation, provide admin email in context
+        if skip_user_creation:
+            context['admin_email'] = request.user.email
 
         if request.method == 'POST':
-            # Step 1: Crea admin
-            if 'step1' in request.POST:
+            # Step 1: Crea admin (only when not skipping user creation)
+            if 'step1' in request.POST and not skip_user_creation:
                 username = request.POST.get('username')
                 email = request.POST.get('email')
                 password = request.POST.get('password')
@@ -25,7 +40,8 @@ def setup_amministratore(request):
                     elif User.objects.filter(email=email).exists():
                         messages.error(request, 'Email già esistente.')
                     else:
-                        user = User.objects.create_user(username=username, email=email, password=password, is_staff=True, is_superuser=True)
+                        # create as staff (we'll promote to superuser after setup completion)
+                        user = User.objects.create_user(username=username, email=email, password=password, is_staff=True)
                         messages.success(request, 'Utente amministratore creato! Ora puoi configurare la scuola.')
                         return redirect('/setup/?step=school')
                 else:
@@ -45,6 +61,17 @@ def setup_amministratore(request):
                         'indirizzo_scuola': indirizzo
                     })
                     messages.success(request, 'Informazioni scuola salvate!')
+
+                    # If skipping user creation, promote the logged-in staff user to superuser
+                    if skip_user_creation and request.user.is_authenticated:
+                        try:
+                            request.user.is_superuser = True
+                            request.user.is_staff = True
+                            request.user.save()
+                            messages.success(request, 'Il tuo account è stato promosso ad amministratore.')
+                        except Exception:
+                            messages.error(request, 'Impossibile promuovere l\'utente a superuser automaticamente.')
+
                     return redirect('/setup/?step=device')
                 else:
                     messages.error(request, 'Compila i campi obbligatori.')

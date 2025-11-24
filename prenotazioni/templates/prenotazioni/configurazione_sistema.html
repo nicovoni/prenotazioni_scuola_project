@@ -26,11 +26,20 @@
     {% endif %}
 
     <div class="content-card">
+        {% if skip_user_creation %}
+            <div class="alert alert-info">
+                <h6>Account amministratore preconfigurato</h6>
+                <p>Hai effettuato l'accesso con il primo utente. L'email amministratore predefinita è:
+                    <strong>{{ admin_email }}</strong>.
+                </p>
+                <p>Dopo aver completato le informazioni sulla scuola, il tuo account verrà promosso ad amministratore.</p>
+            </div>
+        {% endif %}
         {% if step == 1 %}
             <!-- Passo 1: Designazione Admin -->
             <h3>👑 Passo 1: Designazione Amministratore</h3>
             <p>Inserisci l'indirizzo email dell'amministratore per ricevere le credenziali di accesso.</p>
-
+            {% if not skip_user_creation %}
             <form method="post">
                 {% csrf_token %}
                 <div class="row justify-content-center">
@@ -53,6 +62,11 @@
                     <button type="submit" name="step1" class="btn btn-primary btn-lg">Invia Credenziali Amministratore →</button>
                 </div>
             </form>
+            {% else %}
+                <div class="text-center mt-3">
+                    <a href="?step=school" class="btn btn-primary">Continua alla configurazione della scuola →</a>
+                </div>
+            {% endif %}
 
         {% elif step == "school" %}
             <!-- Passo 1.5: Informazioni scuola -->
@@ -63,6 +77,14 @@
 
                     <form method="post">
                         {% csrf_token %}
+
+                        {% if admin_email %}
+                            <div class="mb-3">
+                                <label class="form-label">Email Amministratore</label>
+                                <input type="email" class="form-control" value="{{ admin_email }}" readonly>
+                                <div class="form-text">L'email dell'amministratore è stata preimpostata dal primo accesso.</div>
+                            </div>
+                        {% endif %}
 
                         <!-- Campo obbligatorio: Nome scuola -->
                         <div class="form-group mb-4">
