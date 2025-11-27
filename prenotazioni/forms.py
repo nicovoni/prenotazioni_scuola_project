@@ -19,6 +19,7 @@ from .models import (
     Risorsa as Resource,
     StatoPrenotazione as BookingStatus,
     Prenotazione as Booking,
+    ConfigurazioneSistema,
     TemplateNotifica as NotificationTemplate,
     CaricamentoFile as FileUpload,
     LogSistema as SystemLog,
@@ -186,6 +187,36 @@ class EmailLoginForm(forms.Form):
         }),
         label='Email Istituzionale'
     )
+
+
+# Backwards-compatible aliases / additional simple forms expected by views
+class AdminUserForm(forms.Form):
+    """Minimal form used during initial setup to collect admin email."""
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'admin@example.edu.it'}),
+        label='Email Amministratore'
+    )
+
+
+class ConfigurationForm(forms.ModelForm):
+    """ModelForm wrapper for `ConfigurazioneSistema` expected by admin views."""
+    class Meta:
+        model = ConfigurazioneSistema
+        fields = [
+            'chiave_configurazione', 'valore_configurazione', 'tipo_configurazione',
+            'descrizione_configurazione', 'configurazione_modificabile'
+        ]
+        widgets = {
+            'chiave_configurazione': forms.TextInput(attrs={'class': 'form-control'}),
+            'valore_configurazione': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'tipo_configurazione': forms.Select(attrs={'class': 'form-select'}),
+            'descrizione_configurazione': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'configurazione_modificabile': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+        }
+
+
+# Alias expected by older view imports
+SchoolInfoForm = InformazioniScuolaForm
 
 
 # =====================================================
