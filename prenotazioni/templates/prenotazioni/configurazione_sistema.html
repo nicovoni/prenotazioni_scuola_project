@@ -165,10 +165,27 @@
                         <!-- Indirizzo completo (obbligatorio, formato compatibile Google Maps) -->
                         <div class="form-group mb-4">
                             <label for="{{ form_school.indirizzo_scuola.id_for_label }}" class="form-label">{{ form_school.indirizzo_scuola.label }} <span class="text-danger">*</span></label>
+
+                            {# Renderizza il campo principale: widget modificato a TextInput con id 'id_indirizzo_autocomplete' #}
                             {{ form_school.indirizzo_scuola }}
+
+                            {# Campi nascosti per latitudine/longitudine (verranno popolati dall'autocomplete) #}
+                            <input type="hidden" id="id_latitudine_scuola" name="latitudine_scuola" value="{{ form_school.initial.latitudine_scuola|default_if_none:'' }}">
+                            <input type="hidden" id="id_longitudine_scuola" name="longitudine_scuola" value="{{ form_school.initial.longitudine_scuola|default_if_none:'' }}">
+                            <input type="hidden" id="id_place_id_scuola" name="place_id_scuola" value="{{ form_school.initial.place_id_scuola|default_if_none:'' }}">
+
+                            <div class="form-text" id="indirizzo-help">Digita il nome o l'indirizzo della scuola e seleziona il suggerimento corretto. Il campo verrà compilato automaticamente.</div>
+
                             {% if form_school.indirizzo_scuola.errors %}
                                 <div class="text-danger small">
                                     {% for error in form_school.indirizzo_scuola.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+
+                            {% if not GOOGLE_MAPS_API_KEY %}
+                                <div class="alert alert-warning mt-2">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    Autocomplete indirizzo disabilitato: imposta `GOOGLE_MAPS_API_KEY` nelle impostazioni per attivare il suggerimento automatico.
                                 </div>
                             {% endif %}
                         </div>
@@ -183,6 +200,46 @@
                             <small class="text-muted"><span class="text-danger">*</span> Campo obbligatorio</small>
                         </div>
                     </form>
+                    {% if GOOGLE_MAPS_API_KEY %}
+                    <script>
+                        function initAutocomplete() {
+                            const input = document.getElementById('id_indirizzo_autocomplete');
+                            if (!input || !window.google || !google.maps || !google.maps.places) return;
+
+                            const options = {
+                                types: ['establishment'],
+                                componentRestrictions: { country: 'it' }
+                            };
+
+                            const autocomplete = new google.maps.places.Autocomplete(input, options);
+                            autocomplete.setFields(['place_id','formatted_address','geometry','name','types','address_components']);
+
+                            autocomplete.addListener('place_changed', function() {
+                                const place = autocomplete.getPlace();
+                                if (!place) return;
+                                // Fill hidden fields if geometry available
+                                if (place.geometry && place.geometry.location) {
+                                    const lat = place.geometry.location.lat();
+                                    const lng = place.geometry.location.lng();
+                                    document.getElementById('id_latitudine_scuola').value = lat;
+                                    document.getElementById('id_longitudine_scuola').value = lng;
+                                }
+                                document.getElementById('id_place_id_scuola').value = place.place_id || '';
+                                if (place.formatted_address) {
+                                    input.value = place.formatted_address;
+                                }
+                            });
+
+                            // If user edits the field manually, clear lat/long to avoid mismatch
+                            input.addEventListener('input', function() {
+                                document.getElementById('id_latitudine_scuola').value = '';
+                                document.getElementById('id_longitudine_scuola').value = '';
+                                document.getElementById('id_place_id_scuola').value = '';
+                            });
+                        }
+                    </script>
+                    <script async defer src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places&callback=initAutocomplete"></script>
+                    {% endif %}
                 </div>
 
         {% elif step == 'device' %}

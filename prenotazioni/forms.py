@@ -100,7 +100,7 @@ class SchoolInfoForm(forms.ModelForm):
             'email_istituzionale_scuola': forms.EmailInput(attrs={'class': 'form-control'}),
             'telefono_scuola': forms.TextInput(attrs={'class': 'form-control'}),
             'fax_scuola': forms.TextInput(attrs={'class': 'form-control'}),
-            'indirizzo_scuola': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'indirizzo_scuola': forms.TextInput(attrs={'class': 'form-control', 'id': 'id_indirizzo_autocomplete', 'placeholder': 'Cerca la scuola...'}),
             'codice_postale_scuola': forms.TextInput(attrs={'class': 'form-control'}),
             'comune_scuola': forms.TextInput(attrs={'class': 'form-control'}),
             'provincia_scuola': forms.TextInput(attrs={'class': 'form-control'}),
@@ -137,118 +137,16 @@ class SchoolInfoForm(forms.ModelForm):
         return sito
 
     def clean_indirizzo_scuola(self):
-        @csrf_protect
-        class BookingForm(forms.Form):
-            """Form principale per prenotazioni."""
-            RISORSA_CHOICES = []  # Popolato dinamicamente
-            risorsa = forms.ModelChoiceField(
-                queryset=Resource.objects.none(),
-                empty_label="Seleziona una risorsa",
-                widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_risorsa'})
-            )
-            data = forms.DateField(
-                widget=forms.DateInput(attrs={
-                    'class': 'form-control',
-                    'type': 'date',
-                    'min': timezone.now().date().isoformat()
-                })
-            )
-            ora_inizio = forms.TimeField(
-                widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
-            )
-            ora_fine = forms.TimeField(
-                widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
-            )
-            quantita = forms.IntegerField(
-                min_value=1,
-                widget=forms.NumberInput(attrs={'class': 'form-control', 'min': '1'})
-            )
-            scopo = forms.CharField(
-                max_length=200,
-                required=False,
-                widget=forms.TextInput(attrs={'class': 'form-control'})
-            )
-            note = forms.CharField(
-                required=False,
-                widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3})
-            )
-            priorita = forms.ChoiceField(
-                choices=Booking.PRIORITA,
-                widget=forms.Select(attrs={'class': 'form-select'}),
-                initial='normale'
-            )
-            setup_needed = forms.BooleanField(
-                required=False,
-                widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-                help_text="Richiede assistenza tecnica per il setup"
-            )
-            cleanup_needed = forms.BooleanField(
-                required=False,
-                widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-                help_text="Richiede assistenza per il riordino"
-            )
+        """Validazione semplice per l'indirizzo scuola: non può essere vuoto.
 
-            def __init__(self, *args, **kwargs):
-                self.user = kwargs.pop('user', None)
-                self.prenotazione_id = kwargs.pop('prenotazione_id', None)
-                super().__init__(*args, **kwargs)
-                # Filtra risorse disponibili
-                self.fields['risorsa'].queryset = Resource.objects.filter(
-                    attivo=True, manutenzione=False, bloccato=False
-                ).order_by('tipo', 'nome')
-
-            def clean(self):
-                """Validazione completa del form."""
-                cleaned_data = super().clean()
-                risorsa = cleaned_data.get('risorsa')
-                data = cleaned_data.get('data')
-                ora_inizio = cleaned_data.get('ora_inizio')
-                ora_fine = cleaned_data.get('ora_fine')
-                quantita = cleaned_data.get('quantita')
-                if not all([risorsa, data, ora_inizio, ora_fine, quantita]):
-                    return cleaned_data
-                # Validazione orari
-                if ora_inizio >= ora_fine:
-                    raise ValidationError("L'orario di fine deve essere successivo a quello di inizio.")
-                # Validazione orari consentiti (configurabili)
-                configuration_start = getattr(settings, 'BOOKING_START_HOUR', '08:00')
-                configuration_end = getattr(settings, 'BOOKING_END_HOUR', '18:00')
-                ora_inizio_str = ora_inizio.strftime('%H:%M')
-                ora_fine_str = ora_fine.strftime('%H:%M')
-                if ora_inizio_str < configuration_start or ora_fine_str > configuration_end:
-                    raise ValidationError(
-                        f"Le prenotazioni sono consentite solo tra le {configuration_start} e le {configuration_end}."
-                    )
-                # Validazione durata
-                try:
-                    inizio_dt = timezone.datetime.combine(data, ora_inizio)
-                    fine_dt = timezone.datetime.combine(data, ora_fine)
-                    inizio_dt = timezone.make_aware(inizio_dt)
-                    fine_dt = timezone.make_aware(fine_dt)
-                    durata_minuti = int((fine_dt - inizio_dt).total_seconds() // 60)
-                    durata_min_config = getattr(settings, 'DURATA_MINIMA_PRENOTAZIONE_MINUTI', 30)
-                    durata_max_config = getattr(settings, 'DURATA_MASSIMA_PRENOTAZIONE_MINUTI', 180)
-                    if durata_minuti < durata_min_config:
-                        raise ValidationError(f"La durata minima è di {durata_min_config} minuti.")
-                    if durata_minuti > durata_max_config:
-                        raise ValidationError(f"La durata massima è di {durata_max_config} minuti.")
-                    # Validazione anticipo
-                    giorni_anticipo = getattr(settings, 'GIORNI_ANTICIPO_PRENOTAZIONE', 2)
-                    if (data - timezone.now().date()).days < giorni_anticipo:
-                        raise ValidationError(f"La prenotazione deve essere fatta almeno {giorni_anticipo} giorni prima.")
-                    # Validazione disponibilità
-                    from .services import BookingService
-                    is_available, disponibile, errors = BookingService.check_resource_availability(
-                        risorsa.id, inizio_dt, fine_dt, quantita, exclude_booking_id=self.prenotazione_id
-                    )
-                    if not is_available:
-                        raise ValidationError(errors[0] if errors else "Risorsa non disponibile.")
-                    # Salva datetime per uso successivo
-                    cleaned_data['inizio'] = inizio_dt
-                    cleaned_data['fine'] = fine_dt
-                except ValueError as e:
-                    raise ValidationError(f"Errore nei dati temporali: {e}")
-                return cleaned_data
+        Il campo viene compilato dall'autocomplete client-side quando possibile.
+        Lato server accettiamo qualsiasi stringa non vuota per permettere
+        all'utente di proseguire anche se la lat/long non sono state impostate.
+        """
+        indirizzo = self.cleaned_data.get('indirizzo_scuola', '')
+        if not indirizzo or not str(indirizzo).strip():
+            raise ValidationError("Questo campo non può essere nullo.")
+        return str(indirizzo).strip()
 
 
 class PinVerificationForm(forms.Form):

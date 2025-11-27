@@ -28,7 +28,12 @@ def setup_amministratore(request):
             session['skip_user_creation'] = False
 
     skip_user_creation = session.get('skip_user_creation', False)
-    context = {'step': step, 'skip_user_creation': skip_user_creation}
+    from django.conf import settings as _dj_settings
+    context = {
+        'step': step,
+        'skip_user_creation': skip_user_creation,
+        'GOOGLE_MAPS_API_KEY': getattr(_dj_settings, 'GOOGLE_MAPS_API_KEY', '')
+    }
 
     # Step 1: Crea admin
     if step == '1':
