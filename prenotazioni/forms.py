@@ -11,7 +11,18 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_protect
-from .models import InformazioniScuola
+from .models import (
+    InformazioniScuola,
+    CategoriaDispositivo as DeviceCategory,
+    Dispositivo as Device,
+    UbicazioneRisorsa as ResourceLocation,
+    Risorsa as Resource,
+    StatoPrenotazione as BookingStatus,
+    Prenotazione as Booking,
+    TemplateNotifica as NotificationTemplate,
+    CaricamentoFile as FileUpload,
+    LogSistema as SystemLog,
+)
 
 
 class InformazioniScuolaForm(forms.ModelForm):
