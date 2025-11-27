@@ -11,101 +11,21 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_protect
-
-from .models import (
-    Risorsa as Resource, Dispositivo as Device, Prenotazione as Booking, ConfigurazioneSistema,
-    ProfiloUtente, InformazioniScuola, SessioneUtente as UserSession, StatoPrenotazione as BookingStatus,
-    UbicazioneRisorsa as ResourceLocation, CategoriaDispositivo as DeviceCategory, TemplateNotifica as NotificationTemplate, CaricamentoFile as FileUpload
-)
-
-User = get_user_model()
+from .models import InformazioniScuola
 
 
-# =====================================================
-# CONFIGURAZIONE E SETUP
-# =====================================================
-
-class AdminUserForm(forms.Form):
-    """Form semplificato per creazione admin iniziale."""
-    email = forms.EmailField(
-        widget=forms.EmailInput(attrs={'class': 'form-control'}),
-        label='Email Admin'
-    )
-
-    def clean_email(self):
-        email = self.cleaned_data.get('email', '').lower()
-        if User.objects.filter(email=email).exists():
-            raise ValidationError('Email già registrata.')
-        return email
-
-
-class ConfigurationForm(forms.ModelForm):
-    """Form per gestire configurazioni di sistema."""
-
-    class Meta:
-        model = ConfigurazioneSistema
-        fields = ['chiave_configurazione', 'valore_configurazione', 'tipo_configurazione', 'descrizione_configurazione', 'configurazione_modificabile']
-        widgets = {
-            'chiave_configurazione': forms.TextInput(attrs={'class': 'form-control'}),
-            'valore_configurazione': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'tipo_configurazione': forms.Select(attrs={'class': 'form-select'}),
-            'descrizione_configurazione': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-            'configurazione_modificabile': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }
-        labels = {
-            'chiave_configurazione': 'Chiave',
-            'valore_configurazione': 'Valore',
-            'tipo_configurazione': 'Tipo',
-            'descrizione_configurazione': 'Descrizione',
-            'configurazione_modificabile': 'Modificabile',
-        }
-
-    def clean_chiave_configurazione(self):
-        chiave = self.cleaned_data['chiave_configurazione'].upper()
-        # Validazione formato chiave (solo lettere, numeri, underscore)
-        if not chiave.replace('_', '').isalnum():
-            raise ValidationError("La chiave può contenere solo lettere, numeri e underscore.")
-        return chiave
-
-
-class SchoolInfoForm(forms.ModelForm):
-    """Form per informazioni complete della scuola."""
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Only the full school name and address are required during setup
-        if 'nome_completo_scuola' in self.fields:
-            self.fields['nome_completo_scuola'].required = True
-        if 'indirizzo_scuola' in self.fields:
-            self.fields['indirizzo_scuola'].required = True
-        # codice and sito are optional but validated if provided
-        if 'codice_meccanografico_scuola' in self.fields:
-            self.fields['codice_meccanografico_scuola'].required = False
-        if 'sito_web_scuola' in self.fields:
-            self.fields['sito_web_scuola'].required = False
-
+class InformazioniScuolaForm(forms.ModelForm):
     class Meta:
         model = InformazioniScuola
         fields = [
-            'nome_completo_scuola', 'nome_breve_scuola', 'codice_meccanografico_scuola', 'partita_iva_scuola',
-            'sito_web_scuola', 'email_istituzionale_scuola', 'telefono_scuola', 'fax_scuola',
-            'indirizzo_scuola', 'codice_postale_scuola', 'comune_scuola', 'provincia_scuola', 'regione_scuola', 'nazione_scuola',
-            'latitudine_scuola', 'longitudine_scuola'
+            'nome_completo_scuola', 'nome_breve_scuola', 'codice_meccanografico_scuola',
+            'partita_iva_scuola', 'sito_web_scuola', 'email_istituzionale_scuola',
+            'telefono_scuola', 'fax_scuola', 'indirizzo_scuola', 'codice_postale_scuola',
+            'comune_scuola', 'provincia_scuola', 'regione_scuola', 'nazione_scuola',
+            'latitudine_scuola', 'longitudine_scuola', 'scuola_attiva'
         ]
         widgets = {
-            'nome_completo_scuola': forms.TextInput(attrs={'class': 'form-control'}),
-            'nome_breve_scuola': forms.TextInput(attrs={'class': 'form-control'}),
-            'codice_meccanografico_scuola': forms.TextInput(attrs={'class': 'form-control'}),
-            'partita_iva_scuola': forms.TextInput(attrs={'class': 'form-control'}),
-            'sito_web_scuola': forms.URLInput(attrs={'class': 'form-control'}),
-            'email_istituzionale_scuola': forms.EmailInput(attrs={'class': 'form-control'}),
-            'telefono_scuola': forms.TextInput(attrs={'class': 'form-control'}),
-            'fax_scuola': forms.TextInput(attrs={'class': 'form-control'}),
-            'indirizzo_scuola': forms.TextInput(attrs={'class': 'form-control', 'id': 'id_indirizzo_autocomplete', 'placeholder': 'Cerca la scuola...'}),
-            'codice_postale_scuola': forms.TextInput(attrs={'class': 'form-control'}),
-            'comune_scuola': forms.TextInput(attrs={'class': 'form-control'}),
-            'provincia_scuola': forms.TextInput(attrs={'class': 'form-control'}),
-            'regione_scuola': forms.TextInput(attrs={'class': 'form-control'}),
-            'nazione_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'indirizzo_scuola': forms.TextInput(attrs={'class': 'form-control', 'id': 'id_indirizzo_autocomplete'}),
             'latitudine_scuola': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00000001'}),
             'longitudine_scuola': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00000001'}),
         }
@@ -143,10 +63,92 @@ class SchoolInfoForm(forms.ModelForm):
         Lato server accettiamo qualsiasi stringa non vuota per permettere
         all'utente di proseguire anche se la lat/long non sono state impostate.
         """
+        import json
+        from urllib import parse, request
+
         indirizzo = self.cleaned_data.get('indirizzo_scuola', '')
         if not indirizzo or not str(indirizzo).strip():
             raise ValidationError("Questo campo non può essere nullo.")
-        return str(indirizzo).strip()
+
+        # Require client to submit OSM identifiers from the autocomplete
+        osm_id = (self.data.get('osm_id_scuola') or '').strip()
+        osm_type = (self.data.get('osm_type_scuola') or '').strip()
+        if not osm_id or not osm_type:
+            raise ValidationError("Seleziona un suggerimento valido dall'elenco (scegli la scuola).")
+
+        # Map osm_type to lookup prefix
+        type_map = {'node': 'N', 'way': 'W', 'relation': 'R', 'n': 'N', 'w': 'W', 'r': 'R'}
+        osm_letter = type_map.get(osm_type.lower())
+        if not osm_letter:
+            raise ValidationError("Tipo OSM non valido fornito.")
+
+        lookup_url = 'https://nominatim.openstreetmap.org/lookup'
+        params = {
+            'osm_ids': f"{osm_letter}{osm_id}",
+            'format': 'jsonv2',
+            'addressdetails': 1,
+            'extratags': 1
+        }
+
+        full_url = lookup_url + '?' + parse.urlencode(params)
+        try:
+            req = request.Request(full_url, headers={'User-Agent': 'prenotazioni-scuola-project'})
+            with request.urlopen(req, timeout=10) as resp:
+                body = resp.read()
+                data = json.loads(body.decode('utf-8'))
+        except Exception as e:
+            raise ValidationError(f"Errore contattando Nominatim (OpenStreetMap): {e}")
+
+        if not isinstance(data, list) or len(data) == 0:
+            raise ValidationError("Nessun risultato trovato per il luogo selezionato.")
+
+        result = data[0]
+
+        # Heuristics to ensure the selected place is a school
+        is_school = False
+        cls = (result.get('class') or '').lower()
+        typ = (result.get('type') or '').lower()
+        extratags = result.get('extratags') or {}
+        if cls == 'amenity' and typ in ('school', 'college', 'university'):
+            is_school = True
+        amenity_tag = (extratags.get('amenity') or '').lower()
+        if amenity_tag in ('school', 'college', 'university'):
+            is_school = True
+        if not is_school:
+            display = (result.get('display_name') or '').lower()
+            if any(k in display for k in ('scuola', 'istituto', 'liceo', 'istituto tecnico')):
+                is_school = True
+
+        if not is_school:
+            raise ValidationError("Devi selezionare un luogo che sia una scuola (seleziona la scuola dall'elenco).")
+
+        lat = result.get('lat')
+        lon = result.get('lon')
+        address = result.get('address') or {}
+
+        cap = address.get('postcode', '')
+        comune = address.get('city') or address.get('town') or address.get('village') or ''
+        provincia = address.get('county') or address.get('state_district') or ''
+        if provincia and provincia.lower().startswith('provincia di '):
+            provincia = provincia[12:]
+        regione = address.get('state') or ''
+        nazione = address.get('country') or ''
+
+        try:
+            self.cleaned_data['latitudine_scuola'] = float(lat) if lat else None
+            self.cleaned_data['longitudine_scuola'] = float(lon) if lon else None
+        except Exception:
+            self.cleaned_data['latitudine_scuola'] = None
+            self.cleaned_data['longitudine_scuola'] = None
+
+        self.cleaned_data['codice_postale_scuola'] = cap
+        self.cleaned_data['comune_scuola'] = comune
+        self.cleaned_data['provincia_scuola'] = provincia
+        self.cleaned_data['regione_scuola'] = regione
+        self.cleaned_data['nazione_scuola'] = nazione
+
+        formatted = result.get('display_name') or str(indirizzo).strip()
+        return formatted
 
 
 class PinVerificationForm(forms.Form):

@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
                 ('email_istituzionale_scuola', models.EmailField(help_text='Email principale della scuola', max_length=254, verbose_name='Email Istituzionale')),
                 ('telefono_scuola', models.CharField(blank=True, help_text='Numero di telefono principale', max_length=20, verbose_name='Telefono Scuola')),
                 ('fax_scuola', models.CharField(blank=True, max_length=20, verbose_name='Fax Scuola')),
-                ('indirizzo_scuola', models.TextField(help_text='Indirizzo secondo standard Google Maps', verbose_name='Indirizzo Completo Scuola')),
+                ('indirizzo_scuola', models.TextField(help_text='Indirizzo completo (compatibile con OpenStreetMap/Nominatim)', verbose_name='Indirizzo Completo Scuola')),
                 ('codice_postale_scuola', models.CharField(help_text='Codice di avviamento postale', max_length=10, verbose_name='Codice Postale scuola')),
                 ('comune_scuola', models.CharField(help_text='Comune di appartenenza', max_length=100, verbose_name='Comune Scuola')),
                 ('provincia_scuola', models.CharField(help_text='Sigla provincia (es: GR, RM, MI)', max_length=50, verbose_name='Provincia Scuola')),

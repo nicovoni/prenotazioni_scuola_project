@@ -283,3 +283,16 @@ Se il database è vuoto (es. Neon) esegui questi passi:
      - INITIALIZE_DB=true
      - EMAIL_HOST_PASSWORD_FILE=/etc/secrets/email_password.txt (se usi Secret File)
    - Al deploy l'entrypoint farà migrate e (se INITIALIZE_DB=true) lancerà `initialize_data`.
+
+## Geocoding: OpenStreetMap (Nominatim)
+
+Questo progetto utilizza ora OpenStreetMap / Nominatim per l'autocomplete e la validazione degli indirizzi (in particolare durante la configurazione iniziale della scuola). Nota rapida:
+
+- Per ambiente di produzione NON usate l'endpoint pubblico di Nominatim per traffico elevato: rispettate la policy d'uso di Nominatim (rate limits, user-agent) oppure installate/hostate un'istanza privata o usate un provider commerciale compatibile.
+- Le chiamate fatte dal server includono un `User-Agent` identificativo; considerate l'aggiunta di caching lato server per risultati di lookup ripetuti.
+- Se preferite mantenere compatibilità con altri servizi, i campi modello sono generici (indirizzo, CAP, comune, provincia, regione, paese, lat/lon) e possono essere popolati da qualsiasi provider di geocoding.
+
+Link utili:
+
+- Nominatim usage policy: https://operations.osmfoundation.org/policies/nominatim/
+

@@ -162,19 +162,50 @@
                             {% endif %}
                         </div>
 
-                        <!-- Indirizzo completo (obbligatorio, formato compatibile Google Maps) -->
+                        <!-- Indirizzo completo (obbligatorio, formato compatibile OpenStreetMap/Nominatim) -->
                         <div class="form-group mb-4">
                             <label for="{{ form_school.indirizzo_scuola.id_for_label }}" class="form-label">{{ form_school.indirizzo_scuola.label }} <span class="text-danger">*</span></label>
 
                             {# Renderizza il campo principale: widget modificato a TextInput con id 'id_indirizzo_autocomplete' #}
                             {{ form_school.indirizzo_scuola }}
 
-                            {# Campi nascosti per latitudine/longitudine (verranno popolati dall'autocomplete) #}
+                            {# Campi nascosti per latitudine/longitudine e riferimento OSM (verranno popolati dall'autocomplete) #}
                             <input type="hidden" id="id_latitudine_scuola" name="latitudine_scuola" value="{{ form_school.initial.latitudine_scuola|default_if_none:'' }}">
                             <input type="hidden" id="id_longitudine_scuola" name="longitudine_scuola" value="{{ form_school.initial.longitudine_scuola|default_if_none:'' }}">
-                            <input type="hidden" id="id_place_id_scuola" name="place_id_scuola" value="{{ form_school.initial.place_id_scuola|default_if_none:'' }}">
+                            <input type="hidden" id="id_osm_id_scuola" name="osm_id_scuola" value="{{ form_school.initial.osm_id_scuola|default_if_none:'' }}">
+                            <input type="hidden" id="id_osm_type_scuola" name="osm_type_scuola" value="{{ form_school.initial.osm_type_scuola|default_if_none:'' }}">
 
                             <div class="form-text" id="indirizzo-help">Digita il nome o l'indirizzo della scuola e seleziona il suggerimento corretto. Il campo verrà compilato automaticamente.</div>
+
+                            <!-- Campi auto-populati: CAP, Comune, Provincia, Regione (readonly ma inviati al server) -->
+                            <div class="row mt-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small">CAP</label>
+                                    <input type="text" id="id_codice_postale_scuola" name="codice_postale_scuola" class="form-control" readonly value="{{ form_school.initial.codice_postale_scuola|default_if_none:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Comune</label>
+                                    <input type="text" id="id_comune_scuola" name="comune_scuola" class="form-control" readonly value="{{ form_school.initial.comune_scuola|default_if_none:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Provincia</label>
+                                    <input type="text" id="id_provincia_scuola" name="provincia_scuola" class="form-control" readonly value="{{ form_school.initial.provincia_scuola|default_if_none:'' }}">
+                                </div>
+                            </div>
+
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small">Regione</label>
+                                    <input type="text" id="id_regione_scuola" name="regione_scuola" class="form-control" readonly value="{{ form_school.initial.regione_scuola|default_if_none:'' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small">Nazione</label>
+                                    <input type="text" id="id_nazione_scuola" name="nazione_scuola" class="form-control" readonly value="{{ form_school.initial.nazione_scuola|default_if_none:'Italia' }}">
+                                </div>
+                            </div>
+
+                            <!-- Mappa di anteprima (visibile dopo selezione) -->
+                            <div id="map_preview" style="height:220px;width:100%;display:none;margin-top:12px;border-radius:8px;border:1px solid #e9ecef;overflow:hidden"></div>
 
                             {% if form_school.indirizzo_scuola.errors %}
                                 <div class="text-danger small">
@@ -182,12 +213,10 @@
                                 </div>
                             {% endif %}
 
-                            {% if not GOOGLE_MAPS_API_KEY %}
-                                <div class="alert alert-warning mt-2">
-                                    <i class="bi bi-exclamation-triangle"></i>
-                                    Autocomplete indirizzo disabilitato: imposta `GOOGLE_MAPS_API_KEY` nelle impostazioni per attivare il suggerimento automatico.
-                                </div>
-                            {% endif %}
+                            <div class="alert alert-info mt-2 d-none" id="nominatim-info">
+                                <i class="bi bi-info-circle"></i>
+                                Suggerimenti indirizzo forniti da OpenStreetMap/Nominatim. Seleziona il risultato corretto.
+                            </div>
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center mt-4">
@@ -200,46 +229,117 @@
                             <small class="text-muted"><span class="text-danger">*</span> Campo obbligatorio</small>
                         </div>
                     </form>
-                    {% if GOOGLE_MAPS_API_KEY %}
+                    <!-- OpenStreetMap / Nominatim autocomplete + Leaflet preview -->
+                    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+                    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+                    <style>
+                        .nominatim-list { position: absolute; z-index: 1200; background: white; border: 1px solid #ddd; width: 100%; max-height: 220px; overflow: auto; border-radius: 6px; }
+                        .nominatim-item { padding: 8px 10px; cursor: pointer; }
+                        .nominatim-item:hover { background: #f8f9fa; }
+                        /* ensure suggestions are placed correctly */
+                        #id_indirizzo_autocomplete { position: relative; }
+                    </style>
+
                     <script>
-                        function initAutocomplete() {
+                        document.addEventListener('DOMContentLoaded', function() {
                             const input = document.getElementById('id_indirizzo_autocomplete');
-                            if (!input || !window.google || !google.maps || !google.maps.places) return;
+                            if (!input) return;
 
-                            const options = {
-                                types: ['establishment'],
-                                componentRestrictions: { country: 'it' }
-                            };
+                            // container for suggestions
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'nominatim-list';
+                            wrapper.style.display = 'none';
+                            // ensure parent is positioned
+                            input.parentNode.style.position = 'relative';
+                            input.parentNode.appendChild(wrapper);
 
-                            const autocomplete = new google.maps.places.Autocomplete(input, options);
-                            autocomplete.setFields(['place_id','formatted_address','geometry','name','types','address_components']);
+                            let timeout = null;
 
-                            autocomplete.addListener('place_changed', function() {
-                                const place = autocomplete.getPlace();
-                                if (!place) return;
-                                // Fill hidden fields if geometry available
-                                if (place.geometry && place.geometry.location) {
-                                    const lat = place.geometry.location.lat();
-                                    const lng = place.geometry.location.lng();
-                                    document.getElementById('id_latitudine_scuola').value = lat;
-                                    document.getElementById('id_longitudine_scuola').value = lng;
-                                }
-                                document.getElementById('id_place_id_scuola').value = place.place_id || '';
-                                if (place.formatted_address) {
-                                    input.value = place.formatted_address;
-                                }
-                            });
+                            function clearHidden() {
+                                try {
+                                    document.getElementById('id_latitudine_scuola').value = '';
+                                    document.getElementById('id_longitudine_scuola').value = '';
+                                    document.getElementById('id_osm_id_scuola').value = '';
+                                    document.getElementById('id_osm_type_scuola').value = '';
+                                    document.getElementById('id_codice_postale_scuola').value = '';
+                                    document.getElementById('id_comune_scuola').value = '';
+                                    document.getElementById('id_provincia_scuola').value = '';
+                                    document.getElementById('id_regione_scuola').value = '';
+                                    document.getElementById('id_nazione_scuola').value = '';
+                                } catch(e){}
+                                const mapContainer = document.getElementById('map_preview');
+                                if (mapContainer) mapContainer.style.display = 'none';
+                            }
 
-                            // If user edits the field manually, clear lat/long to avoid mismatch
                             input.addEventListener('input', function() {
-                                document.getElementById('id_latitudine_scuola').value = '';
-                                document.getElementById('id_longitudine_scuola').value = '';
-                                document.getElementById('id_place_id_scuola').value = '';
+                                const q = this.value.trim();
+                                clearTimeout(timeout);
+                                if (!q || q.length < 3) { wrapper.style.display = 'none'; return; }
+
+                                timeout = setTimeout(function() {
+                                    const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=it&q=' + encodeURIComponent(q);
+                                    fetch(url, { headers: { 'Accept': 'application/json' , 'User-Agent': 'prenotazioni-scuola-project' } })
+                                        .then(r => r.json())
+                                        .then(results => {
+                                            wrapper.innerHTML = '';
+                                            if (!results || results.length === 0) { wrapper.style.display = 'none'; return; }
+                                            results.forEach(function(res) {
+                                                const item = document.createElement('div');
+                                                item.className = 'nominatim-item';
+                                                item.textContent = res.display_name;
+                                                item.addEventListener('click', function() {
+                                                    input.value = res.display_name;
+                                                    document.getElementById('id_latitudine_scuola').value = res.lat || '';
+                                                    document.getElementById('id_longitudine_scuola').value = res.lon || '';
+                                                    document.getElementById('id_osm_id_scuola').value = res.osm_id || '';
+                                                    document.getElementById('id_osm_type_scuola').value = res.osm_type || '';
+                                                    const address = res.address || {};
+                                                    document.getElementById('id_codice_postale_scuola').value = address.postcode || '';
+                                                    document.getElementById('id_comune_scuola').value = address.city || address.town || address.village || '';
+                                                    let prov = address.county || address.state_district || '';
+                                                    if (prov && prov.toLowerCase().startsWith('provincia di ')) prov = prov.slice(12);
+                                                    document.getElementById('id_provincia_scuola').value = prov;
+                                                    document.getElementById('id_regione_scuola').value = address.state || '';
+                                                    document.getElementById('id_nazione_scuola').value = address.country || 'Italia';
+                                                    wrapper.style.display = 'none';
+                                                    showMap(res.lat, res.lon);
+                                                });
+                                                wrapper.appendChild(item);
+                                            });
+                                            wrapper.style.display = 'block';
+                                        }).catch(function(){ wrapper.style.display = 'none'; });
+                                }, 300);
                             });
-                        }
+
+                            input.addEventListener('blur', function() { setTimeout(function(){ wrapper.style.display = 'none'; }, 200); });
+                            input.addEventListener('input', function(){ if (!this.value) clearHidden(); });
+
+                            // Leaflet map preview
+                            let map = null; let marker = null;
+                            function showMap(lat, lng) {
+                                const container = document.getElementById('map_preview');
+                                if (!container) return;
+                                container.style.display = 'block';
+                                const la = parseFloat(lat); const lo = parseFloat(lng);
+                                if (!map) {
+                                    map = L.map(container, { zoomControl: false, attributionControl: false }).setView([la, lo], 16);
+                                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+                                    marker = L.marker([la, lo]).addTo(map);
+                                } else {
+                                    map.setView([la, lo], 16);
+                                    marker.setLatLng([la, lo]);
+                                }
+                            }
+
+                            // show map if lat/lon prefilled
+                            try {
+                                const latVal = parseFloat(document.getElementById('id_latitudine_scuola').value || '');
+                                const lonVal = parseFloat(document.getElementById('id_longitudine_scuola').value || '');
+                                if (!isNaN(latVal) && !isNaN(lonVal)) showMap(latVal, lonVal);
+                            } catch(e) {}
+                        });
                     </script>
-                    <script async defer src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places&callback=initAutocomplete"></script>
-                    {% endif %}
                 </div>
 
         {% elif step == 'device' %}

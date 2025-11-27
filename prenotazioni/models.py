@@ -177,7 +177,7 @@ class InformazioniScuola(models.Model):
     # Indirizzo completo
     indirizzo_scuola = models.TextField(
         verbose_name='Indirizzo Completo Scuola',
-        help_text='Indirizzo secondo standard Google Maps'
+        help_text='Indirizzo completo (compatibile con servizi di geocoding come OpenStreetMap/Nominatim)'
     )
     codice_postale_scuola = models.CharField(
         max_length=10,
