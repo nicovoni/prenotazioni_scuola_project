@@ -12,7 +12,25 @@
     <div class="page-header">
         <h1 class="page-title">⚙️ Configurazione Sistema di Prenotazioni</h1>
         <p class="page-subtitle">
-            {% if step == 1 %}Crea il primo utente amministratore{% elif step == "school" %}Inserisci informazioni sulla scuola{% elif step == "device" %}Catalogo dispositivi scolastici{% elif step == 2 %}Definisci quante risorse creare{% elif step == 3 %}Configura i dettagli delle risorse{% endif %}
+            {% if step == 1 %}
+                Crea il primo utente amministratore
+            {% else %}
+                {% if step == "school" %}
+                    Inserisci informazioni sulla scuola
+                {% else %}
+                    {% if step == "device" %}
+                        Catalogo dispositivi scolastici
+                    {% else %}
+                        {% if step == 2 %}
+                            Definisci quante risorse creare
+                        {% else %}
+                            {% if step == 3 %}
+                                Configura i dettagli delle risorse
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+            {% endif %}
         </p>
     </div>
 
@@ -38,9 +56,9 @@
                     <li class="step" data-step="1" style="flex:1; display:flex; align-items:center; gap:12px;">
                         <div class="step-bullet" aria-hidden="true">👑</div>
                         <div class="step-text">Admin</div>
-                    </li>
                     <li style="width:40px; height:4px; background:#e9ecef; border-radius:2px;"></li>
                     <li class="step" data-step="school" style="flex:1; display:flex; align-items:center; gap:12px;">
+                    </div>
                         <div class="step-bullet" aria-hidden="true">🏫</div>
                         <div class="step-text">Scuola</div>
                     </li>
@@ -562,7 +580,7 @@
                     </script>
                 </div>
 
-        {% elif step == 'device' %}
+        {% else %}{% if step == 'device' %}
             <!-- Passo Device: Catalogo dispositivi -->
             <h3>📱 Passo 2: Catalogo Dispositivi Scolastici</h3>
             <p>Cataloga tutti i dispositivi disponibili nella tua scuola. Questi saranno poi assegnati ai carrelli durante la configurazione delle risorse.</p>
@@ -715,7 +733,7 @@
                                         </details>
                                     {% endif %}
                                 </div>
-                            {% elif dispositivi_esistenti %}
+                            {% else %}{% if dispositivi_esistenti %}
                                 <div class="table-responsive">
                                     <table class="table table-striped">
                                         <thead>
@@ -828,7 +846,7 @@
     });
 </script>
 
-        {% elif step == 2 %}
+        {% else %}{% if step == 2 %}
             <!-- Passo 2: Numero risorse -->
             <h3>🔢 Passo 2: Numero di risorse</h3>
             <p>Quante risorse vuoi creare per il sistema di prenotazioni?</p>
@@ -856,7 +874,7 @@
                 </div>
             </form>
 
-        {% elif step == 'resources' %}
+        {% else %}{% if step == 'resources' %}
             <!-- Passo 3: Dettagli risorse -->
             <h3>📋 Passo 3: Configurazione risorse</h3>
             <p>Definisci i dettagli per ciascuna risorsa selezionata.</p>
@@ -993,12 +1011,16 @@
                     }).catch(e=>{ console.warn('Could not populate plessi:', e); });
                 })();
             </script>
-        {% elif step == 'done' or wizard_completed %}
+        {% else %}{% if step == 'done' or wizard_completed %}
             <div class="text-center py-5">
                 <h2 class="text-success display-4 mb-3">✅ Configurazione completata!</h2>
                 <p class="lead">Il sistema è pronto per essere utilizzato. Puoi ora accedere a tutte le funzionalità.</p>
                 <a href="/" class="btn btn-primary btn-lg mt-3">Vai alla Dashboard</a>
             </div>
+        {% endif %}
+        {% endif %}
+        {% endif %}
+        {% endif %}
         {% endif %}
     </div>
 </div>

@@ -27,7 +27,8 @@
                 </div>
                 <button type="submit" name="step1" class="btn btn-primary">Crea Admin</button>
             </form>
-        {% elif step == 'school' %}
+        {% else %}
+            {% if step == 'school' %}
             <h3>🏫 Step 2: Informazioni Scuola</h3>
             <form method="post">
                 {% csrf_token %}
@@ -49,9 +50,12 @@
                 </div>
                 <button type="submit" name="step_school" class="btn btn-primary">Salva Informazioni</button>
             </form>
-        {% elif step == 'device' %}
+            {% else %}
+                {% if step == 'device' %}
             <h3>💻 Step 3: Configura Dispositivi</h3>
             <p>Qui puoi aggiungere la logica per la configurazione dei dispositivi.</p>
+                {% endif %}
+            {% endif %}
         {% endif %}
     </div>
 </div>

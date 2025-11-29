@@ -31,42 +31,74 @@
                                 {% if table_info.name == 'Utenti' %}
                                     {% if field == 'is_active' %}
                                         {{ record.is_active|yesno:"Sì,No" }}
-                                    {% elif field == 'username' %}
-                                        {{ record.username }}
-                                    {% elif field == 'first_name' %}
-                                        {{ record.first_name|default:"-" }}
-                                    {% elif field == 'last_name' %}
-                                        {{ record.last_name|default:"-" }}
-                                    {% elif field == 'email' %}
-                                        {{ record.email|default:"-" }}
-                                    {% elif field == 'ruolo' %}
-                                        {{ record.get_ruolo_display|default:record.ruolo|default:"-" }}
-                                    {% elif field == 'telefono' %}
-                                        {{ record.telefono|default:"-" }}
-                                    {% elif field == 'classe' %}
-                                        {{ record.classe|default:"-" }}
+                                    {% else %}
+                                        {% if field == 'username' %}
+                                            {{ record.username }}
+                                        {% else %}
+                                            {% if field == 'first_name' %}
+                                                {{ record.first_name|default:"-" }}
+                                            {% else %}
+                                                {% if field == 'last_name' %}
+                                                    {{ record.last_name|default:"-" }}
+                                                {% else %}
+                                                    {% if field == 'email' %}
+                                                        {{ record.email|default:"-" }}
+                                                    {% else %}
+                                                        {% if field == 'ruolo' %}
+                                                            {{ record.get_ruolo_display|default:record.ruolo|default:"-" }}
+                                                        {% else %}
+                                                            {% if field == 'telefono' %}
+                                                                {{ record.telefono|default:"-" }}
+                                                            {% else %}
+                                                                {% if field == 'classe' %}
+                                                                    {{ record.classe|default:"-" }}
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endif %}
                                     {% endif %}
-                                {% elif table_info.name == 'Risorse' %}
-                                    {% if field == 'nome' %}
-                                        {{ record.nome }}
-                                    {% elif field == 'tipo' %}
-                                        {{ record.get_tipo_display|default:record.tipo }}
-                                    {% elif field == 'quantita_totale' %}
-                                        {{ record.quantita_totale|default:"-" }}
-                                    {% endif %}
-                                {% elif table_info.name == 'Prenotazioni' %}
-                                    {% if field == 'id' %}
-                                        {{ record.id }}
-                                    {% elif field == 'Utente' %}
-                                        {{ record.utente.username }} ({{ record.utente.get_ruolo_display }})
-                                    {% elif field == 'Risorsa' %}
-                                        {{ record.risorsa.nome }} ({{ record.risorsa.get_tipo_display }})
-                                    {% elif field == 'quantita' %}
-                                        {{ record.quantita }}
-                                    {% elif field == 'inizio' %}
-                                        {{ record.inizio|date:"Y-m-d H:i:s" }}
-                                    {% elif field == 'fine' %}
-                                        {{ record.fine|date:"Y-m-d H:i:s" }}
+                                {% else %}
+                                    {% if table_info.name == 'Risorse' %}
+                                        {% if field == 'nome' %}
+                                            {{ record.nome }}
+                                        {% else %}
+                                            {% if field == 'tipo' %}
+                                                {{ record.get_tipo_display|default:record.tipo }}
+                                            {% else %}
+                                                {% if field == 'quantita_totale' %}
+                                                    {{ record.quantita_totale|default:"-" }}
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endif %}
+                                    {% else %}
+                                        {% if table_info.name == 'Prenotazioni' %}
+                                            {% if field == 'id' %}
+                                                {{ record.id }}
+                                            {% else %}
+                                                {% if field == 'Utente' %}
+                                                    {{ record.utente.username }} ({{ record.utente.get_ruolo_display }})
+                                                {% else %}
+                                                    {% if field == 'Risorsa' %}
+                                                        {{ record.risorsa.nome }} ({{ record.risorsa.get_tipo_display }})
+                                                    {% else %}
+                                                        {% if field == 'quantita' %}
+                                                            {{ record.quantita }}
+                                                        {% else %}
+                                                            {% if field == 'inizio' %}
+                                                                {{ record.inizio|date:"Y-m-d H:i:s" }}
+                                                            {% else %}
+                                                                {% if field == 'fine' %}
+                                                                    {{ record.fine|date:"Y-m-d H:i:s" }}
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endif %}
                                     {% endif %}
                                 {% endif %}
                             </td>

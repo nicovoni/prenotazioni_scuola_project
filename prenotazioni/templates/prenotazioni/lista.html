@@ -123,7 +123,7 @@
                             data-user="{% if is_admin_view %}{{ p.utente.username }}{% endif %}"
                             data-risorsa="{{ p.risorsa.nome }}"
                             data-data="{{ p.inizio.date|date:'Y-m-d' }}"
-                            data-stato="{% if p.is_passata %}passata{% elif p.is_in_corso %}in_corso{% else %}programmata{% endif %}">
+                            data-stato="{% if p.is_passata %}passata{% else %}{% if p.is_in_corso %}in_corso{% else %}programmata{% endif %}{% endif %}">
                             
                             {% if is_admin_view %}
                             <td>
@@ -137,8 +137,8 @@
                                             <small class="text-muted">{{ p.utente.first_name }} {{ p.utente.last_name }}</small>
                                         {% endif %}
                                         <br>
-                                        <span class="badge badge-modern {% if p.utente.is_docente|default:False %}bg-success{% elif p.utente.is_staff %}bg-danger{% else %}bg-primary{% endif %}">
-                                            {% if p.utente.is_docente|default:False %}👨‍🏫 Docente{% elif p.utente.is_staff %}⚡ Admin{% else %}🎓 {{ p.utente.ruolo|default:''|title }}{% endif %}
+                                        <span class="badge badge-modern {% if p.utente.is_docente|default:False %}bg-success{% else %}{% if p.utente.is_staff %}bg-danger{% else %}bg-primary{% endif %}{% endif %}">
+                                            {% if p.utente.is_docente|default:False %}👨‍🏫 Docente{% else %}{% if p.utente.is_staff %}⚡ Admin{% else %}🎓 {{ p.utente.ruolo|default:''|title }}{% endif %}{% endif %}
                                         </span>
                                     </div>
                                 </div>
@@ -198,16 +198,18 @@
                                         <i class="bi bi-clock-history me-1" aria-label="Icona passata" aria-hidden="false"></i>
                                         Passata
                                     </span>
-                                {% elif p.is_in_corso %}
-                                    <span class="badge bg-success badge-modern pulse">
-                                        <i class="bi bi-play-circle me-1" aria-label="Icona in corso" aria-hidden="false"></i>
-                                        In corso
-                                    </span>
                                 {% else %}
-                                    <span class="badge bg-primary badge-modern">
-                                        <i class="bi bi-calendar-check me-1" aria-label="Icona programmata" aria-hidden="false"></i>
-                                        Programmata
-                                    </span>
+                                    {% if p.is_in_corso %}
+                                        <span class="badge bg-success badge-modern pulse">
+                                            <i class="bi bi-play-circle me-1" aria-label="Icona in corso" aria-hidden="false"></i>
+                                            In corso
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-primary badge-modern">
+                                            <i class="bi bi-calendar-check me-1" aria-label="Icona programmata" aria-hidden="false"></i>
+                                            Programmata
+                                        </span>
+                                    {% endif %}
                                 {% endif %}
                             </td>
                             
