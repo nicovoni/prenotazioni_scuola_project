@@ -247,7 +247,7 @@
                     </script>
                 {% if step == 1 %}
                     <!-- Admin step content - TODO: add admin form if needed -->
-                {% else %}{% if step == "school" %}
+                {% elif step == 'school' %}
                                 <div class="col-md-6">
                                     <label class="form-label small">Nazione</label>
                                     <input type="text" id="id_nazione_scuola" name="nazione_scuola" class="form-control" readonly value="{{ form_school.initial.nazione_scuola|default_if_none:'Italia' }}">
@@ -583,7 +583,7 @@
                     </script>
                 </div>
 
-        {% else %}{% if step == 'device' %}
+            {% elif step == 'device' %}
             <!-- Passo Device: Catalogo dispositivi -->
             <h3>📱 Passo 2: Catalogo Dispositivi Scolastici</h3>
             <p>Cataloga tutti i dispositivi disponibili nella tua scuola. Questi saranno poi assegnati ai carrelli durante la configurazione delle risorse.</p>
@@ -736,7 +736,7 @@
                                         </details>
                                     {% endif %}
                                 </div>
-                            {% else %}{% if dispositivi_esistenti %}
+                            {% elif dispositivi_esistenti %}
                                 <div class="table-responsive">
                                     <table class="table table-striped">
                                         <thead>
@@ -849,7 +849,7 @@
     });
 </script>
 
-        {% else %}{% if step == 2 %}
+        {% elif step == 2 %}
             <!-- Passo 2: Numero risorse -->
             <h3>🔢 Passo 2: Numero di risorse</h3>
             <p>Quante risorse vuoi creare per il sistema di prenotazioni?</p>
@@ -877,7 +877,7 @@
                 </div>
             </form>
 
-        {% else %}{% if step == 'resources' %}
+        {% elif step == 'resources' %}
             <!-- Passo 3: Dettagli risorse -->
             <h3>📋 Passo 3: Configurazione risorse</h3>
             <p>Definisci i dettagli per ciascuna risorsa selezionata.</p>
@@ -1014,16 +1014,12 @@
                     }).catch(e=>{ console.warn('Could not populate plessi:', e); });
                 })();
             </script>
-        {% else %}{% if step == 'done' or wizard_completed %}
+        {% elif step == 'done' or wizard_completed %}
             <div class="text-center py-5">
                 <h2 class="text-success display-4 mb-3">✅ Configurazione completata!</h2>
                 <p class="lead">Il sistema è pronto per essere utilizzato. Puoi ora accedere a tutte le funzionalità.</p>
                 <a href="/" class="btn btn-primary btn-lg mt-3">Vai alla Dashboard</a>
             </div>
-        {% endif %}
-        {% endif %}
-        {% endif %}
-        {% endif %}
         {% endif %}
     </div>
 </div>
