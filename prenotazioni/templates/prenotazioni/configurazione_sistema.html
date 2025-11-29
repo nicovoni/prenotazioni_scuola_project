@@ -26,43 +26,65 @@
     {% endif %}
 
     <div class="content-card">
-        <!-- Barra di avanzamento wizard -->
+        <!-- Modern stepper (clean, non-repeating) -->
         <div class="mb-4">
-            <div class="progress" style="height: 24px;">
-                {% comment %} Barra di progresso del wizard {% endcomment %}
-                <div class="progress-bar {% if current_step == '1' %}bg-success{% else %}bg-light text-dark{% endif %}"
-                    role="progressbar" style="width: 20%; font-size: 1rem;"
-                    aria-valuenow="1" aria-valuemin="1" aria-valuemax="5">
-                    👑 Admin
-                </div>
-                <div class="progress-bar {% if current_step == 'school' %}bg-success{% else %}bg-light text-dark{% endif %}"
-                    role="progressbar" style="width: 20%; font-size: 1rem;"
-                    aria-valuenow="2" aria-valuemin="1" aria-valuemax="5">
-                    🏫 Scuola
-                </div>
-                <div class="progress-bar {% if current_step == 'device' %}bg-success{% else %}bg-light text-dark{% endif %}"
-                    role="progressbar" style="width: 20%; font-size: 1rem;"
-                    aria-valuenow="3" aria-valuemin="1" aria-valuemax="5">
-                    📱 Dispositivi
-                </div>
-                <div class="progress-bar {% if current_step == 'resources' %}bg-success{% else %}bg-light text-dark{% endif %}"
-                    role="progressbar" style="width: 20%; font-size: 1rem;"
-                    aria-valuenow="4" aria-valuemin="1" aria-valuemax="5">
-                    📋 Risorse
-                </div>
-                <div class="progress-bar {% if current_step == 'done' %}bg-success{% else %}bg-light text-dark{% endif %}"
-                    role="progressbar" style="width: 20%; font-size: 1rem;"
-                    aria-valuenow="5" aria-valuemin="1" aria-valuemax="5">
-                    ✅ Fine
-                </div>
+            <div id="wizard-stepper" data-current-step="{{ current_step }}">
+                <ol class="d-flex align-items-center list-unstyled m-0 p-0" style="gap:12px;">
+                    <li class="step" data-step="1" style="flex:1; display:flex; align-items:center; gap:12px;">
+                        <div class="step-bullet" aria-hidden="true">👑</div>
+                        <div class="step-text">Admin</div>
+                    </li>
+                    <li style="width:40px; height:4px; background:#e9ecef; border-radius:2px;"></li>
+                    <li class="step" data-step="school" style="flex:1; display:flex; align-items:center; gap:12px;">
+                        <div class="step-bullet" aria-hidden="true">🏫</div>
+                        <div class="step-text">Scuola</div>
+                    </li>
+                    <li style="width:40px; height:4px; background:#e9ecef; border-radius:2px;"></li>
+                    <li class="step" data-step="device" style="flex:1; display:flex; align-items:center; gap:12px;">
+                        <div class="step-bullet" aria-hidden="true">📱</div>
+                        <div class="step-text">Dispositivi</div>
+                    </li>
+                    <li style="width:40px; height:4px; background:#e9ecef; border-radius:2px;"></li>
+                    <li class="step" data-step="resources" style="flex:1; display:flex; align-items:center; gap:12px;">
+                        <div class="step-bullet" aria-hidden="true">📋</div>
+                        <div class="step-text">Risorse</div>
+                    </li>
+                    <li style="width:40px; height:4px; background:#e9ecef; border-radius:2px;"></li>
+                    <li class="step" data-step="done" style="flex:1; display:flex; align-items:center; gap:12px;">
+                        <div class="step-bullet" aria-hidden="true">✅</div>
+                        <div class="step-text">Fine</div>
+                    </li>
+                </ol>
             </div>
-            <div class="d-flex justify-content-between mt-1">
-                <small>👑 Admin</small>
-                <small>🏫 Scuola</small>
-                <small>📱 Dispositivi</small>
-                <small>📋 Risorse</small>
-                <small>✅ Fine</small>
-            </div>
+
+            <style>
+                #wizard-stepper .step { padding:6px 8px; }
+                .step-bullet { width:40px; height:40px; border-radius:50%; background:#f1f3f5; display:flex; align-items:center; justify-content:center; font-size:1.05rem; transition:all .18s ease; }
+                .step-text { font-weight:600; color:#495057; }
+                .step.completed .step-bullet { background:linear-gradient(135deg,#43e97b,#38f9d7); color:white; transform:translateY(-3px); box-shadow:0 8px 20px rgba(56,249,215,0.08); }
+                .step.active .step-bullet { background:linear-gradient(135deg,#667eea,#764ba2); color:white; transform:translateY(-4px); box-shadow:0 10px 26px rgba(102,126,234,0.14); }
+                @media (max-width:768px) { .step-text { display:none; } }
+            </style>
+
+            <script>
+                (function(){
+                    try{
+                        const container = document.getElementById('wizard-stepper');
+                        if(!container) return;
+                        const current = container.dataset.currentStep || '1';
+                        const order = ['1','school','device','resources','done'];
+                        const currentIndex = order.indexOf(String(current));
+                        const steps = container.querySelectorAll('.step');
+                        steps.forEach((el, idx) => {
+                            const key = el.dataset.step;
+                            el.classList.remove('active','completed');
+                            const pos = order.indexOf(String(key));
+                            if(pos < currentIndex) el.classList.add('completed');
+                            if(pos === currentIndex) el.classList.add('active');
+                        });
+                    }catch(e){console.error(e)}
+                })();
+            </script>
         </div>
 
         {% if skip_user_creation %}
@@ -127,23 +149,11 @@
                             </div>
                         {% endif %}
 
-                        <!-- Solo il campo obbligatorio: Nome completo scuola -->
-                        <div class="form-group mb-4">
-                            <label for="{{ form_school.nome_completo_scuola.id_for_label }}" class="form-label">
-                                {{ form_school.nome_completo_scuola.label }} <span class="text-danger">*</span>
-                            </label>
-                            {{ form_school.nome_completo_scuola }}
-                            {% if form_school.nome_completo_scuola.errors %}
-                                <div class="text-danger small">
-                                    {% for error in form_school.nome_completo_scuola.errors %}{{ error }}{% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Codice meccanografico (opzionale, validazione 10 caratteri se presente) -->
+                        <!-- Codice meccanografico (PRIMO CAMPO) -->
                         <div class="form-group mb-3">
-                            <label for="{{ form_school.codice_meccanografico_scuola.id_for_label }}" class="form-label">{{ form_school.codice_meccanografico_scuola.label }}</label>
-                            {{ form_school.codice_meccanografico_scuola }}
+                            <label for="id_codice_meccanografico_scuola" class="form-label">{{ form_school.codice_meccanografico_scuola.label }} <span class="text-danger">*</span></label>
+                            {{ form_school.codice_meccanografico_scuola.as_widget(attrs={'id':'id_codice_meccanografico_scuola','class':'form-control','required':'required','maxlength':'10','autocomplete':'off'}) }}
+                            <div class="form-text">Inserisci il codice meccanografico (10 caratteri). Verrà usato per cercare i dati ufficiali della scuola.</div>
                             {% if form_school.codice_meccanografico_scuola.errors %}
                                 <div class="text-danger small">
                                     {% for error in form_school.codice_meccanografico_scuola.errors %}{{ error }}{% endfor %}
@@ -151,10 +161,24 @@
                             {% endif %}
                         </div>
 
-                        <!-- Sito web scuola (opzionale, deve essere dominio *.edu.it se fornito) -->
+                        <!-- Nome completo scuola (obbligatorio) -->
+                        <div class="form-group mb-4">
+                            <label for="id_nome_completo_scuola" class="form-label">
+                                {{ form_school.nome_completo_scuola.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form_school.nome_completo_scuola.as_widget(attrs={'id':'id_nome_completo_scuola','class':'form-control','required':'required','maxlength':'200'}) }}
+                            {% if form_school.nome_completo_scuola.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form_school.nome_completo_scuola.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Sito web scuola (obbligatorio) -->
                         <div class="form-group mb-3">
-                            <label for="{{ form_school.sito_web_scuola.id_for_label }}" class="form-label">{{ form_school.sito_web_scuola.label }}</label>
-                            {{ form_school.sito_web_scuola }}
+                            <label for="id_sito_web_scuola" class="form-label">{{ form_school.sito_web_scuola.label }} <span class="text-danger">*</span></label>
+                            {{ form_school.sito_web_scuola.as_widget(attrs={'id':'id_sito_web_scuola','class':'form-control','required':'required','maxlength':'200','placeholder':'https://www.tuoscuola.edu.it'}) }}
+                            <div class="form-text">Inserisci il sito ufficiale della scuola (dominio preferibile *.edu.it).</div>
                             {% if form_school.sito_web_scuola.errors %}
                                 <div class="text-danger small">
                                     {% for error in form_school.sito_web_scuola.errors %}{{ error }}{% endfor %}
@@ -339,6 +363,106 @@
                                 if (!isNaN(latVal) && !isNaN(lonVal)) showMap(latVal, lonVal);
                             } catch(e) {}
                         });
+                    </script>
+
+                    <script>
+                        (function(){
+                            // Client-side validation for codice meccanografico and lookup helper
+                            const codiceEl = document.getElementById('id_codice_meccanografico_scuola');
+                            const nomeEl = document.getElementById('id_nome_completo_scuola');
+                            const indirizzoEl = document.getElementById('id_indirizzo_autocomplete');
+                            const latEl = document.getElementById('id_latitudine_scuola');
+                            const lonEl = document.getElementById('id_longitudine_scuola');
+                            const capEl = document.getElementById('id_codice_postale_scuola');
+                            const comuneEl = document.getElementById('id_comune_scuola');
+                            const provinciaEl = document.getElementById('id_provincia_scuola');
+                            const regioneEl = document.getElementById('id_regione_scuola');
+
+                            if(!codiceEl) return;
+
+                            // normalize input: uppercase and remove spaces
+                            function normalizeCodice(v){ return v ? v.toUpperCase().replace(/\s+/g,'') : ''; }
+
+                            function showInlineMessage(msg, type='info'){
+                                // simple inline toast-like message near codice field
+                                let el = document.getElementById('codice-msg');
+                                if(!el){ el = document.createElement('div'); el.id='codice-msg'; el.className='form-text mt-2'; codiceEl.parentNode.appendChild(el);} 
+                                el.textContent = msg;
+                                el.style.color = (type==='error') ? '#c82333' : '#0d6efd';
+                            }
+
+                            codiceEl.addEventListener('input', function(){
+                                this.value = normalizeCodice(this.value);
+                                const v = this.value;
+                                if(!v){ showInlineMessage(''); return; }
+                                // basic pattern: 10 alnum characters
+                                const ok = /^[A-Z0-9]{10}$/.test(v);
+                                if(ok){ showInlineMessage('Codice valido, provo a cercare i dati ufficiali...','info'); }
+                                else { showInlineMessage('Codice deve essere 10 caratteri alfanumerici (A-Z 0-9).','error'); }
+                            });
+
+                            codiceEl.addEventListener('blur', function(){
+                                const codice = normalizeCodice(this.value);
+                                if(!/^[A-Z0-9]{10}$/.test(codice)) return;
+
+                                // Try backend lookup which should query the Unica/SIC service server-side.
+                                const url = '/api/lookup_unica/?codice=' + encodeURIComponent(codice);
+                                showInlineMessage('Ricerca in corso...','info');
+                                fetch(url, { credentials: 'same-origin', headers:{'Accept':'application/json'} })
+                                .then(r => {
+                                    if(!r.ok) throw new Error('lookup_failed');
+                                    return r.json();
+                                })
+                                .then(data => {
+                                    if(!data || !data.data) { throw new Error('no_data'); }
+                                    const payload = data.data;
+                                    // populate fields
+                                    if(nomeEl && payload.nome) { nomeEl.value = payload.nome; nomeEl.readOnly = true; }
+                                    if(indirizzoEl && payload.indirizzo) { indirizzoEl.value = payload.indirizzo; indirizzoEl.readOnly = true; }
+                                    if(latEl && payload.lat) { latEl.value = payload.lat; }
+                                    if(lonEl && payload.lon) { lonEl.value = payload.lon; }
+                                    if(capEl && payload.cap) { capEl.value = payload.cap; }
+                                    if(comuneEl && payload.comune) { comuneEl.value = payload.comune; }
+                                    if(provinciaEl && payload.provincia) { provinciaEl.value = payload.provincia; }
+                                    if(regioneEl && payload.regione) { regioneEl.value = payload.regione; }
+
+                                    // UX: show badge and unlock button, keep values readonly so they are submitted but not editable
+                                    let badge = document.getElementById('codice-badge');
+                                    if(!badge){
+                                        badge = document.createElement('span');
+                                        badge.id = 'codice-badge';
+                                        badge.className = 'badge bg-success ms-2';
+                                        badge.textContent = 'Auto compilato';
+                                        codiceEl.parentNode.appendChild(badge);
+                                    }
+
+                                    let unlock = document.getElementById('codice-unlock');
+                                    if(!unlock){
+                                        unlock = document.createElement('button');
+                                        unlock.type = 'button';
+                                        unlock.id = 'codice-unlock';
+                                        unlock.className = 'btn btn-link btn-sm ms-2';
+                                        unlock.textContent = 'Modifica';
+                                        codiceEl.parentNode.appendChild(unlock);
+                                        unlock.addEventListener('click', function(){
+                                            // re-enable editing
+                                            if(nomeEl) nomeEl.readOnly = false; if(indirizzoEl) indirizzoEl.readOnly = false; if(regioneEl) regioneEl.readOnly = false; if(provinciaEl) provinciaEl.readOnly = false; if(comuneEl) comuneEl.readOnly = false; if(capEl) capEl.readOnly = false;
+                                            if(badge) badge.remove();
+                                            if(unlock) unlock.remove();
+                                            showInlineMessage('Campi riattivati per modifica.','info');
+                                        });
+                                    }
+
+                                    showInlineMessage('Dati trovati e compilati automaticamente. Verifica e salva.','info');
+                                    try{ if(payload.lat && payload.lon) showMap(payload.lat, payload.lon); }catch(e){}
+                                }).catch(err => {
+                                    // fallback: inform the user to use ricerca indirizzo oppure Nominatim
+                                    console.warn('Lookup error', err);
+                                    showInlineMessage('Impossibile completare lookup automatico. Usa la ricerca indirizzo sottostante se necessario.','error');
+                                });
+                            });
+
+                        })();
                     </script>
                 </div>
 

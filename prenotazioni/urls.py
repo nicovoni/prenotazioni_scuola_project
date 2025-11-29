@@ -1,6 +1,6 @@
 
 from rest_framework import routers
-from .views import BookingViewSet, prenota_laboratorio, lista_prenotazioni, edit_prenotazione, delete_prenotazione, database_viewer, configurazione_sistema, admin_operazioni, setup_amministratore
+from .views import BookingViewSet, prenota_laboratorio, lista_prenotazioni, edit_prenotazione, delete_prenotazione, database_viewer, configurazione_sistema, admin_operazioni, setup_amministratore, lookup_unica
 from django.urls import path, include
 from django.contrib.auth.decorators import login_required, user_passes_test
 
@@ -21,5 +21,6 @@ urlpatterns = [
     path('configurazione-sistema/', login_required(admin_required(configurazione_sistema)), name='configurazione_sistema'),
     path('admin-operazioni/', login_required(admin_required(admin_operazioni)), name='admin_operazioni'),
     path('setup/', setup_amministratore, name='setup_amministratore'),
+    path('lookup_unica/', lookup_unica, name='lookup_unica'),
     path('', include(router.urls)),
 ]

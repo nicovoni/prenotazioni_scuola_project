@@ -987,6 +987,120 @@ def configurazione_sistema(request):
     return view(request)
 
 
+def lookup_unica(request):
+    """Endpoint di supporto per lookup codice meccanografico.
+
+    Questo è un placeholder server-side che verifica il formato del codice
+    e restituisce istruzioni se il lookup automatico non è stato ancora
+    implementato. Per integrare il servizio Unica/SIC è necessario
+    implementare qui la logica che interroga l'API ufficiale o effettua
+    scraping controllato lato server (evitare CORS/JS client-side).
+    """
+    from django.http import JsonResponse
+    import re
+
+    codice = request.GET.get('codice', '')
+    codice = (codice or '').upper().strip()
+    if not codice:
+        return JsonResponse({'error': 'missing_codice'}, status=400)
+
+    # semplice validazione formato 10 caratteri alfanumerici
+    if not re.match(r'^[A-Z0-9]{10}$', codice):
+        return JsonResponse({'error': 'invalid_format', 'message': 'Codice deve essere 10 caratteri alfanumerici.'}, status=400)
+
+    # Try to use a cached JSON index in backups/scuole_index.json or import from CSV backups/scuole_anagrafe.csv
+    from django.conf import settings
+    import os, json, csv
+
+    def normalize_codice(c):
+        return ''.join((c or '').upper().split())
+
+    base = getattr(settings, 'BASE_DIR', os.getcwd())
+    index_path = os.path.join(base, 'backups', 'scuole_index.json')
+    csv_path = os.path.join(base, 'backups', 'scuole_anagrafe.csv')
+
+    index = None
+    if os.path.exists(index_path):
+        try:
+            with open(index_path, 'r', encoding='utf-8') as fh:
+                index = json.load(fh)
+        except Exception:
+            index = None
+
+    # If JSON index missing, try to build from CSV if provided
+    if index is None and os.path.exists(csv_path):
+        try:
+            idx = {}
+            with open(csv_path, newline='', encoding='utf-8') as fh:
+                reader = csv.DictReader(fh)
+                for row in reader:
+                    codice = None
+                    for k in row.keys():
+                        kl = k.lower()
+                        if 'cod' in kl and ('mecc' in kl or 'meccan' in kl or 'istit' in kl or 'scuola' in kl):
+                            codice = row[k]
+                            break
+                    if not codice:
+                        for alt in ['codice','codice_meccanografico','cod_istituto','codicescuola','cod_meccanografico']:
+                            if alt in row:
+                                codice = row[alt]
+                                break
+                    if not codice:
+                        continue
+                    codice_norm = normalize_codice(codice)
+
+                    def pick(keys):
+                        for kk in keys:
+                            if kk in row and row[kk]:
+                                return row[kk]
+                        return ''
+
+                    nome = pick(['denominazione','denominazione_istituto','denominazione_scuola','nome','descrizione'])
+                    indirizzo = pick(['indirizzo','via','indirizzo_scuola','indirizzo_istituto','address'])
+                    cap = pick(['cap','codice_postale','zip'])
+                    comune = pick(['comune','municipio','localita','town','city'])
+                    provincia = pick(['provincia','prov','county'])
+                    regione = pick(['regione','region'])
+                    lat = pick(['latitudine','lat','latitude'])
+                    lon = pick(['longitudine','lon','longitude'])
+
+                    idx[codice_norm] = {
+                        'codice': codice_norm,
+                        'nome': nome,
+                        'indirizzo': indirizzo,
+                        'cap': cap,
+                        'comune': comune,
+                        'provincia': provincia,
+                        'regione': regione,
+                        'lat': lat,
+                        'lon': lon,
+                    }
+
+            # save index
+            try:
+                os.makedirs(os.path.dirname(index_path), exist_ok=True)
+                with open(index_path, 'w', encoding='utf-8') as of:
+                    json.dump(idx, of, ensure_ascii=False, indent=2)
+                index = idx
+            except Exception:
+                index = idx
+        except Exception:
+            index = None
+
+    if index is None:
+        return JsonResponse({
+            'error': 'no_dataset',
+            'message': 'Nessun dataset disponibile. Metti un CSV ufficiale in `backups/scuole_anagrafe.csv` oppure esegui il management command `python manage.py import_scuole_csv`.'
+        }, status=404)
+
+    codice_norm = normalize_codice(codice)
+    data = index.get(codice_norm)
+    if not data:
+        return JsonResponse({'error': 'not_found', 'message': 'Codice non trovato nell’indice locale.'}, status=404)
+
+    return JsonResponse({'error': None, 'data': data})
+
+
 def admin_operazioni(request):
     """Wrapper view per compatibilità."""
     view = AdminOperazioniView.as_view()
