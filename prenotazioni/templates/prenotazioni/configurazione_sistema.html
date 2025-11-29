@@ -152,7 +152,7 @@
                         <!-- Codice meccanografico (PRIMO CAMPO) -->
                         <div class="form-group mb-3">
                             <label for="id_codice_meccanografico_scuola" class="form-label">{{ form_school.codice_meccanografico_scuola.label }} <span class="text-danger">*</span></label>
-                            {{ form_school.codice_meccanografico_scuola.as_widget(attrs={'id':'id_codice_meccanografico_scuola','class':'form-control','required':'required','maxlength':'10','autocomplete':'off'}) }}
+                            {{ form_school.codice_meccanografico_scuola }}
                             <div class="form-text">Inserisci il codice meccanografico (10 caratteri). Verrà usato per cercare i dati ufficiali della scuola.</div>
                             {% if form_school.codice_meccanografico_scuola.errors %}
                                 <div class="text-danger small">
@@ -166,7 +166,7 @@
                             <label for="id_nome_completo_scuola" class="form-label">
                                 {{ form_school.nome_completo_scuola.label }} <span class="text-danger">*</span>
                             </label>
-                            {{ form_school.nome_completo_scuola.as_widget(attrs={'id':'id_nome_completo_scuola','class':'form-control','required':'required','maxlength':'200'}) }}
+                            {{ form_school.nome_completo_scuola }}
                             {% if form_school.nome_completo_scuola.errors %}
                                 <div class="text-danger small">
                                     {% for error in form_school.nome_completo_scuola.errors %}{{ error }}{% endfor %}
@@ -177,7 +177,7 @@
                         <!-- Sito web scuola (obbligatorio) -->
                         <div class="form-group mb-3">
                             <label for="id_sito_web_scuola" class="form-label">{{ form_school.sito_web_scuola.label }} <span class="text-danger">*</span></label>
-                            {{ form_school.sito_web_scuola.as_widget(attrs={'id':'id_sito_web_scuola','class':'form-control','required':'required','maxlength':'200','placeholder':'https://www.tuoscuola.edu.it'}) }}
+                            {{ form_school.sito_web_scuola }}
                             <div class="form-text">Inserisci il sito ufficiale della scuola (dominio preferibile *.edu.it).</div>
                             {% if form_school.sito_web_scuola.errors %}
                                 <div class="text-danger small">
