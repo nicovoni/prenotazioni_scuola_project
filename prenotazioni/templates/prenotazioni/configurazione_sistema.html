@@ -409,22 +409,54 @@
                                 const url = '/api/lookup_unica/?codice=' + encodeURIComponent(codice);
                                 showInlineMessage('Ricerca in corso...','info');
                                 fetch(url, { credentials: 'same-origin', headers:{'Accept':'application/json'} })
-                                .then(r => {
-                                    if(!r.ok) throw new Error('lookup_failed');
-                                    return r.json();
-                                })
-                                .then(data => {
+                                .then(r => r.json().then(data => ({ ok: r.ok, status: r.status, data })))
+                                .then(({ok, status, data}) => {
+                                    // Se c'è un errore nel JSON response, lancia eccezione
+                                    if(!ok || data.error) { 
+                                        console.warn('Lookup error response:', data);
+                                        throw new Error(data.message || data.error || 'lookup_failed'); 
+                                    }
                                     if(!data || !data.data) { throw new Error('no_data'); }
                                     const payload = data.data;
+                                    
+                                    // populate fields - debugging
+                                    console.log('Lookup payload received:', payload);
+                                    
                                     // populate fields
-                                    if(nomeEl && payload.nome) { nomeEl.value = payload.nome; nomeEl.readOnly = true; }
-                                    if(indirizzoEl && payload.indirizzo) { indirizzoEl.value = payload.indirizzo; indirizzoEl.readOnly = true; }
-                                    if(latEl && payload.lat) { latEl.value = payload.lat; }
-                                    if(lonEl && payload.lon) { lonEl.value = payload.lon; }
-                                    if(capEl && payload.cap) { capEl.value = payload.cap; }
-                                    if(comuneEl && payload.comune) { comuneEl.value = payload.comune; }
-                                    if(provinciaEl && payload.provincia) { provinciaEl.value = payload.provincia; }
-                                    if(regioneEl && payload.regione) { regioneEl.value = payload.regione; }
+                                    if(nomeEl && payload.nome) { 
+                                        nomeEl.value = payload.nome; 
+                                        nomeEl.readOnly = true; 
+                                        console.log('Set nome:', payload.nome);
+                                    }
+                                    if(indirizzoEl && payload.indirizzo) { 
+                                        indirizzoEl.value = payload.indirizzo; 
+                                        indirizzoEl.readOnly = true; 
+                                        console.log('Set indirizzo:', payload.indirizzo);
+                                    }
+                                    if(latEl && payload.lat) { 
+                                        latEl.value = payload.lat; 
+                                        console.log('Set lat:', payload.lat);
+                                    }
+                                    if(lonEl && payload.lon) { 
+                                        lonEl.value = payload.lon; 
+                                        console.log('Set lon:', payload.lon);
+                                    }
+                                    if(capEl && payload.cap) { 
+                                        capEl.value = payload.cap; 
+                                        console.log('Set cap:', payload.cap);
+                                    }
+                                    if(comuneEl && payload.comune) { 
+                                        comuneEl.value = payload.comune; 
+                                        console.log('Set comune:', payload.comune);
+                                    }
+                                    if(provinciaEl && payload.provincia) { 
+                                        provinciaEl.value = payload.provincia; 
+                                        console.log('Set provincia:', payload.provincia);
+                                    }
+                                    if(regioneEl && payload.regione) { 
+                                        regioneEl.value = payload.regione; 
+                                        console.log('Set regione:', payload.regione);
+                                    }
 
                                     // UX: show badge and unlock button, keep values readonly so they are submitted but not editable
                                     let badge = document.getElementById('codice-badge');
@@ -446,7 +478,12 @@
                                         codiceEl.parentNode.appendChild(unlock);
                                         unlock.addEventListener('click', function(){
                                             // re-enable editing
-                                            if(nomeEl) nomeEl.readOnly = false; if(indirizzoEl) indirizzoEl.readOnly = false; if(regioneEl) regioneEl.readOnly = false; if(provinciaEl) provinciaEl.readOnly = false; if(comuneEl) comuneEl.readOnly = false; if(capEl) capEl.readOnly = false;
+                                            if(nomeEl) nomeEl.readOnly = false; 
+                                            if(indirizzoEl) indirizzoEl.readOnly = false; 
+                                            if(regioneEl) regioneEl.readOnly = false; 
+                                            if(provinciaEl) provinciaEl.readOnly = false; 
+                                            if(comuneEl) comuneEl.readOnly = false; 
+                                            if(capEl) capEl.readOnly = false;
                                             if(badge) badge.remove();
                                             if(unlock) unlock.remove();
                                             showInlineMessage('Campi riattivati per modifica.','info');
@@ -454,10 +491,10 @@
                                     }
 
                                     showInlineMessage('Dati trovati e compilati automaticamente. Verifica e salva.','info');
-                                    try{ if(payload.lat && payload.lon) showMap(payload.lat, payload.lon); }catch(e){}
+                                    try{ if(payload.lat && payload.lon) showMap(payload.lat, payload.lon); }catch(e){console.error('Map error:', e);}
                                 }).catch(err => {
                                     // fallback: inform the user to use ricerca indirizzo oppure Nominatim
-                                    console.warn('Lookup error', err);
+                                    console.warn('Lookup error:', err);
                                     showInlineMessage('Impossibile completare lookup automatico. Usa la ricerca indirizzo sottostante se necessario.','error');
                                 });
                             });

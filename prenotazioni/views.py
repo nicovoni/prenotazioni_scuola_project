@@ -1034,35 +1034,42 @@ def lookup_unica(request):
             with open(csv_path, newline='', encoding='utf-8') as fh:
                 reader = csv.DictReader(fh)
                 for row in reader:
+                    # Extract codice meccanografico - try multiple column name variations
                     codice = None
-                    for k in row.keys():
-                        kl = k.lower()
-                        if 'cod' in kl and ('mecc' in kl or 'meccan' in kl or 'istit' in kl or 'scuola' in kl):
-                            codice = row[k]
+                    for col in row.keys():
+                        col_lower = col.lower()
+                        if 'cod' in col_lower and ('scuola' in col_lower or 'istituto' in col_lower or 'mecc' in col_lower):
+                            codice = row[col]
                             break
-                    if not codice:
-                        for alt in ['codice','codice_meccanografico','cod_istituto','codicescuola','cod_meccanografico']:
-                            if alt in row:
-                                codice = row[alt]
-                                break
+                    
+                    if not codice and 'CODICESCUOLA' in row:
+                        codice = row['CODICESCUOLA']
+                    if not codice and 'CODICEISTITUTORIFERIMENTO' in row:
+                        codice = row['CODICEISTITUTORIFERIMENTO']
                     if not codice:
                         continue
+                    
                     codice_norm = normalize_codice(codice)
 
-                    def pick(keys):
-                        for kk in keys:
-                            if kk in row and row[kk]:
-                                return row[kk]
+                    # Helper to extract values from CSV with multiple column name attempts
+                    def pick_from_csv(csv_row, possible_names):
+                        """Try multiple possible column names to extract a value."""
+                        for col_name in possible_names:
+                            if col_name in csv_row and csv_row[col_name]:
+                                return str(csv_row[col_name]).strip()
                         return ''
 
-                    nome = pick(['denominazione','denominazione_istituto','denominazione_scuola','nome','descrizione'])
-                    indirizzo = pick(['indirizzo','via','indirizzo_scuola','indirizzo_istituto','address'])
-                    cap = pick(['cap','codice_postale','zip'])
-                    comune = pick(['comune','municipio','localita','town','city'])
-                    provincia = pick(['provincia','prov','county'])
-                    regione = pick(['regione','region'])
-                    lat = pick(['latitudine','lat','latitude'])
-                    lon = pick(['longitudine','lon','longitude'])
+                    # Map CSV columns to our data structure
+                    nome = pick_from_csv(row, ['DENOMINAZIONESCUOLA', 'denominazione_scuola', 'nome', 'DENOMINAZIONE'])
+                    indirizzo = pick_from_csv(row, ['INDIRIZZOSCUOLA', 'indirizzo_scuola', 'indirizzo', 'INDIRIZZO'])
+                    cap = pick_from_csv(row, ['CAPSCUOLA', 'codice_postale', 'CAP', 'cap'])
+                    comune = pick_from_csv(row, ['DESCRIZIONECOMUNE', 'comune', 'COMUNE', 'city'])
+                    provincia = pick_from_csv(row, ['PROVINCIA', 'provincia', 'prov', 'county'])
+                    regione = pick_from_csv(row, ['REGIONE', 'regione', 'region', 'state'])
+                    
+                    # Latitude/Longitude might not be in CSV, default to empty
+                    lat = pick_from_csv(row, ['latitudine', 'lat', 'latitude', 'LAT'])
+                    lon = pick_from_csv(row, ['longitudine', 'lon', 'longitude', 'LON'])
 
                     idx[codice_norm] = {
                         'codice': codice_norm,
@@ -1084,7 +1091,8 @@ def lookup_unica(request):
                 index = idx
             except Exception:
                 index = idx
-        except Exception:
+        except Exception as e:
+            print(f"Error reading CSV: {e}")
             index = None
 
     if index is None:
