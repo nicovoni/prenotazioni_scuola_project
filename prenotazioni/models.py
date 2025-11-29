@@ -562,7 +562,14 @@ class UbicazioneRisorsa(models.Model):
     """
     Localizzazioni fisiche delle risorse.
     """
-    nome = models.CharField(max_length=100, unique=True)
+    nome = models.CharField(max_length=100)  # Non unique: molte scuole hanno lo stesso nome
+    codice_meccanografico = models.CharField(
+        max_length=20,
+        unique=True,  # Unique: da scuole_anagrafe.csv
+        blank=True,
+        verbose_name='Codice Meccanografico',
+        help_text='Codice scuola/plesso (CODICESCUOLA dal CSV) - identificatore univoco'
+    )
     descrizione = models.TextField(blank=True)
     edificio = models.CharField(max_length=50)
     piano = models.CharField(max_length=20)

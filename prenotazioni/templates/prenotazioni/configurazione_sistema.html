@@ -4,6 +4,11 @@
 
 {% block content %}
 <div class="container mt-5">
+    {% if school_info %}
+        <input type="hidden" id="saved_school_codice" value="{{ school_info.codice_meccanografico_scuola }}">
+    {% else %}
+        <input type="hidden" id="saved_school_codice" value="">
+    {% endif %}
     <div class="page-header">
         <h1 class="page-title">⚙️ Configurazione Sistema di Prenotazioni</h1>
         <p class="page-subtitle">
@@ -63,165 +68,165 @@
                 .step-text { font-weight:600; color:#495057; }
                 .step.completed .step-bullet { background:linear-gradient(135deg,#43e97b,#38f9d7); color:white; transform:translateY(-3px); box-shadow:0 8px 20px rgba(56,249,215,0.08); }
                 .step.active .step-bullet { background:linear-gradient(135deg,#667eea,#764ba2); color:white; transform:translateY(-4px); box-shadow:0 10px 26px rgba(102,126,234,0.14); }
-                @media (max-width:768px) { .step-text { display:none; } }
-            </style>
+                    <script>
+                        (function(){
+                            // Client-side validation for codice meccanografico and lookup helper
+                            const codiceEl = document.getElementById('id_codice_meccanografico_scuola');
 
-            <script>
-                (function(){
-                    try{
-                        const container = document.getElementById('wizard-stepper');
-                        if(!container) return;
-                        const current = container.dataset.currentStep || '1';
-                        const order = ['1','school','device','resources','done'];
-                        const currentIndex = order.indexOf(String(current));
-                        const steps = container.querySelectorAll('.step');
-                        steps.forEach((el, idx) => {
-                            const key = el.dataset.step;
-                            el.classList.remove('active','completed');
-                            const pos = order.indexOf(String(key));
-                            if(pos < currentIndex) el.classList.add('completed');
-                            if(pos === currentIndex) el.classList.add('active');
-                        });
-                    }catch(e){console.error(e)}
-                })();
-            </script>
-        </div>
+                            if(!codiceEl) return;
 
-        {% if skip_user_creation %}
-            <div class="alert alert-info">
-                <h6>Account amministratore preconfigurato</h6>
-                <p>Hai effettuato l'accesso con il primo utente. L'email amministratore predefinita è:
-                    <strong>{{ admin_email }}</strong>.
-                </p>
-                <p>Dopo aver completato le informazioni sulla scuola, il tuo account verrà promosso ad amministratore.</p>
-            </div>
-        {% endif %}
+                            // normalize input: uppercase and remove spaces
+                            function normalizeCodice(v){ return v ? v.toUpperCase().replace(/\s+/g,'') : ''; }
 
-        {% if step == '1' %}
-            <!-- Passo 1: Designazione Admin -->
-            <h3>👑 Passo 1: Designazione Amministratore</h3>
-            <p>Inserisci l'indirizzo email dell'amministratore per ricevere le credenziali di accesso.</p>
-            {% if not skip_user_creation %}
-            <form method="post">
-                {% csrf_token %}
-                <div class="row justify-content-center">
-                    <div class="col-md-8">
-                        <label for="{{ form_admin.email.id_for_label }}" class="form-label">{{ form_admin.email.label }}</label>
-                        {{ form_admin.email }}
-                        {% if form_admin.email.help_text %}
-                            <div class="form-text">{{ form_admin.email.help_text }}</div>
-                        {% endif %}
-                        {% if form_admin.email.errors %}
-                            <div class="text-danger">
-                                {% for error in form_admin.email.errors %}
-                                    <small>{{ error }}</small>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="mt-4 d-flex justify-content-between">
-                    <span></span>
-                    <button type="submit" name="step1" class="btn btn-primary btn-lg">Avanti →</button>
-                </div>
-            </form>
-            {% else %}
-                <div class="text-center mt-3">
-                    <a href="?step=school" class="btn btn-primary">Continua alla configurazione della scuola →</a>
-                </div>
-            {% endif %}
+                            function showInlineMessage(msg, type='info'){
+                                let el = document.getElementById('codice-msg');
+                                if(!el){ el = document.createElement('div'); el.id='codice-msg'; el.className='form-text mt-2'; codiceEl.parentNode.appendChild(el);} 
+                                el.textContent = msg;
+                                el.style.color = (type==='error') ? '#c82333' : '#0d6efd';
+                            }
 
-        {% elif step == 'school' %}
-            <!-- Passo 1.5: Informazioni scuola -->
-            <div class="row">
-                <div class="col-md-8">
-                    <h3>🏫 Informazioni sulla scuola</h3>
-                    <p>Inserisci il nome completo della scuola (obbligatorio).</p>
+                            codiceEl.addEventListener('input', function(){
+                                this.value = normalizeCodice(this.value);
+                                const v = this.value;
+                                if(!v){ showInlineMessage(''); return; }
+                                const ok = /^[A-Z0-9]{10}$/.test(v);
+                                if(ok){ 
+                                    showInlineMessage('Codice valido, provo a cercare i dati ufficiali...','info');
+                                    performLookup(v);
+                                }
+                                else { showInlineMessage('Codice deve essere 10 caratteri alfanumerici (A-Z 0-9).','error'); }
+                            });
 
-                    <form method="post">
-                        {% csrf_token %}
+                            function getField(id){ return document.getElementById(id); }
 
-                        {% if admin_email %}
-                            <div class="mb-3">
-                                <label class="form-label">Email Amministratore</label>
-                                <input type="email" class="form-control" value="{{ admin_email }}" readonly>
-                                <div class="form-text">L'email dell'amministratore è stata preimpostata dal primo accesso.</div>
-                            </div>
-                        {% endif %}
+                            // lightweight map helper (independent copy)
+                            let _map = null, _marker = null;
+                            function showMap(lat, lon){
+                                const container = document.getElementById('map_preview');
+                                if(!container) return;
+                                container.style.display = 'block';
+                                const la = parseFloat(lat), lo = parseFloat(lon);
+                                try{
+                                    if(!_map){
+                                        _map = L.map(container, { zoomControl: false, attributionControl: false }).setView([la, lo], 16);
+                                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(_map);
+                                        _marker = L.marker([la, lo]).addTo(_map);
+                                    } else {
+                                        _map.setView([la, lo], 16);
+                                        if(_marker) _marker.setLatLng([la, lo]);
+                                    }
+                                }catch(e){console.warn('Leaflet map error', e)}
+                            }
 
-                        <!-- Codice meccanografico (PRIMO CAMPO) -->
-                        <div class="form-group mb-3">
-                            <label for="id_codice_meccanografico_scuola" class="form-label">{{ form_school.codice_meccanografico_scuola.label }} <span class="text-danger">*</span></label>
-                            {{ form_school.codice_meccanografico_scuola }}
-                            <div class="form-text">Inserisci il codice meccanografico (10 caratteri). Verrà usato per cercare i dati ufficiali della scuola.</div>
-                            {% if form_school.codice_meccanografico_scuola.errors %}
-                                <div class="text-danger small">
-                                    {% for error in form_school.codice_meccanografico_scuola.errors %}{{ error }}{% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
+                            // Populate visible fields by id (safe regardless of closure scope)
+                            function populateFieldsWithSchool(school){
+                                const ids = {
+                                    nome: 'id_nome_completo_scuola',
+                                    indirizzo: 'id_indirizzo_autocomplete',
+                                    lat: 'id_latitudine_scuola',
+                                    lon: 'id_longitudine_scuola',
+                                    cap: 'id_codice_postale_scuola',
+                                    comune: 'id_comune_scuola',
+                                    provincia: 'id_provincia_scuola',
+                                    regione: 'id_regione_scuola'
+                                };
+                                if(school.nome){ const e=getField(ids.nome); if(e){ e.value = school.nome; e.readOnly = true; } }
+                                if(school.indirizzo){ const e=getField(ids.indirizzo); if(e){ e.value = school.indirizzo; e.readOnly = true; } }
+                                if(school.lat){ const e=getField(ids.lat); if(e) e.value = String(school.lat); }
+                                if(school.lon){ const e=getField(ids.lon); if(e) e.value = String(school.lon); }
+                                if(school.cap){ const e=getField(ids.cap); if(e) e.value = school.cap; }
+                                if(school.comune){ const e=getField(ids.comune); if(e) e.value = school.comune; }
+                                if(school.provincia){ const e=getField(ids.provincia); if(e) e.value = school.provincia; }
+                                if(school.regione){ const e=getField(ids.regione); if(e) e.value = school.regione; }
+                                try{ if(school.lat && school.lon) showMap(parseFloat(school.lat), parseFloat(school.lon)); }catch(e){console.error(e)}
+                            }
 
-                        <!-- Nome completo scuola (obbligatorio) -->
-                        <div class="form-group mb-4">
-                            <label for="id_nome_completo_scuola" class="form-label">
-                                {{ form_school.nome_completo_scuola.label }} <span class="text-danger">*</span>
-                            </label>
-                            {{ form_school.nome_completo_scuola }}
-                            {% if form_school.nome_completo_scuola.errors %}
-                                <div class="text-danger small">
-                                    {% for error in form_school.nome_completo_scuola.errors %}{{ error }}{% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
+                            // Build and show modal for affiliated schools
+                            function showAffiliatedSchoolsModal(affiliatedSchools, mainInstitute){
+                                // remove existing modal if any
+                                const existing = document.getElementById('affiliated-schools-modal');
+                                if(existing) existing.remove();
 
-                        <!-- Sito web scuola (obbligatorio) -->
-                        <div class="form-group mb-3">
-                            <label for="id_sito_web_scuola" class="form-label">{{ form_school.sito_web_scuola.label }} <span class="text-danger">*</span></label>
-                            {{ form_school.sito_web_scuola }}
-                            <div class="form-text">Inserisci il sito ufficiale della scuola (dominio preferibile *.edu.it).</div>
-                            {% if form_school.sito_web_scuola.errors %}
-                                <div class="text-danger small">
-                                    {% for error in form_school.sito_web_scuola.errors %}{{ error }}{% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
+                                const modal = document.createElement('div');
+                                modal.id = 'affiliated-schools-modal';
+                                modal.className = 'modal fade';
+                                modal.setAttribute('tabindex','-1');
+                                modal.setAttribute('aria-hidden','true');
+                                modal.innerHTML = `
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Sedi dell'istituto</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>L'istituto <strong>${mainInstitute.nome || mainInstitute.codice}</strong> comprende le seguenti sedi:</p>
+                                                <div class="list-group" id="_affiliated_list"></div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+                                            </div>
+                                        </div>
+                                    </div>`;
+                                document.body.appendChild(modal);
 
-                        <!-- Indirizzo completo (obbligatorio, formato compatibile OpenStreetMap/Nominatim) -->
-                        <div class="form-group mb-4">
-                            <label for="{{ form_school.indirizzo_scuola.id_for_label }}" class="form-label">{{ form_school.indirizzo_scuola.label }} <span class="text-danger">*</span></label>
+                                const list = modal.querySelector('#_affiliated_list');
+                                affiliatedSchools.forEach(function(school, idx){
+                                    const btn = document.createElement('button');
+                                    btn.type = 'button';
+                                    btn.className = 'list-group-item list-group-item-action';
+                                    btn.innerHTML = `<strong>${school.nome || school.codice}</strong><br><small class="text-muted">${school.indirizzo||''} ${school.comune?('- '+school.comune):''}</small>`;
+                                    btn.addEventListener('click', function(){
+                                        populateFieldsWithSchool(school);
+                                        const bs = bootstrap.Modal.getOrCreateInstance(modal);
+                                        bs.hide();
+                                        showInlineMessage('Selezionata sede: ' + (school.nome || school.codice), 'info');
+                                    });
+                                    list.appendChild(btn);
+                                });
 
-                            {# Renderizza il campo principale: widget modificato a TextInput con id 'id_indirizzo_autocomplete' #}
-                            {{ form_school.indirizzo_scuola }}
+                                const bs = new bootstrap.Modal(modal);
+                                bs.show();
+                            }
 
-                            {# Campi nascosti per latitudine/longitudine e riferimento OSM (verranno popolati dall'autocomplete) #}
-                            <input type="hidden" id="id_latitudine_scuola" name="latitudine_scuola" value="{{ form_school.initial.latitudine_scuola|default_if_none:'' }}">
-                            <input type="hidden" id="id_longitudine_scuola" name="longitudine_scuola" value="{{ form_school.initial.longitudine_scuola|default_if_none:'' }}">
-                            <input type="hidden" id="id_osm_id_scuola" name="osm_id_scuola" value="{{ form_school.initial.osm_id_scuola|default_if_none:'' }}">
-                            <input type="hidden" id="id_osm_type_scuola" name="osm_type_scuola" value="{{ form_school.initial.osm_type_scuola|default_if_none:'' }}">
+                            // Function to perform the lookup
+                            function performLookup(codice) {
+                                const url = '/api/lookup_unica/?codice=' + encodeURIComponent(codice);
+                                showInlineMessage('Ricerca in corso...','info');
+                                fetch(url, { credentials: 'same-origin', headers:{'Accept':'application/json'} })
+                                .then(r => r.json().then(data => ({ ok: r.ok, status: r.status, data })))
+                                .then(({ok, status, data}) => {
+                                    if(!ok || data.error) { console.warn('Lookup error response:', data); throw new Error(data.message || data.error || 'lookup_failed'); }
+                                    if(!data || !data.data) { throw new Error('no_data'); }
+                                    const payload = data.data;
 
-                            <div class="form-text" id="indirizzo-help">Digita il nome o l'indirizzo della scuola e seleziona il suggerimento corretto. Il campo verrà compilato automaticamente.</div>
+                                    // populate default/main fields
+                                    populateFieldsWithSchool(payload);
 
-                            <!-- Campi auto-populati: CAP, Comune, Provincia, Regione (readonly ma inviati al server) -->
-                            <div class="row mt-3">
-                                <div class="col-md-4">
-                                    <label class="form-label small">CAP</label>
-                                    <input type="text" id="id_codice_postale_scuola" name="codice_postale_scuola" class="form-control" readonly value="{{ form_school.initial.codice_postale_scuola|default_if_none:'' }}">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label small">Comune</label>
-                                    <input type="text" id="id_comune_scuola" name="comune_scuola" class="form-control" readonly value="{{ form_school.initial.comune_scuola|default_if_none:'' }}">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label small">Provincia</label>
-                                    <input type="text" id="id_provincia_scuola" name="provincia_scuola" class="form-control" readonly value="{{ form_school.initial.provincia_scuola|default_if_none:'' }}">
-                                </div>
-                            </div>
+                                    // show badge and unlock button
+                                    let badge = document.getElementById('codice-badge');
+                                    if(!badge){ badge = document.createElement('span'); badge.id='codice-badge'; badge.className='badge bg-success ms-2'; badge.textContent='Auto compilato'; codiceEl.parentNode.appendChild(badge); }
+                                    let unlock = document.getElementById('codice-unlock');
+                                    if(!unlock){ unlock = document.createElement('button'); unlock.type='button'; unlock.id='codice-unlock'; unlock.className='btn btn-link btn-sm ms-2'; unlock.textContent='Modifica'; codiceEl.parentNode.appendChild(unlock);
+                                        unlock.addEventListener('click', function(){
+                                            ['id_nome_completo_scuola','id_indirizzo_autocomplete','id_regione_scuola','id_provincia_scuola','id_comune_scuola','id_codice_postale_scuola'].forEach(function(id){ const e=getField(id); if(e) e.readOnly=false; });
+                                            if(badge) badge.remove(); if(unlock) unlock.remove(); showInlineMessage('Campi riattivati per modifica.','info');
+                                        }); }
 
-                            <div class="row mt-2">
-                                <div class="col-md-6">
-                                    <label class="form-label small">Regione</label>
-                                    <input type="text" id="id_regione_scuola" name="regione_scuola" class="form-control" readonly value="{{ form_school.initial.regione_scuola|default_if_none:'' }}">
-                                </div>
+                                    showInlineMessage('Dati trovati e compilati automaticamente. Verifica e salva.','info');
+
+                                    // affiliated schools
+                                    if(data.affiliated_schools && data.affiliated_schools.length>0){
+                                        showAffiliatedSchoolsModal(data.affiliated_schools, payload);
+                                    }
+                                }).catch(err => {
+                                    console.warn('Lookup error:', err);
+                                    showInlineMessage('Impossibile completare lookup automatico. Usa la ricerca indirizzo sottostante se necessario.','error');
+                                });
+                            }
+
+                        })();
+                    </script>
                                 <div class="col-md-6">
                                     <label class="form-label small">Nazione</label>
                                     <input type="text" id="id_nazione_scuola" name="nazione_scuola" class="form-control" readonly value="{{ form_school.initial.nazione_scuola|default_if_none:'Italia' }}">
@@ -479,25 +484,78 @@
                                         codiceEl.parentNode.appendChild(unlock);
                                         unlock.addEventListener('click', function(){
                                             // re-enable editing
-                                            if(nomeEl) nomeEl.readOnly = false; 
-                                            if(indirizzoEl) indirizzoEl.readOnly = false; 
-                                            if(regioneEl) regioneEl.readOnly = false; 
-                                            if(provinciaEl) provinciaEl.readOnly = false; 
-                                            if(comuneEl) comuneEl.readOnly = false; 
-                                            if(capEl) capEl.readOnly = false;
-                                            if(badge) badge.remove();
-                                            if(unlock) unlock.remove();
-                                            showInlineMessage('Campi riattivati per modifica.','info');
+                                            ['id_nome_completo_scuola','id_indirizzo_autocomplete','id_regione_scuola','id_provincia_scuola','id_comune_scuola','id_codice_postale_scuola'].forEach(function(i){ const e=document.getElementById(i); if(e) e.readOnly=false; });
+                                            if(badge) badge.remove(); if(unlock) unlock.remove(); showInlineMessage('Campi riattivati per modifica.','info');
                                         });
                                     }
 
                                     showInlineMessage('Dati trovati e compilati automaticamente. Verifica e salva.','info');
                                     try{ if(payload.lat && payload.lon) showMap(payload.lat, payload.lon); }catch(e){console.error('Map error:', e);}
+
+                                    // affiliated schools
+                                    if (data.affiliated_schools && data.affiliated_schools.length > 0) {
+                                        showAffiliatedSchoolsModal(data.affiliated_schools, payload);
+                                    }
                                 }).catch(err => {
                                     // fallback: inform the user to use ricerca indirizzo oppure Nominatim
                                     console.warn('Lookup error:', err);
                                     showInlineMessage('Impossibile completare lookup automatico. Usa la ricerca indirizzo sottostante se necessario.','error');
                                 });
+                            }
+
+                            // Helper: populateFieldsWithSchool
+                            function populateFieldsWithSchool(school) {
+                                const ids = {
+                                    nome: 'id_nome_completo_scuola',
+                                    indirizzo: 'id_indirizzo_autocomplete',
+                                    lat: 'id_latitudine_scuola',
+                                    lon: 'id_longitudine_scuola',
+                                    cap: 'id_codice_postale_scuola',
+                                    comune: 'id_comune_scuola',
+                                    provincia: 'id_provincia_scuola',
+                                    regione: 'id_regione_scuola'
+                                };
+                                if(school.nome){ const e=document.getElementById(ids.nome); if(e){ e.value = school.nome; e.readOnly = true; } }
+                                if(school.indirizzo){ const e=document.getElementById(ids.indirizzo); if(e){ e.value = school.indirizzo; e.readOnly = true; } }
+                                if(school.lat){ const e=document.getElementById(ids.lat); if(e) e.value = String(school.lat); }
+                                if(school.lon){ const e=document.getElementById(ids.lon); if(e) e.value = String(school.lon); }
+                                if(school.cap){ const e=document.getElementById(ids.cap); if(e) e.value = school.cap; }
+                                if(school.comune){ const e=document.getElementById(ids.comune); if(e) e.value = school.comune; }
+                                if(school.provincia){ const e=document.getElementById(ids.provincia); if(e) e.value = school.provincia; }
+                                if(school.regione){ const e=document.getElementById(ids.regione); if(e) e.value = school.regione; }
+                                try{ if(school.lat && school.lon) showMap(parseFloat(school.lat), parseFloat(school.lon)); }catch(e){console.error('Map error:', e);}
+                            }
+
+                            // Helper: showAffiliatedSchoolsModal
+                            function showAffiliatedSchoolsModal(affiliatedSchools, mainInstitute) {
+                                const existing = document.getElementById('affiliated-schools-modal'); if(existing) existing.remove();
+                                const modal = document.createElement('div');
+                                modal.id = 'affiliated-schools-modal'; modal.className = 'modal fade'; modal.setAttribute('tabindex','-1'); modal.setAttribute('aria-hidden','true');
+                                modal.innerHTML = `
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Sedi dell'istituto</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>L'istituto <strong>${mainInstitute.nome || mainInstitute.codice}</strong> comprende le seguenti sedi:</p>
+                                                <div class="list-group" id="_affiliated_list"></div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+                                            </div>
+                                        </div>
+                                    </div>`;
+                                document.body.appendChild(modal);
+                                const list = modal.querySelector('#_affiliated_list');
+                                affiliatedSchools.forEach(function(school){
+                                    const btn = document.createElement('button'); btn.type='button'; btn.className='list-group-item list-group-item-action';
+                                    btn.innerHTML = `<strong>${school.nome || school.codice}</strong><br><small class="text-muted">${school.indirizzo||''} ${school.comune?('- '+school.comune):''}</small>`;
+                                    btn.addEventListener('click', function(){ populateFieldsWithSchool(school); bootstrap.Modal.getOrCreateInstance(modal).hide(); showInlineMessage('Selezionata sede: '+(school.nome||school.codice),'info'); });
+                                    list.appendChild(btn);
+                                });
+                                new bootstrap.Modal(modal).show();
                             }
 
                         })();
@@ -835,6 +893,14 @@
                                     </select>
                                     <div class="form-text">Laboratorio: prenotabile solo per intero. Carrello: prenotabile parzialmente.</div>
                                 </div>
+                                <!-- Plesso (sede) select populated from affiliated_schools -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_plesso_{{ resource_num }}" class="form-label fw-bold">Plesso (sede)</label>
+                                    <select name="plesso_{{ resource_num }}" id="id_plesso_{{ resource_num }}" class="form-control">
+                                        <option value="">Usa sede principale</option>
+                                    </select>
+                                    <div class="form-text">Seleziona il plesso/sede associata a questa risorsa (opzionale).</div>
+                                </div>
                             </div>
 
                             <!-- Campo quantità per carrelli -->
@@ -894,6 +960,38 @@
                         select.dispatchEvent(new Event('change'));
                     });
                 });
+            </script>
+            <script>
+                // Populate plesso selects by querying lookup_unica for saved school codice
+                (function(){
+                    const codiceEl = document.getElementById('saved_school_codice');
+                    const codice = codiceEl ? (codiceEl.value || '').trim() : '';
+                    if(!codice) return;
+                    const url = '/api/lookup_unica/?codice=' + encodeURIComponent(codice);
+                    fetch(url, { credentials: 'same-origin', headers:{'Accept':'application/json'} })
+                    .then(r => r.json().then(d => ({ok: r.ok, data: d}))).then(({ok, data})=>{
+                        if(!ok || !data || data.error) return;
+                        const main = data.data || null;
+                        const aff = Array.isArray(data.affiliated_schools) ? data.affiliated_schools.slice() : [];
+                        // ensure main is not included in affiliates
+                        if(main && main.codice){
+                            for(let i=aff.length-1;i>=0;i--){ if((aff[i].codice||'').toUpperCase() === (main.codice||'').toUpperCase()){ aff.splice(i,1); } }
+                        }
+                        // Build options list with main first
+                        const options = [];
+                        if(main){ options.push({value: main.codice, label: (main.nome||main.codice) + ' (Sede principale)'}); }
+                        aff.forEach(function(s){ options.push({value: s.codice, label: (s.nome||s.codice) }); });
+
+                        // Populate every plesso select
+                        const selects = document.querySelectorAll('select[id^="id_plesso_"]');
+                        selects.forEach(function(sel){
+                            // clear existing
+                            sel.innerHTML = '';
+                            const placeholder = document.createElement('option'); placeholder.value=''; placeholder.textContent='Usa sede principale'; sel.appendChild(placeholder);
+                            options.forEach(function(o){ const opt=document.createElement('option'); opt.value=o.value; opt.textContent=o.label; sel.appendChild(opt); });
+                        });
+                    }).catch(e=>{ console.warn('Could not populate plessi:', e); });
+                })();
             </script>
         {% elif step == 'done' or wizard_completed %}
             <div class="text-center py-5">

@@ -28,9 +28,12 @@ def setup_amministratore(request):
             session['skip_user_creation'] = False
 
     skip_user_creation = session.get('skip_user_creation', False)
+    # Include saved school info (if any) so templates can access persisted codice
+    school_instance = InformazioniScuola.objects.filter(id=1).first()
     context = {
         'step': step,
         'skip_user_creation': skip_user_creation,
+        'school_info': school_instance,
     }
 
     # Step 1: Crea admin
@@ -118,9 +121,61 @@ def setup_amministratore(request):
             form_risorse = RisorseConfigurazioneForm(request.POST, num_risorse=num_risorse, dispositivi_disponibili=dispositivi_disponibili)
             context['form_risorse'] = form_risorse
             if form_risorse.is_valid():
-                # Salva risorse (implementazione dettagliata da aggiungere)
-                messages.success(request, 'Risorse configurate!')
-                return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=done")
+                # Extract and save risorse with plesso mapping
+                from django.db import transaction
+                from .models import UbicazioneRisorsa
+                try:
+                    with transaction.atomic():
+                        for i in range(1, num_risorse + 1):
+                            nome = request.POST.get(f'nome_{i}', '').strip()
+                            tipo = request.POST.get(f'tipo_{i}', '').strip()
+                            plesso_codice = request.POST.get(f'plesso_{i}', '').strip()
+                            quantita = request.POST.get(f'quantita_{i}', '1').strip()
+
+                            if not nome or not tipo:
+                                continue
+
+                            # Map tipo from form (lab/carrello) to model choices
+                            tipo_map = {'lab': 'laboratorio', 'carrello': 'carrello'}
+                            tipo_risorsa = tipo_map.get(tipo, tipo)
+
+                            # Generate codice (can be customized)
+                            codice = f"RES{i:04d}"
+                            while Risorsa.objects.filter(codice=codice).exists():
+                                import random
+                                codice = f"RES{random.randint(10000, 99999)}"
+
+                            # Create Risorsa instance
+                            risorsa = Risorsa(
+                                nome=nome,
+                                codice=codice,
+                                tipo=tipo_risorsa,
+                                capacita_massima=int(quantita) if quantita and tipo_risorsa == 'carrello' else None,
+                                attivo=True
+                            )
+
+                            # Map plesso_codice to UbicazioneRisorsa if provided
+                            if plesso_codice:
+                                # Search for UbicazioneRisorsa by codice_meccanografico (exact match)
+                                ubicazione = UbicazioneRisorsa.objects.filter(
+                                    codice_meccanografico__iexact=plesso_codice
+                                ).first()
+                                # Fallback: try nome
+                                if not ubicazione:
+                                    ubicazione = UbicazioneRisorsa.objects.filter(
+                                        nome__icontains=plesso_codice
+                                    ).first()
+                                if ubicazione:
+                                    risorsa.localizzazione = ubicazione
+
+                            risorsa.save()
+
+                    messages.success(request, 'Risorse configurate!')
+                    return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=done")
+                except Exception as e:
+                    messages.error(request, f'Errore durante il salvataggio delle risorse: {str(e)}')
+                    import logging
+                    logging.getLogger('prenotazioni').exception('Error saving resources in setup wizard')
             else:
                 messages.error(request, 'Correggi gli errori nel form risorse.')
 
@@ -990,17 +1045,20 @@ def configurazione_sistema(request):
 def lookup_unica(request):
     """Endpoint di supporto per lookup codice meccanografico.
 
-    Questo è un placeholder server-side che verifica il formato del codice
-    e restituisce istruzioni se il lookup automatico non è stato ancora
-    implementato. Per integrare il servizio Unica/SIC è necessario
-    implementare qui la logica che interroga l'API ufficiale o effettua
-    scraping controllato lato server (evitare CORS/JS client-side).
+    Legge sempre dal CSV backups/scuole_anagrafe.csv come unica fonte di verità
+    per codici meccanografici, istituti principali e sedi affiliate.
+    
+    Ritorna:
+    - data: informazioni dello istituto principale
+    - affiliated_schools: lista di plessi affiliate (esclude la sede principale)
     """
     from django.http import JsonResponse
     import re
 
     codice = request.GET.get('codice', '')
     codice = (codice or '').upper().strip()
+    # preserve original requested codice before any local reassignments
+    requested_codice = codice
     if not codice:
         return JsonResponse({'error': 'missing_codice'}, status=400)
 
@@ -1008,7 +1066,8 @@ def lookup_unica(request):
     if not re.match(r'^[A-Z0-9]{10}$', codice):
         return JsonResponse({'error': 'invalid_format', 'message': 'Codice deve essere 10 caratteri alfanumerici.'}, status=400)
 
-    # Try to use a cached JSON index in backups/scuole_index.json or import from CSV backups/scuole_anagrafe.csv
+    # La fonte attendibile è sempre il CSV in backups/scuole_anagrafe.csv
+    # Leggiamo sempre dal CSV per assicurare coerenza dei dati
     from django.conf import settings
     import os, json, csv
 
@@ -1016,40 +1075,33 @@ def lookup_unica(request):
         return ''.join((c or '').upper().split())
 
     base = getattr(settings, 'BASE_DIR', os.getcwd())
-    index_path = os.path.join(base, 'backups', 'scuole_index.json')
     csv_path = os.path.join(base, 'backups', 'scuole_anagrafe.csv')
 
     index = None
-    if os.path.exists(index_path):
-        try:
-            with open(index_path, 'r', encoding='utf-8') as fh:
-                index = json.load(fh)
-        except Exception:
-            index = None
-
-    # If JSON index missing, try to build from CSV if provided
-    if index is None and os.path.exists(csv_path):
+    
+    # Leggi sempre dal CSV come fonte primaria di verità
+    if os.path.exists(csv_path):
         try:
             idx = {}
             with open(csv_path, newline='', encoding='utf-8') as fh:
                 reader = csv.DictReader(fh)
                 for row in reader:
                     # Extract codice meccanografico - try multiple column name variations
-                    codice = None
+                    csv_codice = None
                     for col in row.keys():
                         col_lower = col.lower()
                         if 'cod' in col_lower and ('scuola' in col_lower or 'istituto' in col_lower or 'mecc' in col_lower):
-                            codice = row[col]
+                            csv_codice = row[col]
                             break
-                    
-                    if not codice and 'CODICESCUOLA' in row:
-                        codice = row['CODICESCUOLA']
-                    if not codice and 'CODICEISTITUTORIFERIMENTO' in row:
-                        codice = row['CODICEISTITUTORIFERIMENTO']
-                    if not codice:
+
+                    if not csv_codice and 'CODICESCUOLA' in row:
+                        csv_codice = row['CODICESCUOLA']
+                    if not csv_codice and 'CODICEISTITUTORIFERIMENTO' in row:
+                        csv_codice = row['CODICEISTITUTORIFERIMENTO']
+                    if not csv_codice:
                         continue
-                    
-                    codice_norm = normalize_codice(codice)
+
+                    codice_norm = normalize_codice(csv_codice)
 
                     # Helper to extract values from CSV with multiple column name attempts
                     def pick_from_csv(csv_row, possible_names):
@@ -1070,6 +1122,10 @@ def lookup_unica(request):
                     # Latitude/Longitude might not be in CSV, default to empty
                     lat = pick_from_csv(row, ['latitudine', 'lat', 'latitude', 'LAT'])
                     lon = pick_from_csv(row, ['longitudine', 'lon', 'longitude', 'LON'])
+                    
+                    # Extract codice istituto principale
+                    codice_istituto = pick_from_csv(row, ['CODICEISTITUTORIFERIMENTO', 'codiceistitutoriferimento'])
+                    sede_direttivo = pick_from_csv(row, ['INDICAZIONESEDEDIRETTIVO', 'indicazionesededirettivo', 'SEDE_DIRETTIVO'])
 
                     idx[codice_norm] = {
                         'codice': codice_norm,
@@ -1081,16 +1137,13 @@ def lookup_unica(request):
                         'regione': regione,
                         'lat': lat,
                         'lon': lon,
+                        'codice_istituto': codice_istituto,
+                        'sede_direttivo': sede_direttivo,
                     }
 
-            # save index
-            try:
-                os.makedirs(os.path.dirname(index_path), exist_ok=True)
-                with open(index_path, 'w', encoding='utf-8') as of:
-                    json.dump(idx, of, ensure_ascii=False, indent=2)
-                index = idx
-            except Exception:
-                index = idx
+            # NON salvare come cache: il CSV è l'unica fonte di verità
+            # Manteniamo index solo in memoria per questa richiesta
+            index = idx
         except Exception as e:
             print(f"Error reading CSV: {e}")
             index = None
@@ -1098,15 +1151,55 @@ def lookup_unica(request):
     if index is None:
         return JsonResponse({
             'error': 'no_dataset',
-            'message': 'Nessun dataset disponibile. Metti un CSV ufficiale in `backups/scuole_anagrafe.csv` oppure esegui il management command `python manage.py import_scuole_csv`.'
+            'message': 'Nessun dataset disponibile. Assicurati che il CSV ufficiale sia in `backups/scuole_anagrafe.csv`.'
         }, status=404)
 
-    codice_norm = normalize_codice(codice)
+    codice_norm = normalize_codice(requested_codice)
     data = index.get(codice_norm)
     if not data:
         return JsonResponse({'error': 'not_found', 'message': 'Codice non trovato nell’indice locale.'}, status=404)
 
-    return JsonResponse({'error': None, 'data': data})
+    # Logica per scuole affiliate
+    # Se questo codice ha sede_direttivo=SI, è una scuola principale
+    # Altrimenti, trova la scuola principale attraverso codice_istituto
+    
+    main_institute = None
+    affiliated_schools = []
+    
+    # Se questo è il codice principale (sede_direttivo=SI)
+    if data.get('sede_direttivo', '').upper() == 'SI':
+        main_institute = data
+        # Trova tutte le scuole affiliate con lo stesso codice_istituto
+        if data.get('codice_istituto'):
+            for idx_code, idx_data in index.items():
+                if idx_data.get('codice_istituto') == data.get('codice_istituto'):
+                    if idx_code != codice_norm:  # Escludi la principale stessa
+                        affiliated_schools.append(idx_data)
+    else:
+        # Questo è un codice di una scuola figlia
+        # Trova la scuola principale
+        if data.get('codice_istituto'):
+            for idx_code, idx_data in index.items():
+                if idx_data.get('codice_istituto') == data.get('codice_istituto') and idx_data.get('sede_direttivo', '').upper() == 'SI':
+                    main_institute = idx_data
+                    break
+        
+        # Se non trovata, usa la scuola corrente come principale
+        if main_institute is None:
+            main_institute = data
+        
+        # Trova tutte le scuole affiliate
+        if main_institute.get('codice_istituto'):
+            for idx_code, idx_data in index.items():
+                if idx_data.get('codice_istituto') == main_institute.get('codice_istituto'):
+                    if idx_code != main_institute['codice']:  # Escludi la principale
+                        affiliated_schools.append(idx_data)
+    
+    return JsonResponse({
+        'error': None, 
+        'data': main_institute,
+        'affiliated_schools': affiliated_schools
+    })
 
 
 def admin_operazioni(request):
