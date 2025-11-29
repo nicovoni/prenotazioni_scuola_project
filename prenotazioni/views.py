@@ -18,11 +18,21 @@ def setup_amministratore(request):
     step = request.GET.get('step')
     session = request.session
     wizard_steps = ['1', 'school', 'device', 'resources', 'done']
+    
+    # Cerca se esiste un utente is_staff=True (admin esistente)
+    admin_user = User.objects.filter(is_staff=True, is_superuser=False).first()
+    
     # Default step
     if not step:
-        if request.user.is_authenticated and request.user.is_staff and not request.user.is_superuser:
+        if admin_user:
+            # Se c'è già un admin is_staff, salta la creazione e vai direttamente alla scuola
             step = 'school'
             session['skip_user_creation'] = True
+            session['admin_user_id'] = admin_user.id
+        elif request.user.is_authenticated and request.user.is_staff and not request.user.is_superuser:
+            step = 'school'
+            session['skip_user_creation'] = True
+            session['admin_user_id'] = request.user.id
         else:
             step = '1'
             session['skip_user_creation'] = False
@@ -35,6 +45,17 @@ def setup_amministratore(request):
         'skip_user_creation': skip_user_creation,
         'school_info': school_instance,
     }
+    
+    # Se esiste un admin user, aggiungilo al context
+    if skip_user_creation:
+        admin_user_id = session.get('admin_user_id')
+        if admin_user_id:
+            try:
+                admin_user = User.objects.get(id=admin_user_id)
+                context['admin_email'] = admin_user.email
+                context['admin_username'] = admin_user.username
+            except User.DoesNotExist:
+                pass
 
     # Step 1: Crea admin
     if step == '1':

@@ -246,8 +246,40 @@
                         })();
                     </script>
                 {% if step == 1 %}
-                    <!-- Admin step content - TODO: add admin form if needed -->
+                    <!-- Admin step content -->
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">👑 Passo 1: Crea Amministratore</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="{{ form_admin.email.id_for_label }}" class="form-label">{{ form_admin.email.label }}</label>
+                                    {{ form_admin.email }}
+                                    {% if form_admin.email.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form_admin.email.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Inserisci l'email dell'amministratore del sistema.</div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-4">
+                                    <button type="submit" name="step1" class="btn btn-primary btn-lg">
+                                        ➕ Crea Amministratore →
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 {% elif step == 'school' %}
+                    {% if skip_user_creation and admin_username %}
+                    <div class="alert alert-success mb-4">
+                        <h5>✓ Amministratore Riconosciuto</h5>
+                        <p class="mb-1"><strong>Username:</strong> {{ admin_username }}</p>
+                        <p class="mb-0"><strong>Email:</strong> {{ admin_email }}</p>
+                    </div>
+                    {% endif %}
                                 <div class="col-md-6">
                                     <label class="form-label small">Nazione</label>
                                     <input type="text" id="id_nazione_scuola" name="nazione_scuola" class="form-control" readonly value="{{ form_school.initial.nazione_scuola|default_if_none:'Italia' }}">
