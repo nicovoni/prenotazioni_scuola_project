@@ -245,6 +245,9 @@
 
                         })();
                     </script>
+                {% if step == 1 %}
+                    <!-- Admin step content - TODO: add admin form if needed -->
+                {% else %}{% if step == "school" %}
                                 <div class="col-md-6">
                                     <label class="form-label small">Nazione</label>
                                     <input type="text" id="id_nazione_scuola" name="nazione_scuola" class="form-control" readonly value="{{ form_school.initial.nazione_scuola|default_if_none:'Italia' }}">
