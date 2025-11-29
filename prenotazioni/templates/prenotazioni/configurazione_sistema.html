@@ -397,15 +397,16 @@
                                 if(!v){ showInlineMessage(''); return; }
                                 // basic pattern: 10 alnum characters
                                 const ok = /^[A-Z0-9]{10}$/.test(v);
-                                if(ok){ showInlineMessage('Codice valido, provo a cercare i dati ufficiali...','info'); }
+                                if(ok){ 
+                                    showInlineMessage('Codice valido, provo a cercare i dati ufficiali...','info');
+                                    // Perform lookup immediately when code is valid
+                                    performLookup(v);
+                                }
                                 else { showInlineMessage('Codice deve essere 10 caratteri alfanumerici (A-Z 0-9).','error'); }
                             });
 
-                            codiceEl.addEventListener('blur', function(){
-                                const codice = normalizeCodice(this.value);
-                                if(!/^[A-Z0-9]{10}$/.test(codice)) return;
-
-                                // Try backend lookup which should query the Unica/SIC service server-side.
+                            // Function to perform the lookup
+                            function performLookup(codice) {
                                 const url = '/api/lookup_unica/?codice=' + encodeURIComponent(codice);
                                 showInlineMessage('Ricerca in corso...','info');
                                 fetch(url, { credentials: 'same-origin', headers:{'Accept':'application/json'} })
@@ -497,7 +498,7 @@
                                     console.warn('Lookup error:', err);
                                     showInlineMessage('Impossibile completare lookup automatico. Usa la ricerca indirizzo sottostante se necessario.','error');
                                 });
-                            });
+                            }
 
                         })();
                     </script>
