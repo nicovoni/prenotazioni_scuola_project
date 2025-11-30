@@ -220,14 +220,16 @@
                                             <a href="{% url 'prenotazioni:edit_prenotazione' p.id %}" 
                                                class="btn btn-outline-primary btn-sm hover-lift" 
                                                data-bs-toggle="tooltip" 
-                                               title="Modifica prenotazione">
-                                                <i class="bi bi-pencil" aria-label="Modifica prenotazione" aria-hidden="false"></i>
+                                               title="Modifica prenotazione"
+                                               aria-label="Modifica prenotazione">
+                                                <i class="bi bi-pencil" aria-hidden="true"></i>
                                             </a>
                                             <button class="btn btn-outline-danger btn-sm hover-lift" 
                                                     onclick="confirmDelete({{ p.id }})" 
                                                     data-bs-toggle="tooltip" 
-                                                    title="Elimina prenotazione">
-                                                <i class="bi bi-trash" aria-label="Elimina prenotazione" aria-hidden="false"></i>
+                                                    title="Elimina prenotazione"
+                                                    aria-label="Elimina prenotazione">
+                                                <i class="bi bi-trash" aria-hidden="true"></i>
                                             </button>
                                         </div>
                                     {% else %}
