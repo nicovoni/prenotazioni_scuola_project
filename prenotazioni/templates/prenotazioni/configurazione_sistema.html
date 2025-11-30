@@ -53,12 +53,12 @@
         <div class="mb-4">
             <div id="wizard-stepper" data-current-step="{{ current_step }}">
                 <ol class="d-flex align-items-center list-unstyled m-0 p-0" style="gap:12px;">
-                    <li class="step" data-step="1" style="flex:1; display:flex; align-items:center; gap:12px;">
+                    <li class="step" data-step="admin" style="flex:1; display:flex; align-items:center; gap:12px;">
                         <div class="step-bullet" aria-hidden="true">👑</div>
                         <div class="step-text">Admin</div>
+                    </li>
                     <li style="width:40px; height:4px; background:#e9ecef; border-radius:2px;"></li>
                     <li class="step" data-step="school" style="flex:1; display:flex; align-items:center; gap:12px;">
-                    </div>
                         <div class="step-bullet" aria-hidden="true">🏫</div>
                         <div class="step-text">Scuola</div>
                     </li>
@@ -245,7 +245,7 @@
 
                         })();
                     </script>
-                {% if step == 1 %}
+                {% if step == 'admin' %}
                     <!-- Admin step content -->
                     <div class="card">
                         <div class="card-header bg-primary text-white">
@@ -278,11 +278,10 @@
                             <h5 class="mb-0">🏫 Passo 2: Informazioni Scuola</h5>
                         </div>
                         <div class="card-body">
-                            {% if skip_user_creation and admin_username %}
+                            {% if has_admin %}
                             <div class="alert alert-success mb-4">
                                 <h5>✓ Amministratore Riconosciuto</h5>
-                                <p class="mb-1"><strong>Username:</strong> {{ admin_username }}</p>
-                                <p class="mb-0"><strong>Email:</strong> {{ admin_email }}</p>
+                                <p class="mb-1"><strong>Email:</strong> {{ admin_email }}</p>
                             </div>
                             {% endif %}
 

@@ -1,150 +1,213 @@
 from django.contrib.auth import get_user_model
 
 def setup_amministratore(request):
-    """View di setup amministratore e prima configurazione."""
+    """
+    Wizard di configurazione iniziale del sistema.
+    
+    Logica chiara e semplice:
+    1. Se esiste superuser → redirect a home (setup completato)
+    2. Se non esiste nessun admin → mostra step 'admin' (solo email)
+    3. Se esiste is_staff ma non superuser → salta a step 'school'
+    4. Step progressivi: admin → school → device → resources → done
+    """
     from django.contrib.auth import get_user_model
     from django.contrib import messages
     from django.shortcuts import render, redirect
-    from .models import Risorsa, InformazioniScuola, Dispositivo
+    from .models import Risorsa, InformazioniScuola, Dispositivo, UbicazioneRisorsa
     from .forms import AdminUserForm, SchoolInfoForm, DeviceWizardForm, RisorseConfigurazioneForm
     from django.urls import reverse
+    from django.db import transaction
+    
     User = get_user_model()
 
-    # Step logic
+    # Step 0: Se setup è già completato (esiste superuser), vai a home
     if User.objects.filter(is_superuser=True).exists():
         return redirect('home')
 
-    # Step management
-    step = request.GET.get('step')
+    # Determinare lo step corrente
+    step = request.GET.get('step', '').strip()
     session = request.session
-    wizard_steps = ['1', 'school', 'device', 'resources', 'done']
     
-    # Cerca se esiste un utente is_staff=True (admin esistente)
-    admin_user = User.objects.filter(is_staff=True, is_superuser=False).first()
-    
-    # Default step
+    # Se nessuno step specificato, determina automaticamente qual è il prossimo
     if not step:
+        # Se esiste is_staff ma non superuser, salta direttamente a 'school'
+        admin_user = User.objects.filter(is_staff=True, is_superuser=False).first()
         if admin_user:
-            # Se c'è già un admin is_staff, salta la creazione e vai direttamente alla scuola
             step = 'school'
-            session['skip_user_creation'] = True
             session['admin_user_id'] = admin_user.id
-        elif request.user.is_authenticated and request.user.is_staff and not request.user.is_superuser:
-            step = 'school'
-            session['skip_user_creation'] = True
-            session['admin_user_id'] = request.user.id
         else:
-            step = '1'
-            session['skip_user_creation'] = False
+            # Altrimenti, inizia dal passo admin (creazione utente)
+            step = 'admin'
 
-    skip_user_creation = session.get('skip_user_creation', False)
-    # Include saved school info (if any) so templates can access persisted codice
-    school_instance = InformazioniScuola.objects.filter(id=1).first()
+    session['current_step'] = step
+    session.save()
+
+    # Context base
     context = {
         'step': step,
-        'skip_user_creation': skip_user_creation,
-        'school_info': school_instance,
+        'wizard_steps': ['admin', 'school', 'device', 'resources', 'done'],
+        'current_step': step,
     }
-    
-    # Se esiste un admin user, aggiungilo al context
-    if skip_user_creation:
-        admin_user_id = session.get('admin_user_id')
-        if admin_user_id:
-            try:
-                admin_user = User.objects.get(id=admin_user_id)
-                context['admin_email'] = admin_user.email
-                context['admin_username'] = admin_user.username
-            except User.DoesNotExist:
-                pass
 
-    # Step 1: Crea admin
-    if step == '1':
+    # Recupera informazioni admin se esiste
+    admin_user_id = session.get('admin_user_id')
+    if admin_user_id:
+        try:
+            admin_user = User.objects.get(id=admin_user_id)
+            context['admin_email'] = admin_user.email
+            context['admin_username'] = admin_user.username
+            context['has_admin'] = True
+        except User.DoesNotExist:
+            session.pop('admin_user_id', None)
+
+    # Recupera informazioni scuola se esiste
+    school_instance = InformazioniScuola.objects.filter(id=1).first()
+    context['school_info'] = school_instance
+
+    # ============================================================================
+    # STEP 1: Admin creation (solo email - password generata automaticamente)
+    # ============================================================================
+    if step == 'admin':
         form_admin = AdminUserForm()
         context['form_admin'] = form_admin
-        if request.method == 'POST' and not skip_user_creation:
+        
+        if request.method == 'POST':
             form_admin = AdminUserForm(request.POST)
             context['form_admin'] = form_admin
+            
             if form_admin.is_valid():
                 email = form_admin.cleaned_data['email']
-                username = email.split('@')[0]
-                password = User.objects.make_random_password()
+                
+                # Controlla se email esiste già
                 if User.objects.filter(email=email).exists():
-                    messages.error(request, 'Email già esistente.')
+                    messages.error(request, 'Email già associata a un altro utente.')
                 else:
-                    user = User.objects.create_user(username=username, email=email, password=password, is_staff=True)
-                    # Qui potresti inviare una mail con la password generata
-                    session['admin_email'] = email
-                    messages.success(request, f'Utente amministratore creato! Email: {email}.')
+                    # Crea utente con username derivato da email
+                    username = email.split('@')[0]
+                    # Ensure unique username
+                    base_username = username
+                    counter = 1
+                    while User.objects.filter(username=username).exists():
+                        username = f"{base_username}{counter}"
+                        counter += 1
+                    
+                    # Genera password casuale
+                    password = User.objects.make_random_password(length=12)
+                    
+                    # Crea utente admin
+                    admin_user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=password,
+                        is_staff=True,
+                        is_superuser=False
+                    )
+                    
+                    # Salva in sessione per i prossimi step
+                    session['admin_user_id'] = admin_user.id
+                    session['admin_password'] = password  # Da mostrare una sola volta
+                    session.save()
+                    
+                    messages.success(request, f'✓ Amministratore creato con email: {email}')
                     return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=school")
             else:
-                messages.error(request, 'Correggi gli errori nel form.')
-        if skip_user_creation:
-            context['admin_email'] = request.user.email
+                for field, errors in form_admin.errors.items():
+                    for error in errors:
+                        messages.error(request, f'{field}: {error}')
 
-    # Step 2: Info scuola
+    # ============================================================================
+    # STEP 2: Informazioni scuola
+    # ============================================================================
     elif step == 'school':
-        school_instance = InformazioniScuola.objects.filter(id=1).first()
+        # Deve esistere un admin per arrivare qui
+        admin_user_id = session.get('admin_user_id')
+        if not admin_user_id:
+            messages.error(request, 'Devi prima creare un utente admin.')
+            return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=admin")
+        
+        # Carica o crea istanza scuola
+        school_instance, _ = InformazioniScuola.objects.get_or_create(id=1)
         form_school = SchoolInfoForm(instance=school_instance)
         context['form_school'] = form_school
-        if skip_user_creation:
-            context['admin_email'] = request.user.email
-        else:
-            context['admin_email'] = session.get('admin_email')
+        
         if request.method == 'POST':
             form_school = SchoolInfoForm(request.POST, instance=school_instance)
             context['form_school'] = form_school
+            
             if form_school.is_valid():
                 form_school.save()
-                messages.success(request, 'Informazioni scuola salvate!')
-                # Promuovi utente a superuser se necessario
-                if skip_user_creation and request.user.is_authenticated:
-                    try:
-                        request.user.is_superuser = True
-                        request.user.is_staff = True
-                        request.user.save()
-                        messages.success(request, 'Il tuo account è stato promosso ad amministratore.')
-                    except Exception:
-                        messages.error(request, 'Impossibile promuovere l\'utente a superuser automaticamente.')
+                messages.success(request, '✓ Informazioni scuola salvate!')
                 return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=device")
             else:
-                messages.error(request, 'Correggi gli errori nel form.')
+                for field, errors in form_school.errors.items():
+                    for error in errors:
+                        messages.error(request, f'{field}: {error}')
 
-    # Step 3: Catalogo dispositivi
+    # ============================================================================
+    # STEP 3: Catalogo dispositivi
+    # ============================================================================
     elif step == 'device':
+        # Deve esistere un admin e scuola per arrivare qui
+        admin_user_id = session.get('admin_user_id')
+        school_instance = InformazioniScuola.objects.filter(id=1).first()
+        
+        if not admin_user_id or not school_instance:
+            messages.error(request, 'Completa i step precedenti prima di continuare.')
+            return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=school")
+        
         form_device = DeviceWizardForm()
         dispositivi_esistenti = Dispositivo.objects.all().order_by('marca', 'nome')
         context['form_device'] = form_device
         context['dispositivi_esistenti'] = dispositivi_esistenti
+        
         if request.method == 'POST':
             if 'add_device' in request.POST:
                 form_device = DeviceWizardForm(request.POST)
                 context['form_device'] = form_device
+                
                 if form_device.is_valid():
                     form_device.save()
-                    messages.success(request, 'Dispositivo aggiunto!')
+                    messages.success(request, '✓ Dispositivo aggiunto!')
                     return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=device")
                 else:
-                    messages.error(request, 'Correggi gli errori nel form dispositivo.')
+                    messages.error(request, 'Errore nel form dispositivo.')
+                    
             elif 'step_device_continue' in request.POST:
                 if Dispositivo.objects.exists():
                     return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=resources")
                 else:
-                    messages.error(request, 'Devi catalogare almeno un dispositivo per continuare.')
+                    messages.error(request, '❌ Devi catalogare almeno un dispositivo per continuare.')
 
-    # Step 4: Configura risorse
+    # ============================================================================
+    # STEP 4: Configura risorse
+    # ============================================================================
     elif step == 'resources':
+        # Verifica prerequisiti
+        admin_user_id = session.get('admin_user_id')
+        school_instance = InformazioniScuola.objects.filter(id=1).first()
+        
+        if not admin_user_id or not school_instance or not Dispositivo.objects.exists():
+            messages.error(request, 'Completa i step precedenti prima di continuare.')
+            return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=device")
+        
         num_risorse = session.get('num_risorse', 3)
         dispositivi_disponibili = Dispositivo.objects.all()
-        form_risorse = RisorseConfigurazioneForm(num_risorse=num_risorse, dispositivi_disponibili=dispositivi_disponibili)
+        form_risorse = RisorseConfigurazioneForm(
+            num_risorse=num_risorse, 
+            dispositivi_disponibili=dispositivi_disponibili
+        )
         context['form_risorse'] = form_risorse
         context['num_risorse'] = range(1, num_risorse + 1)
+        
         if request.method == 'POST':
-            form_risorse = RisorseConfigurazioneForm(request.POST, num_risorse=num_risorse, dispositivi_disponibili=dispositivi_disponibili)
+            form_risorse = RisorseConfigurazioneForm(
+                request.POST, 
+                num_risorse=num_risorse, 
+                dispositivi_disponibili=dispositivi_disponibili
+            )
             context['form_risorse'] = form_risorse
+            
             if form_risorse.is_valid():
-                # Extract and save risorse with plesso mapping
-                from django.db import transaction
-                from .models import UbicazioneRisorsa
                 try:
                     with transaction.atomic():
                         for i in range(1, num_risorse + 1):
@@ -156,17 +219,18 @@ def setup_amministratore(request):
                             if not nome or not tipo:
                                 continue
 
-                            # Map tipo from form (lab/carrello) to model choices
+                            # Map tipo
                             tipo_map = {'lab': 'laboratorio', 'carrello': 'carrello'}
                             tipo_risorsa = tipo_map.get(tipo, tipo)
 
-                            # Generate codice (can be customized)
+                            # Genera codice univoco
                             codice = f"RES{i:04d}"
+                            counter = 1
                             while Risorsa.objects.filter(codice=codice).exists():
                                 import random
                                 codice = f"RES{random.randint(10000, 99999)}"
 
-                            # Create Risorsa instance
+                            # Crea risorsa
                             risorsa = Risorsa(
                                 nome=nome,
                                 codice=codice,
@@ -175,13 +239,11 @@ def setup_amministratore(request):
                                 attivo=True
                             )
 
-                            # Map plesso_codice to UbicazioneRisorsa if provided
+                            # Map plesso se fornito
                             if plesso_codice:
-                                # Search for UbicazioneRisorsa by codice_meccanografico (exact match)
                                 ubicazione = UbicazioneRisorsa.objects.filter(
                                     codice_meccanografico__iexact=plesso_codice
                                 ).first()
-                                # Fallback: try nome
                                 if not ubicazione:
                                     ubicazione = UbicazioneRisorsa.objects.filter(
                                         nome__icontains=plesso_codice
@@ -191,22 +253,31 @@ def setup_amministratore(request):
 
                             risorsa.save()
 
-                    messages.success(request, 'Risorse configurate!')
+                    messages.success(request, '✓ Risorse configurate!')
                     return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=done")
                 except Exception as e:
-                    messages.error(request, f'Errore durante il salvataggio delle risorse: {str(e)}')
+                    messages.error(request, f'Errore nel salvataggio: {str(e)}')
                     import logging
-                    logging.getLogger('prenotazioni').exception('Error saving resources in setup wizard')
-            else:
-                messages.error(request, 'Correggi gli errori nel form risorse.')
+                    logging.getLogger('prenotazioni').exception(
+                        'Error saving resources in setup wizard'
+                    )
 
-    # Step 5: Fine
+    # ============================================================================
+    # STEP 5: Completamento - promuovi admin a superuser
+    # ============================================================================
     elif step == 'done':
+        admin_user_id = session.get('admin_user_id')
+        if admin_user_id:
+            try:
+                admin_user = User.objects.get(id=admin_user_id)
+                if not admin_user.is_superuser:
+                    admin_user.is_superuser = True
+                    admin_user.save()
+                    messages.success(request, '✓ Account promosso a superuser!')
+            except User.DoesNotExist:
+                pass
+        
         context['wizard_completed'] = True
-
-    # Barra avanzamento e step attivo
-    context['wizard_steps'] = wizard_steps
-    context['current_step'] = step
 
     return render(request, 'prenotazioni/configurazione_sistema.html', context)
 """
