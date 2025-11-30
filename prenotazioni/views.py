@@ -227,6 +227,21 @@ def setup_amministratore(request):
             if form_risorse.is_valid():
                 try:
                     with transaction.atomic():
+                        # CORREZIONE: Assicura che esista almeno una UbicazioneRisorsa
+                        # Se nessuna esiste, crea una di default
+                        ubicazioni = UbicazioneRisorsa.objects.all()
+                        if not ubicazioni.exists():
+                            # Crea ubicazione di default
+                            ubicazione_default = UbicazioneRisorsa.objects.create(
+                                nome='Plesso Principale',
+                                edificio='A',
+                                piano='0',
+                                aula='Centrale',
+                                codice_meccanografico='DEFAULT'
+                            )
+                        else:
+                            ubicazione_default = ubicazioni.first()
+                        
                         for i in range(1, num_risorse + 1):
                             nome = request.POST.get(f'nome_{i}', '').strip()
                             tipo = request.POST.get(f'tipo_{i}', '').strip()
@@ -247,26 +262,30 @@ def setup_amministratore(request):
                                 import random
                                 codice = f"RES{random.randint(10000, 99999)}"
 
-                            # Crea risorsa
+                            # CORREZIONE: Garantisci che localizzazione sia sempre assegnata (NOT NULL)
+                            ubicazione = ubicazione_default
+                            
+                            # Prova a trovare ubicazione da plesso_codice se fornito
+                            if plesso_codice:
+                                ubicazione_match = UbicazioneRisorsa.objects.filter(
+                                    codice_meccanografico__iexact=plesso_codice
+                                ).first()
+                                if not ubicazione_match:
+                                    ubicazione_match = UbicazioneRisorsa.objects.filter(
+                                        nome__icontains=plesso_codice
+                                    ).first()
+                                if ubicazione_match:
+                                    ubicazione = ubicazione_match
+
+                            # Crea risorsa con ubicazione GARANTITA
                             risorsa = Risorsa(
                                 nome=nome,
                                 codice=codice,
                                 tipo=tipo_risorsa,
                                 capacita_massima=int(quantita) if quantita and tipo_risorsa == 'carrello' else None,
-                                attivo=True
+                                attivo=True,
+                                localizzazione=ubicazione  # GARANTITO NOT NULL
                             )
-
-                            # Map plesso se fornito
-                            if plesso_codice:
-                                ubicazione = UbicazioneRisorsa.objects.filter(
-                                    codice_meccanografico__iexact=plesso_codice
-                                ).first()
-                                if not ubicazione:
-                                    ubicazione = UbicazioneRisorsa.objects.filter(
-                                        nome__icontains=plesso_codice
-                                    ).first()
-                                if ubicazione:
-                                    risorsa.localizzazione = ubicazione
 
                             risorsa.save()
 

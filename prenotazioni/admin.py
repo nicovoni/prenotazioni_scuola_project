@@ -7,7 +7,7 @@ Aggiornato per supportare tutti i nuovi modelli della ristrutturazione.
 from django.contrib import admin
 from .models import (
     # Modelli Core
-    ProfiloUtente, Risorsa, Dispositivo, Prenotazione,
+    ProfiloUtente, Risorsa, Dispositivo, Prenotazione, PrenotazioneDispositivo,
 
     # Configurazione e Info
     ConfigurazioneSistema, InformazioniScuola,
@@ -136,7 +136,7 @@ class AmministrazioneUbicazioneRisorsa(admin.ModelAdmin):
 class AmministrazioneDispositivo(admin.ModelAdmin):
     """Admin per dispositivi."""
 
-    list_display = ('nome', 'tipo', 'categoria', 'stato', 'disponibile', 'edificio', 'attivo')
+    list_display = ('nome', 'tipo', 'categoria', 'stato', 'disponibile', 'ubicazione', 'attivo')
     list_filter = ('tipo', 'stato', 'categoria', 'attivo', 'data_acquisto')
     search_fields = ('nome', 'marca', 'modello', 'serie', 'codice_inventario')
     readonly_fields = ('creato_il', 'modificato_il', 'disponibile')
@@ -184,10 +184,8 @@ class AmministrazionePrenotazione(admin.ModelAdmin):
 
     list_display = ('utente', 'risorsa', 'stato', 'quantita', 'inizio', 'fine', 'priorita', 'durata_ore', 'stato_temporale', 'con_approvazione', 'modificabile', 'dispositivi_richiesti')
     list_filter = ('stato', 'priorita', 'setup_needed', 'cleanup_needed', 'inizio', 'fine', 'approvazione_richiesta')
-    search_fields = ('utente__username', 'utente__email', 'risorsa__nome', 'scopo', 'dispositivi_selezionati__nome')
+    search_fields = ('utente__username', 'utente__email', 'risorsa__nome', 'scopo')
     readonly_fields = ('creato_il', 'modificato_il', 'durata_minuti', 'durata_ore', 'stato_temporale', 'con_approvazione', 'modificabile', 'cancellabile', 'conflitti', 'dispositivi_richiesti', 'data_approvazione')
-
-    filter_horizontal = ('dispositivi_selezionati',)
 
     # Filtri avanzati per controllo minuzioso
     list_filter = (
@@ -269,9 +267,9 @@ class AmministrazionePrenotazione(admin.ModelAdmin):
 
     def dispositivi_richiesti(self, obj):
         """Mostra i dispositivi richiesti per questa prenotazione."""
-        dispositivi = obj.dispositivi_selezionati.all()
+        dispositivi = obj.prenotazionedispositivo_set.all()
         if dispositivi:
-            return ", ".join([d.nome for d in dispositivi[:3]]) + (f" +{dispositivi.count()-3}" if dispositivi.count() > 3 else "")
+            return ", ".join([pd.dispositivo.nome for pd in dispositivi[:3]]) + (f" +{dispositivi.count()-3}" if dispositivi.count() > 3 else "")
         return "Nessuno"
     dispositivi_richiesti.short_description = 'Dispositivi'
 
@@ -279,7 +277,7 @@ class AmministrazionePrenotazione(admin.ModelAdmin):
         """Ottimizza le query per controlli minuziosi."""
         return super().get_queryset(request).select_related(
             'utente', 'risorsa', 'stato', 'approvato_da'
-        ).prefetch_related('dispositivi_selezionati')
+        ).prefetch_related('prenotazionedispositivo_set')
 
     def get_readonly_fields(self, request, obj=None):
         """Campi readonly basati su logica minuziosa."""
@@ -295,6 +293,23 @@ class AmministrazionePrenotazione(admin.ModelAdmin):
                 readonly.extend(['inizio', 'fine', 'quantita'])
 
         return tuple(readonly)
+
+
+@admin.register(PrenotazioneDispositivo)
+class AmministrazionePrenotazioneDispositivo(admin.ModelAdmin):
+    """Admin per assegnazioni dispositivi alle prenotazioni."""
+
+    list_display = ('prenotazione', 'dispositivo', 'quantita', 'stato_assegnazione', 'data_assegnazione', 'data_restituzione')
+    list_filter = ('stato_assegnazione', 'data_assegnazione', 'data_restituzione')
+    search_fields = ('prenotazione__utente__username', 'dispositivo__nome', 'note_assegnazione')
+    readonly_fields = ('data_assegnazione', 'prenotazione', 'dispositivo')
+    ordering = ('-data_assegnazione',)
+
+    def get_queryset(self, request):
+        """Ottimizza le query."""
+        return super().get_queryset(request).select_related(
+            'prenotazione', 'prenotazione__utente', 'dispositivo'
+        )
 
 
 # =====================================================

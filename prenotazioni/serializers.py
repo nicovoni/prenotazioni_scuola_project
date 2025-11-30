@@ -169,11 +169,23 @@ class BookingStatusSerializer(serializers.ModelSerializer):
         fields = ['id', 'nome', 'descrizione', 'colore', 'icon', 'ordine']
 
 
+class PrenotazioneDispositivoSerializer(serializers.Serializer):
+    """Serializer per device assignments con state tracking."""
+    id = serializers.IntegerField(read_only=True)
+    dispositivo = DeviceSerializer(read_only=True)
+    quantita = serializers.IntegerField()
+    stato_assegnazione = serializers.CharField()
+    data_assegnazione = serializers.DateTimeField(read_only=True)
+    data_restituzione = serializers.DateTimeField(allow_null=True)
+    note_assegnazione = serializers.CharField(required=False, allow_blank=True)
+
+
 class BookingSerializer(serializers.ModelSerializer):
     utente = SimpleUserSerializer(read_only=True)
     risorsa = ResourceSerializer(read_only=True)
     stato = BookingStatusSerializer(read_only=True)
-    dispositivi_selezionati = DeviceSerializer(many=True, read_only=True)
+    # AGGIORNATO: dispositivi_assegnati sostituisce dispositivi_selezionati
+    dispositivi_assegnati = PrenotazioneDispositivoSerializer(many=True, read_only=True)
 
     durata_minuti = serializers.IntegerField(read_only=True, source='durata_minuti')
     durata_ore = serializers.FloatField(read_only=True, source='durata_ore')
@@ -186,7 +198,7 @@ class BookingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Prenotazione
-        fields = ['id', 'utente', 'risorsa', 'dispositivi_selezionati', 'inizio', 'fine', 'quantita', 'priorita', 'stato', 'scopo', 'note', 'note_amministrative', 'setup_needed', 'cleanup_needed', 'approvazione_richiesta', 'approvato_da', 'data_approvazione', 'notifiche_inviate', 'ultimo_aggiornamento_notifica', 'durata_minuti', 'durata_ore', 'is_passata', 'is_futura', 'is_in_corso', 'can_be_modified', 'can_be_cancelled', 'creato_il', 'modificato_il', 'cancellato_il']
+        fields = ['id', 'utente', 'risorsa', 'dispositivi_assegnati', 'inizio', 'fine', 'numero_persone', 'quantita', 'priorita', 'stato', 'scopo', 'note', 'note_amministrative', 'setup_needed', 'cleanup_needed', 'approvazione_richiesta', 'approvato_da', 'data_approvazione', 'notifiche_inviate', 'ultimo_aggiornamento_notifica', 'durata_minuti', 'durata_ore', 'is_passata', 'is_futura', 'is_in_corso', 'can_be_modified', 'can_be_cancelled', 'creato_il', 'modificato_il', 'cancellato_il']
         read_only_fields = ['id', 'utente', 'stato', 'approvato_da', 'data_approvazione', 'notifiche_inviate', 'durata_minuti', 'durata_ore', 'is_passata', 'is_futura', 'is_in_corso', 'can_be_modified', 'can_be_cancelled', 'creato_il', 'modificato_il', 'cancellato_il']
 
     def get_can_be_modified(self, obj):
@@ -203,7 +215,8 @@ class BookingSerializer(serializers.ModelSerializer):
 class BookingCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Prenotazione
-        fields = ['risorsa', 'dispositivi_selezionati', 'inizio', 'fine', 'quantita', 'priorita', 'scopo', 'note', 'setup_needed', 'cleanup_needed']
+        fields = ['risorsa', 'inizio', 'fine', 'numero_persone', 'quantita', 'priorita', 'scopo', 'note', 'setup_needed', 'cleanup_needed']
+        # NOTE: dispositivi_assegnati gestiti tramite PrenotazioneDispositivo dopo creazione
 
     def validate(self, data):
         inizio = data.get('inizio')

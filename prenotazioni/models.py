@@ -44,12 +44,6 @@ def genera_codice_univoco():
 # MANAGER PERSONALIZZATI PER SOFT-DELETE
 # =============================================================================
 
-class SoftDeleteManager(models.Manager):
-    """Manager che filtra automaticamente record soft-deleted."""
-    def get_queryset(self):
-        return super().get_queryset().filter(cancellato_il__isnull=True)
-
-
 class SoftDeleteQuerySet(models.QuerySet):
     """QuerySet personalizzato per soft-delete."""
     def delete(self):
@@ -67,6 +61,12 @@ class SoftDeleteQuerySet(models.QuerySet):
     def all_including_deleted(self):
         """Include anche record soft-deleted."""
         return super().get_queryset()
+
+
+class SoftDeleteManager(models.Manager):
+    """Manager che filtra automaticamente record soft-deleted."""
+    def get_queryset(self):
+        return SoftDeleteQuerySet(self.model, using=self._db).filter(cancellato_il__isnull=True)
 
 
 # =====================================================
@@ -618,10 +618,12 @@ class Dispositivo(models.Model):
         help_text='CPU, RAM, Storage, OS, etc.'
     )
 
-    # Localizzazione - CORRETTA: FK a UbicazioneRisorsa (obbligatoria)
+    # Localizzazione - CORRETTA: FK a UbicazioneRisorsa (nullable per ora, diventerà obbligatoria dopo setup)
     ubicazione = models.ForeignKey(
         UbicazioneRisorsa,
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         verbose_name='Ubicazione Dispositivo',
         help_text='Localizzazione fisica del dispositivo'
     )
@@ -673,7 +675,7 @@ class Dispositivo(models.Model):
     modificato_il = models.DateTimeField(auto_now=True)
 
     # Manager personalizzato per soft-delete
-    objects = SoftDeleteManager.as_manager()
+    objects = SoftDeleteManager()
     all_objects = models.Manager()  # Per recuperare anche cancellati
 
     class Meta:
@@ -756,6 +758,8 @@ class Risorsa(models.Model):
     localizzazione = models.ForeignKey(
         UbicazioneRisorsa,
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         verbose_name='Ubicazione Risorsa'
     )
 
@@ -835,7 +839,7 @@ class Risorsa(models.Model):
     modificato_il = models.DateTimeField(auto_now=True)
 
     # Manager personalizzato per soft-delete
-    objects = SoftDeleteManager.as_manager()
+    objects = SoftDeleteManager()
     all_objects = models.Manager()  # Per recuperare anche cancellate
 
     class Meta:
@@ -1062,7 +1066,7 @@ class Prenotazione(models.Model):
     cancellato_il = models.DateTimeField(null=True, blank=True)
 
     # Manager con soft-delete
-    objects = SoftDeleteManager.as_manager()
+    objects = SoftDeleteManager()
     all_objects = models.Manager()
 
     class Meta:

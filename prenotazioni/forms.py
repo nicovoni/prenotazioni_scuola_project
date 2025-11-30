@@ -190,24 +190,62 @@ class PinVerificationForm(forms.Form):
 
 
 class EmailLoginForm(forms.Form):
-    """Form per login tramite email."""
+    """Form per login tramite email.
+    
+    La validazione del formato/dominio email verrà implementata
+    durante lo step di configurazione del sistema per adattarsi
+    alle specifiche esigenze dell'istituto.
+    """
     
     email = forms.EmailField(
         widget=forms.EmailInput(attrs={
             'class': 'form-control',
-            'placeholder': 'i.cognome@isufol.it'
+            'placeholder': 'nome.cognome@dominio.it'
         }),
-        label='Email Istituzionale'
+        label='Email Istituzionale',
+        help_text='Inserisci la tua email scolastica'
     )
 
 
 # Backwards-compatible aliases / additional simple forms expected by views
 class AdminUserForm(forms.Form):
-    """Minimal form used during initial setup to collect admin email."""
+    """Form per collezionare email primo utente che diventerà amministratore.
+    
+    IMPORTANTE:
+    - Il primo utente che accede al sistema diventerà AUTOMATICAMENTE amministratore
+    - Questo ruolo NON POTRÀ ESSERE CAMBIATO IN SEGUITO
+    - L'email può essere un indirizzo personale (qualsiasi dominio)
+    - La validazione è solo sul formato email (non sul dominio)
+    
+    Successivamente gli altri utenti (docenti con email scolastica) dovranno
+    rispettare il formato e dominio configurati dall'istituto.
+    """
     email = forms.EmailField(
-        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'admin@example.edu.it'}),
-        label='Email Amministratore'
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'admin@example.com'
+        }),
+        label='Email Amministratore',
+        help_text='Può essere un indirizzo email personale (qualsiasi dominio)'
     )
+    
+    def clean_email(self):
+        """Valida che l'email abbia un formato corretto.
+        
+        NOTE:
+        - Qualsiasi dominio è accettato (non solo .edu.it)
+        - La validazione del dominio per gli altri utenti sarà
+          configurata in uno step successivo
+        """
+        email = self.cleaned_data.get('email', '').strip()
+        if not email:
+            raise ValidationError('Questo campo non può essere vuoto.')
+        
+        # Semplice validazione: assicura che sia un'email valida
+        # Django già valida il formato tramite EmailField
+        # Qui non facciamo controlli sul dominio
+        
+        return email.lower()
 
 
 class ConfigurationForm(forms.ModelForm):
@@ -257,7 +295,7 @@ class DeviceForm(forms.ModelForm):
         model = Device
         fields = [
             'nome', 'modello', 'marca', 'serie', 'codice_inventario', 'tipo',
-            'categoria', 'specifiche', 'stato', 'edificio', 'piano', 'aula', 'armadio',
+            'categoria', 'ubicazione', 'specifiche', 'stato',
             'data_acquisto', 'data_scadenza_garanzia', 'valore_acquisto', 'note',
             'ultimo_controllo', 'prossima_manutenzione'
         ]
@@ -269,12 +307,9 @@ class DeviceForm(forms.ModelForm):
             'codice_inventario': forms.TextInput(attrs={'class': 'form-control'}),
             'tipo': forms.Select(attrs={'class': 'form-select'}),
             'categoria': forms.Select(attrs={'class': 'form-select'}),
+            'ubicazione': forms.Select(attrs={'class': 'form-select'}),
             'specifiche': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'stato': forms.Select(attrs={'class': 'form-select'}),
-            'edificio': forms.TextInput(attrs={'class': 'form-control'}),
-            'piano': forms.TextInput(attrs={'class': 'form-control'}),
-            'aula': forms.TextInput(attrs={'class': 'form-control'}),
-            'armadio': forms.TextInput(attrs={'class': 'form-control'}),
             'data_acquisto': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'data_scadenza_garanzia': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'valore_acquisto': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -287,9 +322,18 @@ class DeviceForm(forms.ModelForm):
 class DeviceWizardForm(forms.ModelForm):
     """Form semplificato per wizard configurazione."""
     
+    # Campo ubicazione richiesto per FK a UbicazioneRisorsa
+    ubicazione = forms.ModelChoiceField(
+        queryset=ResourceLocation.objects.all(),
+        label='Ubicazione Dispositivo',
+        empty_label='-- Seleziona ubicazione --',
+        widget=forms.Select(attrs={'class': 'form-control mb-2'}),
+        help_text='Dove si trova fisicamente il dispositivo'
+    )
+    
     class Meta:
         model = Device
-        fields = ['nome', 'tipo', 'marca', 'modello', 'categoria']
+        fields = ['nome', 'tipo', 'marca', 'modello', 'categoria', 'ubicazione']
         widgets = {
             'nome': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'es: iPad Pro 12.9'}),
             'tipo': forms.Select(attrs={'class': 'form-control mb-2'}),

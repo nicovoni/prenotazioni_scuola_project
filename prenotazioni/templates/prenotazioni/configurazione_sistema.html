@@ -232,17 +232,42 @@
                         </div>
                         <div class="card-body">
                             {% if form_admin %}
+                            <!-- ⚠️ AVVISO IMPORTANTE per primo utente admin -->
+                            <div class="alert alert-warning border-2" role="alert">
+                                <h5 class="alert-heading">
+                                    <i class="bi bi-exclamation-triangle"></i> Attenzione: Questa decisione è permanente!
+                                </h5>
+                                <hr>
+                                <p class="mb-2">
+                                    <strong>L'indirizzo email che inserirai diventerà l'amministratore del sistema.</strong>
+                                </p>
+                                <ul class="mb-3">
+                                    <li><strong>Non potrà mai essere cambiato in futuro</strong> - questo ruolo è permanente e esclusivo</li>
+                                    <li><strong>Può essere un'email personale</strong> - non deve necessariamente essere del dominio della scuola</li>
+                                    <li>Avrà accesso completo a tutte le funzionalità amministrative</li>
+                                    <li>Avrà accesso al wizard di configurazione e alle impostazioni di sistema</li>
+                                </ul>
+                                <p class="mb-0">
+                                    <strong>💡 Consiglio:</strong> Usa un'email che avrai accesso anche in futuro (es. email personale o email con permessi di accesso durevoli).
+                                </p>
+                            </div>
+
                             <form method="post">
                                 {% csrf_token %}
                                 <div class="mb-3">
-                                    <label for="{{ form_admin.email.id_for_label }}" class="form-label">{{ form_admin.email.label }}</label>
+                                    <label for="{{ form_admin.email.id_for_label }}" class="form-label">
+                                        <strong>{{ form_admin.email.label }}</strong>
+                                        <span class="text-danger">*</span>
+                                    </label>
                                     {{ form_admin.email }}
+                                    {% if form_admin.email.help_text %}
+                                        <div class="form-text">{{ form_admin.email.help_text }}</div>
+                                    {% endif %}
                                     {% if form_admin.email.errors %}
                                         <div class="text-danger small">
                                             {% for error in form_admin.email.errors %}{{ error }}{% endfor %}
                                         </div>
                                     {% endif %}
-                                    <div class="form-text">Inserisci l'email dell'amministratore del sistema.</div>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center mt-4">
                                     <button type="submit" name="step1" class="btn btn-primary btn-lg">
