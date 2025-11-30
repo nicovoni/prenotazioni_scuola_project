@@ -1265,4 +1265,71 @@
     </div>
 </div>
 
+<script>
+    // Disabilita auto-dismiss degli alert importanti per permettere all'utente di leggere
+    document.addEventListener('DOMContentLoaded', function() {
+        // Trova tutti gli alert
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            // Se è un alert di warning o danger, disabilita auto-dismiss
+            if (alert.classList.contains('alert-warning') || alert.classList.contains('alert-danger')) {
+                // Rimuovi il role="alert" che potrebbe causare auto-dismiss
+                // Nota: Bootstrap 5 non ha auto-dismiss di default, ma nel caso fosse attivato:
+                // Disabilita qualsiasi timer di auto-dismiss
+                alert.setAttribute('data-bs-dismiss', 'false');
+                
+                // Se c'è un pulsante di chiusura, mantienilo ma non auto-chiudere
+                const closeBtn = alert.querySelector('.btn-close');
+                if (closeBtn) {
+                    // L'utente può chiuderlo manualmente, ma non scompare da solo
+                    closeBtn.style.cursor = 'pointer';
+                }
+            }
+        });
+
+        // Specificamente per l'alert admin, mantienilo visibile per almeno 1 minuto
+        // anche se l'utente tenta di chiuderlo accidentalmente
+        const adminAlerts = document.querySelectorAll('.alert-warning');
+        adminAlerts.forEach(function(alert) {
+            if (alert.textContent.includes('Attenzione') || alert.textContent.includes('permanente')) {
+                // Questo è l'alert admin - disabilita il btn-close per 60 secondi
+                const closeBtn = alert.querySelector('.btn-close');
+                if (closeBtn) {
+                    closeBtn.style.opacity = '0.3';
+                    closeBtn.style.cursor = 'not-allowed';
+                    closeBtn.setAttribute('disabled', 'disabled');
+                    
+                    // Dopo 60 secondi, abilita la chiusura
+                    setTimeout(function() {
+                        closeBtn.style.opacity = '1';
+                        closeBtn.style.cursor = 'pointer';
+                        closeBtn.removeAttribute('disabled');
+                    }, 60000); // 60 secondi = 1 minuto
+                    
+                    // Aggiungi testo visibile del timer
+                    const timer = document.createElement('small');
+                    timer.className = 'text-muted';
+                    timer.id = 'admin-alert-timer';
+                    timer.textContent = '(Resterà visibile per 1 minuto)';
+                    timer.style.display = 'block';
+                    timer.style.marginTop = '0.5rem';
+                    alert.appendChild(timer);
+                    
+                    // Update timer countdown
+                    let secondsLeft = 60;
+                    const timerInterval = setInterval(function() {
+                        secondsLeft--;
+                        if (secondsLeft > 0) {
+                            timer.textContent = `(Chiusura disponibile tra ${secondsLeft}s)`;
+                        } else {
+                            timer.textContent = '(Puoi ora chiudere questo avviso)';
+                            clearInterval(timerInterval);
+                        }
+                    }, 1000);
+                }
+            }
+        });
+    });
+</script>
+
 {% endblock %}

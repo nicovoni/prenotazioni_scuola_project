@@ -108,21 +108,16 @@ def setup_amministratore(request):
                         username = f"{base_username}{counter}"
                         counter += 1
                     
-                    # Genera password casuale
-                    password = User.objects.make_random_password(length=12)
-                    
-                    # Crea utente admin
+                    # Crea utente admin (accesso via email+PIN come i docenti)
                     admin_user = User.objects.create_user(
                         username=username,
                         email=email,
-                        password=password,
                         is_staff=True,
                         is_superuser=False
                     )
                     
                     # Salva in sessione per i prossimi step
                     session['admin_user_id'] = admin_user.id
-                    session['admin_password'] = password  # Da mostrare una sola volta
                     session.save()
                     
                     messages.success(request, f'✓ Amministratore creato con email: {email}')
