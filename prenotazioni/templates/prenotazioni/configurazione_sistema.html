@@ -82,14 +82,6 @@
                 .step.active .step-bullet { background:linear-gradient(135deg,#667eea,#764ba2); color:white; transform:translateY(-4px); box-shadow:0 10px 26px rgba(102,126,234,0.14); }
             </style>
 
-            <!-- DEBUG: Mostra il valore di step -->
-            <div style="background:#fff3cd; padding:15px; margin:15px 0; border:1px solid #ffc107; border-radius:4px; font-family:monospace; font-size:13px;">
-                <strong style="color:#856404;">🔍 DEBUG:</strong><br>
-                step = "{{ step }}"<br>
-                current_step = "{{ current_step }}"<br>
-                form_admin = {{ form_admin|default:"FALSE" }}
-            </div>
-
                     <script>
                         (function(){
                             // Client-side validation for codice meccanografico and lookup helper
@@ -121,46 +113,29 @@
 
                             function getField(id){ return document.getElementById(id); }
 
-                            // lightweight map helper (independent copy)
-                            let _map = null, _marker = null;
-                            function showMap(lat, lon){
-                                const container = document.getElementById('map_preview');
-                                if(!container) return;
-                                container.style.display = 'block';
-                                const la = parseFloat(lat), lo = parseFloat(lon);
-                                try{
-                                    if(!_map){
-                                        _map = L.map(container, { zoomControl: false, attributionControl: false }).setView([la, lo], 16);
-                                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(_map);
-                                        _marker = L.marker([la, lo]).addTo(_map);
-                                    } else {
-                                        _map.setView([la, lo], 16);
-                                        if(_marker) _marker.setLatLng([la, lo]);
-                                    }
-                                }catch(e){console.warn('Leaflet map error', e)}
-                            }
+                            // lightweight map helper - NOT USED (lat/lon removed)
+                            // Coordinates are not available in CSV data
 
                             // Populate visible fields by id (safe regardless of closure scope)
                             function populateFieldsWithSchool(school){
                                 const ids = {
                                     nome: 'id_nome_completo_scuola',
                                     indirizzo: 'id_indirizzo_autocomplete',
-                                    lat: 'id_latitudine_scuola',
-                                    lon: 'id_longitudine_scuola',
                                     cap: 'id_codice_postale_scuola',
                                     comune: 'id_comune_scuola',
                                     provincia: 'id_provincia_scuola',
-                                    regione: 'id_regione_scuola'
+                                    regione: 'id_regione_scuola',
+                                    sito_web: 'id_sito_web_scuola',
+                                    email: 'id_email_istituzionale_scuola'
                                 };
                                 if(school.nome){ const e=getField(ids.nome); if(e){ e.value = school.nome; e.readOnly = true; } }
                                 if(school.indirizzo){ const e=getField(ids.indirizzo); if(e){ e.value = school.indirizzo; e.readOnly = true; } }
-                                if(school.lat){ const e=getField(ids.lat); if(e) e.value = String(school.lat); }
-                                if(school.lon){ const e=getField(ids.lon); if(e) e.value = String(school.lon); }
                                 if(school.cap){ const e=getField(ids.cap); if(e) e.value = school.cap; }
                                 if(school.comune){ const e=getField(ids.comune); if(e) e.value = school.comune; }
                                 if(school.provincia){ const e=getField(ids.provincia); if(e) e.value = school.provincia; }
                                 if(school.regione){ const e=getField(ids.regione); if(e) e.value = school.regione; }
-                                try{ if(school.lat && school.lon) showMap(parseFloat(school.lat), parseFloat(school.lon)); }catch(e){console.error(e)}
+                                if(school.sito_web){ const e=getField(ids.sito_web); if(e){ e.value = school.sito_web; e.readOnly = true; } }
+                                if(school.email_istituzionale){ const e=getField(ids.email); if(e){ e.value = school.email_istituzionale; e.readOnly = true; } }
                             }
 
                             // Build and show modal for affiliated schools

@@ -34,7 +34,7 @@ class InformazioniScuolaForm(forms.ModelForm):
             'partita_iva_scuola', 'sito_web_scuola', 'email_istituzionale_scuola',
             'telefono_scuola', 'fax_scuola', 'indirizzo_scuola', 'codice_postale_scuola',
             'comune_scuola', 'provincia_scuola', 'regione_scuola', 'nazione_scuola',
-            'latitudine_scuola', 'longitudine_scuola', 'scuola_attiva'
+            'scuola_attiva'
         ]
         widgets = {
             'nome_completo_scuola': forms.TextInput(attrs={'class': 'form-control'}),
@@ -51,8 +51,6 @@ class InformazioniScuolaForm(forms.ModelForm):
             'provincia_scuola': forms.TextInput(attrs={'class': 'form-control'}),
             'regione_scuola': forms.TextInput(attrs={'class': 'form-control'}),
             'nazione_scuola': forms.TextInput(attrs={'class': 'form-control'}),
-            'latitudine_scuola': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00000001'}),
-            'longitudine_scuola': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00000001'}),
             'scuola_attiva': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 

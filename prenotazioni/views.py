@@ -1196,6 +1196,10 @@ def lookup_unica(request):
                     # Extract codice istituto principale
                     codice_istituto = pick_from_csv(row, ['CODICEISTITUTORIFERIMENTO', 'codiceistitutoriferimento'])
                     sede_direttivo = pick_from_csv(row, ['INDICAZIONESEDEDIRETTIVO', 'indicazionesededirettivo', 'SEDE_DIRETTIVO'])
+                    
+                    # Extract sito web e email istituzionale
+                    sito_web = pick_from_csv(row, ['SITOWEBSCUOLA', 'sitowebscuola', 'sito_web', 'website'])
+                    email_istituzionale = pick_from_csv(row, ['INDIRIZZOEMAILSCUOLA', 'indirizzoemailscuola', 'email', 'mail'])
 
                     idx[codice_norm] = {
                         'codice': codice_norm,
@@ -1209,6 +1213,8 @@ def lookup_unica(request):
                         'lon': lon,
                         'codice_istituto': codice_istituto,
                         'sede_direttivo': sede_direttivo,
+                        'sito_web': sito_web,
+                        'email_istituzionale': email_istituzionale,
                     }
 
             # NON salvare come cache: il CSV è l'unica fonte di verità
