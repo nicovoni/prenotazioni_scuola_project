@@ -44,13 +44,16 @@ def setup_amministratore(request):
     
     # Se nessuno step specificato, determina automaticamente qual è il prossimo
     if not step:
-        # Se esiste is_staff ma non superuser, salta direttamente a 'school'
-        admin_user = User.objects.filter(is_staff=True, is_superuser=False).first()
-        if admin_user:
-            step = 'school'
-            session['admin_user_id'] = admin_user.id
+        # Se non c'è nessun superuser, il wizard deve partire da 'admin'
+        # (ignora la sessione precedente se non è completa)
+        if not User.objects.filter(is_superuser=True).exists():
+            # No superuser exists → sempre start da 'admin'
+            step = 'admin'
+            # Pulisci la sessione precedente per un fresh start
+            session.pop('admin_user_id', None)
+            session.pop('current_step', None)
         else:
-            # Altrimenti, inizia dal passo admin (creazione utente)
+            # Questo non dovrebbe mai accadere (siamo nel ramo wizard, non dashboard)
             step = 'admin'
 
     session['current_step'] = step
