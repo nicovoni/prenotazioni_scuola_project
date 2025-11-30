@@ -12,24 +12,18 @@
     <div class="page-header">
         <h1 class="page-title">⚙️ Configurazione Sistema di Prenotazioni</h1>
         <p class="page-subtitle">
-            {% if step == 1 %}
+            {% if step == "admin" or step == 1 %}
                 Crea il primo utente amministratore
+            {% elif step == "school" %}
+                Inserisci informazioni sulla scuola
+            {% elif step == "device" %}
+                Catalogo dispositivi scolastici
+            {% elif step == "resources" or step == 2 or step == 3 %}
+                Configura risorse e dispositivi
+            {% elif step == "done" %}
+                Completamento della configurazione
             {% else %}
-                {% if step == "school" %}
-                    Inserisci informazioni sulla scuola
-                {% else %}
-                    {% if step == "device" %}
-                        Catalogo dispositivi scolastici
-                    {% else %}
-                        {% if step == 2 %}
-                            Definisci quante risorse creare
-                        {% else %}
-                            {% if step == 3 %}
-                                Configura i dettagli delle risorse
-                            {% endif %}
-                        {% endif %}
-                    {% endif %}
-                {% endif %}
+                Configurazione Sistema
             {% endif %}
         </p>
     </div>
@@ -245,13 +239,14 @@
 
                         })();
                     </script>
-                {% if step == 'admin' %}
+                {% if step == "admin" or step == 1 %}
                     <!-- Admin step content -->
                     <div class="card">
                         <div class="card-header bg-primary text-white">
                             <h5 class="mb-0">👑 Passo 1: Crea Amministratore</h5>
                         </div>
                         <div class="card-body">
+                            {% if form_admin %}
                             <form method="post">
                                 {% csrf_token %}
                                 <div class="mb-3">
@@ -270,9 +265,14 @@
                                     </button>
                                 </div>
                             </form>
+                            {% else %}
+                            <div class="alert alert-danger mb-0">
+                                <strong>⚠️ Errore di Context:</strong> form_admin non è disponibile in questa richiesta.
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
-                {% elif step == 'school' %}
+                {% elif step == "school" %}
                     <div class="card">
                         <div class="card-header bg-primary text-white">
                             <h5 class="mb-0">🏫 Passo 2: Informazioni Scuola</h5>
