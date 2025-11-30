@@ -1246,24 +1246,45 @@ def lookup_unica(request):
                     if idx_code != codice_norm:  # Escludi la principale stessa
                         affiliated_schools.append(idx_data)
     else:
-        # Questo è un codice di una scuola figlia
-        # Trova la scuola principale
+        # Questo è un codice di una scuola figlia/plesso
+        # Strategia 1: Usa codice_istituto per trovare la principale
         if data.get('codice_istituto'):
             for idx_code, idx_data in index.items():
                 if idx_data.get('codice_istituto') == data.get('codice_istituto') and idx_data.get('sede_direttivo', '').upper() == 'SI':
                     main_institute = idx_data
                     break
         
-        # Se non trovata, usa la scuola corrente come principale
+        # Strategia 2 (fallback): Se non trovata via codice_istituto,
+        # cerca altre scuole dello stesso nome (plessi della stessa scuola)
+        if main_institute is None and data.get('nome'):
+            # Cerca la scuola con sede_direttivo=SI e nome simile
+            nome_base = data.get('nome', '').split(' - ')[0].strip()  # Prendi la parte prima del " - "
+            for idx_code, idx_data in index.items():
+                idx_nome_base = idx_data.get('nome', '').split(' - ')[0].strip()
+                if idx_nome_base == nome_base and idx_data.get('sede_direttivo', '').upper() == 'SI':
+                    main_institute = idx_data
+                    break
+        
+        # Strategia 3 (fallback finale): Se ancora non trovata, usa il plesso stesso
+        # (Ma log per debug)
         if main_institute is None:
+            import logging
+            logging.warning(f"Could not find main institute for plesso {codice_norm}. Using plesso itself.")
             main_institute = data
         
-        # Trova tutte le scuole affiliate
+        # Trova tutte le scuole affiliate della principale
         if main_institute.get('codice_istituto'):
             for idx_code, idx_data in index.items():
                 if idx_data.get('codice_istituto') == main_institute.get('codice_istituto'):
                     if idx_code != main_institute['codice']:  # Escludi la principale
                         affiliated_schools.append(idx_data)
+        elif main_institute.get('nome'):
+            # Fallback: trova plessi con lo stesso nome base
+            nome_base = main_institute.get('nome', '').split(' - ')[0].strip()
+            for idx_code, idx_data in index.items():
+                idx_nome_base = idx_data.get('nome', '').split(' - ')[0].strip()
+                if idx_nome_base == nome_base and idx_code != main_institute['codice']:
+                    affiliated_schools.append(idx_data)
     
     return JsonResponse({
         'error': None, 
