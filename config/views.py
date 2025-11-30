@@ -9,13 +9,13 @@ def home(request):
         from django.contrib.auth import get_user_model
         User = get_user_model()
         if not User.objects.exists() or not Risorsa.objects.exists():
-            return redirect('prenotazioni:configurazione_sistema')
+            return redirect('prenotazioni:setup_amministratore')
         return render(request, 'home.html')
     except Exception:
         logging.getLogger('prenotazioni').exception('Error while checking initial setup in home view')
         # Se le tabelle non esistono, redirect alla configurazione
         # Questo permette al sito di funzionare durante il deploy
-        return redirect('prenotazioni:configurazione_sistema')
+        return redirect('prenotazioni:setup_amministratore')
 
 def health_check(request):
     """Health check endpoint for Render deployment monitoring"""

@@ -2,28 +2,42 @@ from django.contrib.auth import get_user_model
 
 def setup_amministratore(request):
     """
-    Wizard di configurazione iniziale del sistema.
+    Wizard di configurazione iniziale e gestione configurazioni post-setup.
     
-    Logica chiara e semplice:
-    1. Se esiste superuser → redirect a home (setup completato)
-    2. Se non esiste nessun admin → mostra step 'admin' (solo email)
-    3. Se esiste is_staff ma non superuser → salta a step 'school'
-    4. Step progressivi: admin → school → device → resources → done
+    Unico entry point per:
+    1. Setup iniziale (se no superuser)
+    2. Gestione configurazioni (se superuser esiste)
+    
+    Logica:
+    - Se no superuser → Mostra wizard (admin → school → device → resources → done)
+    - Se superuser esiste → Mostra dashboard configurazioni
     """
     from django.contrib.auth import get_user_model
     from django.contrib import messages
     from django.shortcuts import render, redirect
-    from .models import Risorsa, InformazioniScuola, Dispositivo, UbicazioneRisorsa
-    from .forms import AdminUserForm, SchoolInfoForm, DeviceWizardForm, RisorseConfigurazioneForm
+    from .models import (
+        Risorsa, InformazioniScuola, Dispositivo, UbicazioneRisorsa,
+        ConfigurazioneSistema
+    )
+    from .forms import (
+        AdminUserForm, SchoolInfoForm, DeviceWizardForm, RisorseConfigurazioneForm,
+        ConfigurationForm
+    )
     from django.urls import reverse
     from django.db import transaction
+    from django.core.paginator import Paginator
     
     User = get_user_model()
 
-    # Step 0: Se setup è già completato (esiste superuser), vai a home
+    # Step 0: Se setup è già completato (esiste superuser)
     if User.objects.filter(is_superuser=True).exists():
-        return redirect('home')
+        # Mostra dashboard di gestione configurazioni
+        return _show_config_dashboard(request)
 
+    # ============================================================================
+    # SETUP WIZARD (eseguito solo se nessun superuser esiste)
+    # ============================================================================
+    
     # Determinare lo step corrente
     step = request.GET.get('step', '').strip()
     session = request.session
@@ -280,6 +294,69 @@ def setup_amministratore(request):
         context['wizard_completed'] = True
 
     return render(request, 'prenotazioni/configurazione_sistema.html', context)
+
+
+def _show_config_dashboard(request):
+    """Mostra dashboard di gestione configurazioni post-setup."""
+    from .models import ConfigurazioneSistema
+    from .forms import ConfigurationForm
+    from django.core.paginator import Paginator
+    from django.shortcuts import render, redirect, get_object_or_404
+    from django.views.decorators.csrf import csrf_protect
+    from django.contrib import messages
+    
+    if request.method == 'GET':
+        # Mostra lista configurazioni
+        configs = ConfigurazioneSistema.objects.only(
+            'id', 'chiave_configurazione', 'valore_configurazione', 'tipo_configurazione'
+        ).order_by('tipo_configurazione', 'chiave_configurazione')
+        
+        paginator = Paginator(configs, 10)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
+        context = {
+            'page_obj': page_obj,
+            'configs': page_obj.object_list,
+            'config_types': ConfigurazioneSistema.TIPO_CONFIGURAZIONE,
+            'setup_complete': True  # Flag che setup è completo
+        }
+        return render(request, 'prenotazioni/configurazione_sistema.html', context)
+    
+    elif request.method == 'POST':
+        # Gestisce creazione/modifica configurazioni
+        action = request.POST.get('action')
+
+        if action == 'create':
+            form = ConfigurationForm(request.POST)
+            if form.is_valid():
+                form.save()
+                messages.success(request, '✓ Configurazione creata con successo.')
+            else:
+                messages.error(request, 'Errore nella creazione della configurazione.')
+
+        elif action == 'update':
+            config_id = request.POST.get('config_id')
+            config = get_object_or_404(ConfigurazioneSistema, id=config_id)
+            form = ConfigurationForm(request.POST, instance=config)
+            if form.is_valid():
+                form.save()
+                messages.success(request, '✓ Configurazione aggiornata con successo.')
+            else:
+                messages.error(request, 'Errore nell\'aggiornamento della configurazione.')
+
+        elif action == 'delete':
+            config_id = request.POST.get('config_id')
+            config = get_object_or_404(ConfigurazioneSistema, id=config_id)
+            if config.configurazione_modificabile:
+                config.delete()
+                messages.success(request, '✓ Configurazione eliminata.')
+            else:
+                messages.error(request, 'Questa configurazione non può essere eliminata.')
+
+        return redirect('prenotazioni:setup_amministratore')
+    
+    return redirect('prenotazioni:setup_amministratore')
 """
 Views Django per la nuova architettura del sistema di prenotazioni.
 
@@ -411,107 +488,8 @@ def health_check(request):
 
 # =====================================================
 # CONFIGURAZIONE E SETUP SISTEMA
+# (La logica di setup è ora consolidata in `setup_amministratore`.)
 # =====================================================
-
-class ConfigurazioneSistemaView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """Vista per configurazione iniziale e gestione configurazioni."""
-    def test_func(self):
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
-        # Consenti accesso se utente è admin oppure se non esistono admin
-        return self.request.user.is_staff or not User.objects.filter(is_superuser=True).exists()
-    
-    def get(self, request):
-        """Mostra stato configurazione sistema."""
-        # Controlla se sistema già configurato
-        if not Risorsa.objects.exists():
-            return self._render_setup_wizard(request)
-
-        # Sistema già configurato - mostra gestione configurazioni
-        configs = ConfigurazioneSistema.objects.only('id', 'chiave_configurazione', 'valore_configurazione', 'tipo_configurazione').order_by('tipo_configurazione', 'chiave_configurazione')
-        paginator = Paginator(configs, 10)
-        page_number = request.GET.get('page')
-        page_obj = paginator.get_page(page_number)
-
-        context = {
-            'page_obj': page_obj,
-            'configs': page_obj.object_list,
-            'config_types': ConfigurazioneSistema.TIPO_CONFIGURAZIONE
-        }
-        return render(request, 'admin/configurazioni.html', context)
-
-    @method_decorator(csrf_protect)
-    def post(self, request):
-        """Gestisce creazione/modifica configurazioni."""
-        action = request.POST.get('action')
-
-        if action == 'create':
-            form = ConfigurationForm(request.POST)
-            if form.is_valid():
-                form.save()
-                messages.success(request, 'Configurazione creata con successo.')
-            else:
-                messages.error(request, 'Errore nella creazione della configurazione.')
-
-        elif action == 'update':
-            config_id = request.POST.get('config_id')
-            config = get_object_or_404(ConfigurazioneSistema, id=config_id)
-            form = ConfigurationForm(request.POST, instance=config)
-            if form.is_valid():
-                form.save()
-                messages.success(request, 'Configurazione aggiornata con successo.')
-            else:
-                messages.error(request, 'Errore nell\'aggiornamento della configurazione.')
-
-        elif action == 'delete':
-            config_id = request.POST.get('config_id')
-            config = get_object_or_404(ConfigurazioneSistema, id=config_id)
-            if config.configurazione_modificabile:
-                config.delete()
-                messages.success(request, 'Configurazione eliminata.')
-            else:
-                messages.error(request, 'Questa configurazione non può essere eliminata.')
-
-        elif action == 'initialize':
-            # Inizializza sistema
-            success, message = SystemInitializer.initialize_system()
-            if success:
-                messages.success(request, message)
-            else:
-                messages.error(request, message)
-
-        return redirect('admin:configurazioni')
-
-    def _render_setup_wizard(self, request):
-        """Render wizard di setup iniziale."""
-        step = request.GET.get('step', '1')
-
-        if step == '1':
-            # Configurazione scuola
-            school_info, _ = InformazioniScuola.objects.get_or_create(id=1)
-            form = SchoolInfoForm(instance=school_info)
-
-        elif step == '2':
-            # Configurazione dispositivi
-            form = DeviceWizardForm()
-            dispositivi = Dispositivo.objects.all().order_by('marca', 'nome')
-
-        elif step == '3':
-            # Configurazione risorse
-            num_risorse = request.session.get('num_risorse', 3)
-            dispositivi_disponibili = Dispositivo.objects.all()
-            form = RisorseConfigurazioneForm(
-                num_risorse=num_risorse,
-                dispositivi_disponibili=dispositivi_disponibili
-            )
-        
-        context = {
-            'step': step,
-            'form': form,
-            'dispositivi': dispositivi if step == '2' else None
-        }
-        
-        return render(request, 'admin/setup_wizard.html', context)
 
 
 class AdminOperazioniView(LoginRequiredMixin, UserPassesTestMixin, View):
@@ -1128,10 +1106,7 @@ class SystemStatsView(generics.GenericAPIView):
 # VIEW WRAPPER PER COMPATIBILITÀ
 # =====================================================
 
-def configurazione_sistema(request):
-    """Wrapper view per compatibilità."""
-    view = ConfigurazioneSistemaView.as_view()
-    return view(request)
+# `configurazione_sistema` wrapper removed — requests now route to `setup_amministratore`.
 
 
 def lookup_unica(request):
