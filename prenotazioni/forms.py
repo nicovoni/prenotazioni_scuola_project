@@ -37,9 +37,23 @@ class InformazioniScuolaForm(forms.ModelForm):
             'latitudine_scuola', 'longitudine_scuola', 'scuola_attiva'
         ]
         widgets = {
+            'nome_completo_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'nome_breve_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'codice_meccanografico_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'partita_iva_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'sito_web_scuola': forms.URLInput(attrs={'class': 'form-control'}),
+            'email_istituzionale_scuola': forms.EmailInput(attrs={'class': 'form-control'}),
+            'telefono_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'fax_scuola': forms.TextInput(attrs={'class': 'form-control'}),
             'indirizzo_scuola': forms.TextInput(attrs={'class': 'form-control', 'id': 'id_indirizzo_autocomplete'}),
+            'codice_postale_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'comune_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'provincia_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'regione_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'nazione_scuola': forms.TextInput(attrs={'class': 'form-control'}),
             'latitudine_scuola': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00000001'}),
             'longitudine_scuola': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00000001'}),
+            'scuola_attiva': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
     def clean_codice_meccanografico_scuola(self):

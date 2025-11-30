@@ -273,44 +273,244 @@
                         </div>
                     </div>
                 {% elif step == 'school' %}
-                    {% if skip_user_creation and admin_username %}
-                    <div class="alert alert-success mb-4">
-                        <h5>✓ Amministratore Riconosciuto</h5>
-                        <p class="mb-1"><strong>Username:</strong> {{ admin_username }}</p>
-                        <p class="mb-0"><strong>Email:</strong> {{ admin_email }}</p>
-                    </div>
-                    {% endif %}
-                                <div class="col-md-6">
-                                    <label class="form-label small">Nazione</label>
-                                    <input type="text" id="id_nazione_scuola" name="nazione_scuola" class="form-control" readonly value="{{ form_school.initial.nazione_scuola|default_if_none:'Italia' }}">
-                                </div>
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">🏫 Passo 2: Informazioni Scuola</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if skip_user_creation and admin_username %}
+                            <div class="alert alert-success mb-4">
+                                <h5>✓ Amministratore Riconosciuto</h5>
+                                <p class="mb-1"><strong>Username:</strong> {{ admin_username }}</p>
+                                <p class="mb-0"><strong>Email:</strong> {{ admin_email }}</p>
                             </div>
-
-                            <!-- Mappa di anteprima (visibile dopo selezione) -->
-                            <div id="map_preview" style="height:220px;width:100%;display:none;margin-top:12px;border-radius:8px;border:1px solid #e9ecef;overflow:hidden"></div>
-
-                            {% if form_school.indirizzo_scuola.errors %}
-                                <div class="text-danger small">
-                                    {% for error in form_school.indirizzo_scuola.errors %}{{ error }}{% endfor %}
-                                </div>
                             {% endif %}
 
-                            <div class="alert alert-info mt-2 d-none" id="nominatim-info">
-                                <i class="bi bi-info-circle"></i>
-                                Suggerimenti indirizzo forniti da OpenStreetMap/Nominatim. Seleziona il risultato corretto.
-                            </div>
-                        </div>
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                <!-- Codice Meccanografico - lookup field -->
+                                <div class="mb-3">
+                                    <label for="{{ form_school.codice_meccanografico_scuola.id_for_label }}" class="form-label"><strong>{{ form_school.codice_meccanografico_scuola.label }} <span class="text-danger">*</span></strong></label>
+                                    {{ form_school.codice_meccanografico_scuola }}
+                                    <div class="form-text">Inserisci il codice meccanografico (10 caratteri). Es: TSAA82000A</div>
+                                    {% if form_school.codice_meccanografico_scuola.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form_school.codice_meccanografico_scuola.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
 
-                        <div class="d-flex justify-content-between align-items-center mt-4">
-                            <a href="?step=1" class="btn btn-outline-secondary">← Indietro</a>
-                            <button type="submit" name="step_school" class="btn btn-primary btn-lg">
-                                💾 Salva e Continua →
-                            </button>
+                                <!-- Nome Completo -->
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="mb-3">
+                                            <label for="{{ form_school.nome_completo_scuola.id_for_label }}" class="form-label"><strong>{{ form_school.nome_completo_scuola.label }} <span class="text-danger">*</span></strong></label>
+                                            {{ form_school.nome_completo_scuola }}
+                                            {% if form_school.nome_completo_scuola.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_school.nome_completo_scuola.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="{{ form_school.nome_breve_scuola.id_for_label }}" class="form-label">{{ form_school.nome_breve_scuola.label }}</label>
+                                            {{ form_school.nome_breve_scuola }}
+                                            {% if form_school.nome_breve_scuola.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_school.nome_breve_scuola.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Indirizzo con autocomplete -->
+                                <div class="mb-3">
+                                    <label for="{{ form_school.indirizzo_scuola.id_for_label }}" class="form-label"><strong>{{ form_school.indirizzo_scuola.label }} <span class="text-danger">*</span></strong></label>
+                                    {{ form_school.indirizzo_scuola }}
+                                    <div class="form-text">Usa la ricerca per trovare l'indirizzo della scuola</div>
+                                    {% if form_school.indirizzo_scuola.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form_school.indirizzo_scuola.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Mappa di anteprima -->
+                                <div id="map_preview" style="height:250px;width:100%;display:none;margin-bottom:12px;border-radius:8px;border:1px solid #e9ecef;overflow:hidden"></div>
+
+                                <!-- Hidden OSM fields for autocomplete -->
+                                <input type="hidden" id="id_osm_id_scuola" name="osm_id_scuola" value="">
+                                <input type="hidden" id="id_osm_type_scuola" name="osm_type_scuola" value="">
+
+                                <!-- Dettagli Indirizzo -->
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="{{ form_school.codice_postale_scuola.id_for_label }}" class="form-label">{{ form_school.codice_postale_scuola.label }}</label>
+                                            {{ form_school.codice_postale_scuola }}
+                                            {% if form_school.codice_postale_scuola.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_school.codice_postale_scuola.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="{{ form_school.comune_scuola.id_for_label }}" class="form-label">{{ form_school.comune_scuola.label }}</label>
+                                            {{ form_school.comune_scuola }}
+                                            {% if form_school.comune_scuola.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_school.comune_scuola.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="{{ form_school.provincia_scuola.id_for_label }}" class="form-label">{{ form_school.provincia_scuola.label }}</label>
+                                            {{ form_school.provincia_scuola }}
+                                            {% if form_school.provincia_scuola.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_school.provincia_scuola.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Regione e Nazione -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form_school.regione_scuola.id_for_label }}" class="form-label">{{ form_school.regione_scuola.label }}</label>
+                                            {{ form_school.regione_scuola }}
+                                            {% if form_school.regione_scuola.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_school.regione_scuola.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form_school.nazione_scuola.id_for_label }}" class="form-label">{{ form_school.nazione_scuola.label }}</label>
+                                            {{ form_school.nazione_scuola }}
+                                            {% if form_school.nazione_scuola.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_school.nazione_scuola.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Coordinate Geografiche -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form_school.latitudine_scuola.id_for_label }}" class="form-label">{{ form_school.latitudine_scuola.label }}</label>
+                                            {{ form_school.latitudine_scuola }}
+                                            {% if form_school.latitudine_scuola.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_school.latitudine_scuola.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form_school.longitudine_scuola.id_for_label }}" class="form-label">{{ form_school.longitudine_scuola.label }}</label>
+                                            {{ form_school.longitudine_scuola }}
+                                            {% if form_school.longitudine_scuola.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_school.longitudine_scuola.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Contatti -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form_school.email_istituzionale_scuola.id_for_label }}" class="form-label"><strong>{{ form_school.email_istituzionale_scuola.label }} <span class="text-danger">*</span></strong></label>
+                                            {{ form_school.email_istituzionale_scuola }}
+                                            {% if form_school.email_istituzionale_scuola.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_school.email_istituzionale_scuola.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form_school.telefono_scuola.id_for_label }}" class="form-label">{{ form_school.telefono_scuola.label }}</label>
+                                            {{ form_school.telefono_scuola }}
+                                            {% if form_school.telefono_scuola.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_school.telefono_scuola.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Sito Web e Partita IVA -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form_school.sito_web_scuola.id_for_label }}" class="form-label"><strong>{{ form_school.sito_web_scuola.label }} <span class="text-danger">*</span></strong></label>
+                                            {{ form_school.sito_web_scuola }}
+                                            <div class="form-text">Deve essere un dominio *.edu.it</div>
+                                            {% if form_school.sito_web_scuola.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_school.sito_web_scuola.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form_school.partita_iva_scuola.id_for_label }}" class="form-label">{{ form_school.partita_iva_scuola.label }}</label>
+                                            {{ form_school.partita_iva_scuola }}
+                                            {% if form_school.partita_iva_scuola.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form_school.partita_iva_scuola.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Fax -->
+                                <div class="mb-3">
+                                    <label for="{{ form_school.fax_scuola.id_for_label }}" class="form-label">{{ form_school.fax_scuola.label }}</label>
+                                    {{ form_school.fax_scuola }}
+                                    {% if form_school.fax_scuola.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form_school.fax_scuola.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center mt-4">
+                                    <a href="?step=1" class="btn btn-outline-secondary">← Indietro</a>
+                                    <button type="submit" name="step_school" class="btn btn-primary btn-lg">
+                                        💾 Salva e Continua →
+                                    </button>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted"><span class="text-danger">*</span> Campo obbligatorio</small>
+                                </div>
+                            </form>
                         </div>
-                        <div class="mt-2">
-                            <small class="text-muted"><span class="text-danger">*</span> Campo obbligatorio</small>
-                        </div>
-                    </form>
+                    </div>
                     <!-- OpenStreetMap / Nominatim autocomplete + Leaflet preview -->
                     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
                     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
