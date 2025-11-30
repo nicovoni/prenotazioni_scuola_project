@@ -12,13 +12,13 @@
     <div class="page-header">
         <h1 class="page-title">⚙️ Configurazione Sistema di Prenotazioni</h1>
         <p class="page-subtitle">
-            {% if step == "admin" or step == 1 %}
+            {% if step == "admin" %}
                 Crea il primo utente amministratore
             {% elif step == "school" %}
                 Inserisci informazioni sulla scuola
             {% elif step == "device" %}
                 Catalogo dispositivi scolastici
-            {% elif step == "resources" or step == 2 or step == 3 %}
+            {% elif step == "resources" %}
                 Configura risorse e dispositivi
             {% elif step == "done" %}
                 Completamento della configurazione
@@ -85,10 +85,9 @@
             <!-- DEBUG: Mostra il valore di step -->
             <div style="background:#fff3cd; padding:15px; margin:15px 0; border:1px solid #ffc107; border-radius:4px; font-family:monospace; font-size:13px;">
                 <strong style="color:#856404;">🔍 DEBUG:</strong><br>
-                step="{{ step }}"<br>
-                current_step="{{ current_step }}"<br>
-                step == "admin": {{ step == "admin" }}<br>
-                form_admin exists: {{ form_admin|default:"FALSE" }}
+                step = "{{ step }}"<br>
+                current_step = "{{ current_step }}"<br>
+                form_admin = {{ form_admin|default:"FALSE" }}
             </div>
 
                     <script>
