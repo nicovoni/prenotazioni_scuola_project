@@ -1,32 +1,3 @@
-
-from django.db.models.signals import post_migrate
-from django.dispatch import receiver
-
-
-# Pulizia automatica dei record ProfiloUtente dopo le migrazioni
-import django
-import logging
-from django.db import connection
-from django.db import ProgrammingError, OperationalError
-
-@receiver(post_migrate)
-def clean_profilo_utente_null_fields(sender, **kwargs):
-    table_name = 'prenotazioni_profiloutente'
-    with connection.cursor() as cursor:
-        tables = connection.introspection.table_names()
-    if table_name in tables:
-        from .models import ProfiloUtente
-        ProfiloUtente.objects.filter(nome_utente__isnull=True).update(nome_utente="")
-        ProfiloUtente.objects.filter(cognome_utente__isnull=True).update(cognome_utente="")
-# =====================================================
-# SCELTE GLOBALI
-# =====================================================
-
-SCELTE_SESSO = [
-    ('M', 'Maschio'),
-    ('F', 'Femmina'),
-    ('ALTRO', 'Altro'),
-]
 """
 Sistema di prenotazioni scolastiche - NUOVA ARCHITETTURA MIGLIORATA
 
@@ -44,7 +15,19 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 import uuid
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, post_migrate
+from django.dispatch import receiver
+import logging
+
+# =====================================================
+# SCELTE GLOBALI
+# =====================================================
+
+SCELTE_SESSO = [
+    ('M', 'Maschio'),
+    ('F', 'Femmina'),
+    ('ALTRO', 'Altro'),
+]
 
 
 # =============================================================================
@@ -55,6 +38,35 @@ def genera_codice_univoco():
     """Genera un codice univoco per elementi del sistema."""
     # Return a UUID instance (preferred for UUIDField defaults)
     return uuid.uuid4()
+
+
+# =============================================================================
+# MANAGER PERSONALIZZATI PER SOFT-DELETE
+# =============================================================================
+
+class SoftDeleteManager(models.Manager):
+    """Manager che filtra automaticamente record soft-deleted."""
+    def get_queryset(self):
+        return super().get_queryset().filter(cancellato_il__isnull=True)
+
+
+class SoftDeleteQuerySet(models.QuerySet):
+    """QuerySet personalizzato per soft-delete."""
+    def delete(self):
+        """Soft-delete: marca come cancellato invece di rimuovere."""
+        return self.update(cancellato_il=timezone.now())
+    
+    def hard_delete(self):
+        """Hard-delete: rimozione fisica dal database."""
+        return super().delete()
+    
+    def deleted(self):
+        """Filtra solo record cancellati."""
+        return self.filter(cancellato_il__isnull=False)
+    
+    def all_including_deleted(self):
+        """Include anche record soft-deleted."""
+        return super().get_queryset()
 
 
 # =====================================================
@@ -460,49 +472,16 @@ class SessioneUtente(models.Model):
         verbose_name='PIN Sessione',
         help_text='Per verifiche PIN'
     )
-    nome_utente = models.CharField(
-        max_length=100,
-        verbose_name='Nome Utente',
-        help_text='Nome di battesimo',
-        blank=True,
-        null=True
-    )
-    cognome_utente = models.CharField(
-        max_length=100,
-        verbose_name='Cognome Utente',
-        help_text='Cognome',
-        blank=True,
-        null=True
-    )
-    sesso_utente = models.CharField(
-        max_length=10,
-        choices=SCELTE_SESSO,
-        blank=True,
-        null=True,
-        verbose_name='Sesso Utente'
-    )
-    data_nascita_utente = models.DateField(
-        null=True, blank=True,
-        verbose_name='Data Nascita Utente'
-    )
-    codice_fiscale_utente = models.CharField(
-        max_length=16,
-        blank=True,
-        null=True,
-        verbose_name='Codice Fiscale Utente'
-    )
-    telefono_utente = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True,
-        verbose_name='Telefono Utente'
-    )
-    email_personale_utente = models.EmailField(
-        blank=True,
-        null=True,
-        verbose_name='Email Personale Utente',
-        help_text='Email alternativa per comunicazioni'
-    )
+
+    # RIMOSSO: i seguenti campi erano duplicati da User + ProfiloUtente
+    # - nome_utente (usa User.first_name + ProfiloUtente.nome_battesimo)
+    # - cognome_utente (usa User.last_name)
+    # - sesso_utente (usa ProfiloUtente.sesso)
+    # - data_nascita_utente (usa ProfiloUtente.data_nascita)
+    # - codice_fiscale_utente (usa ProfiloUtente.codice_fiscale)
+    # - telefono_utente (usa ProfiloUtente.telefono)
+    # - email_personale_utente (usa User.email)
+    
     @property
     def sessione_scaduta(self):
         # Restituisce True se la sessione è scaduta. Se la data di scadenza
@@ -639,6 +618,14 @@ class Dispositivo(models.Model):
         help_text='CPU, RAM, Storage, OS, etc.'
     )
 
+    # Localizzazione - CORRETTA: FK a UbicazioneRisorsa (obbligatoria)
+    ubicazione = models.ForeignKey(
+        UbicazioneRisorsa,
+        on_delete=models.PROTECT,
+        verbose_name='Ubicazione Dispositivo',
+        help_text='Localizzazione fisica del dispositivo'
+    )
+
     # Stato e disponibilità
     stato = models.CharField(
         max_length=20,
@@ -654,20 +641,6 @@ class Dispositivo(models.Model):
     )
     attivo = models.BooleanField(default=True)
     cancellato_il = models.DateTimeField(null=True, blank=True, help_text='Soft-delete: data di cancellazione')
-    def clean(self):
-        """Validazione coerenza dati dispositivo."""
-        if self.codice_inventario and len(self.codice_inventario) < 3:
-            from django.core.exceptions import ValidationError
-            raise ValidationError({'codice_inventario': 'Il codice inventario deve essere di almeno 3 caratteri.'})
-        if self.data_scadenza_garanzia and self.data_acquisto and self.data_scadenza_garanzia < self.data_acquisto:
-            from django.core.exceptions import ValidationError
-            raise ValidationError({'data_scadenza_garanzia': 'La data di scadenza garanzia non può essere precedente alla data di acquisto.'})
-
-    # Localizzazione
-    edificio = models.CharField(max_length=50, blank=True)
-    piano = models.CharField(max_length=20, blank=True)
-    aula = models.CharField(max_length=50, blank=True)
-    armadio = models.CharField(max_length=50, blank=True)
 
     # Informazioni di acquisto
     data_acquisto = models.DateField(null=True, blank=True)
@@ -682,8 +655,26 @@ class Dispositivo(models.Model):
     ultimo_controllo = models.DateTimeField(null=True, blank=True)
     prossima_manutenzione = models.DateTimeField(null=True, blank=True)
 
+    # Audit - NUOVO: chi ha creato/modificato
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='dispositivi_creati'
+    )
+    modified_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='dispositivi_modificati'
+    )
+
     creato_il = models.DateTimeField(auto_now_add=True)
     modificato_il = models.DateTimeField(auto_now=True)
+
+    # Manager personalizzato per soft-delete
+    objects = SoftDeleteManager.as_manager()
+    all_objects = models.Manager()  # Per recuperare anche cancellati
 
     class Meta:
         verbose_name = 'Dispositivo'
@@ -694,7 +685,18 @@ class Dispositivo(models.Model):
             models.Index(fields=['tipo', 'stato']),
             models.Index(fields=['categoria']),
             models.Index(fields=['attivo']),
+            models.Index(fields=['ubicazione']),
+            models.Index(fields=['cancellato_il']),
         ]
+
+    def clean(self):
+        """Validazione coerenza dati dispositivo."""
+        if self.codice_inventario and len(self.codice_inventario) < 3:
+            from django.core.exceptions import ValidationError
+            raise ValidationError({'codice_inventario': 'Il codice inventario deve essere di almeno 3 caratteri.'})
+        if self.data_scadenza_garanzia and self.data_acquisto and self.data_scadenza_garanzia < self.data_acquisto:
+            from django.core.exceptions import ValidationError
+            raise ValidationError({'data_scadenza_garanzia': 'La data di scadenza garanzia non può essere precedente alla data di acquisto.'})
 
     def __str__(self):
         if self.modello:
@@ -750,11 +752,11 @@ class Risorsa(models.Model):
         verbose_name='Categoria'
     )
 
-    # Localizzazione
+    # Localizzazione - CORRETTA: obbligatoria (NOT NULL)
     localizzazione = models.ForeignKey(
         UbicazioneRisorsa,
-        on_delete=models.SET_NULL,
-        null=True, blank=True
+        on_delete=models.PROTECT,
+        verbose_name='Ubicazione Risorsa'
     )
 
     # Capacità e specifiche
@@ -790,6 +792,7 @@ class Risorsa(models.Model):
     manutenzione = models.BooleanField(default=False)
     bloccato = models.BooleanField(default=False)
     cancellato_il = models.DateTimeField(null=True, blank=True, help_text='Soft-delete: data di cancellazione')
+
     def clean(self):
         """Validazione coerenza dispositivi associati."""
         if self.is_carrello() or self.is_laboratorio():
@@ -799,24 +802,6 @@ class Risorsa(models.Model):
         if self.capacita_massima is not None and self.capacita_massima < 1:
             from django.core.exceptions import ValidationError
             raise ValidationError({'capacita_massima': 'La capacità massima deve essere almeno 1.'})
-    def delete(self, using=None, keep_parents=False):
-        """Soft-delete: marca la risorsa come cancellata."""
-        from django.utils import timezone
-        self.cancellato_il = timezone.now()
-        self.attivo = False
-        self.save()
-    def hard_delete(self, using=None, keep_parents=False):
-        """Elimina fisicamente la risorsa dal database."""
-        super().delete(using=using, keep_parents=keep_parents)
-    def delete(self, using=None, keep_parents=False):
-        """Soft-delete: marca il dispositivo come cancellato."""
-        from django.utils import timezone
-        self.cancellato_il = timezone.now()
-        self.attivo = False
-        self.save()
-    def hard_delete(self, using=None, keep_parents=False):
-        """Elimina fisicamente il dispositivo dal database."""
-        super().delete(using=using, keep_parents=keep_parents)
 
     # Preferenze prenotazione
     prenotazione_anticipo_minimo = models.PositiveIntegerField(default=1)
@@ -832,8 +817,26 @@ class Risorsa(models.Model):
     note_amministrative = models.TextField(blank=True)
     note_utenti = models.TextField(blank=True)
 
+    # Audit - NUOVO: chi ha creato/modificato
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='risorse_create'
+    )
+    modified_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='risorse_modificate'
+    )
+
     creato_il = models.DateTimeField(auto_now_add=True)
     modificato_il = models.DateTimeField(auto_now=True)
+
+    # Manager personalizzato per soft-delete
+    objects = SoftDeleteManager.as_manager()
+    all_objects = models.Manager()  # Per recuperare anche cancellate
 
     class Meta:
         verbose_name = 'Risorsa'
@@ -846,6 +849,7 @@ class Risorsa(models.Model):
             models.Index(fields=['attivo']),
             models.Index(fields=['manutenzione']),
             models.Index(fields=['bloccato']),
+            models.Index(fields=['cancellato_il']),
         ]
 
     def __str__(self):
@@ -865,7 +869,7 @@ class Risorsa(models.Model):
 
     def get_available_devices(self):
         """Dispositivi disponibili nella risorsa."""
-        return self.dispositivi.filter(attivo=True, stato='disponibile')
+        return self.dispositivi.filter(attivo=True, stato='disponibile', cancellato_il__isnull=True)
 
 
 # =====================================================
@@ -891,15 +895,84 @@ class StatoPrenotazione(models.Model):
         return self.nome
 
 
+class PrenotazioneDispositivo(models.Model):
+    """
+    Tabella intermedia per tracciare dispositivi specifici in prenotazioni.
+    
+    Cattura:
+    - Quale dispositivo specifico è assegnato a quale prenotazione
+    - In che quantità
+    - Stato di assegnazione (assegnato, in preparazione, restituito)
+    - Timestamp di assegnazione e restituzione
+    """
+    STATO_ASSEGNAZIONE = [
+        ('assegnato', 'Assegnato'),
+        ('in_preparazione', 'In Preparazione'),
+        ('restituito', 'Restituito'),
+        ('danneggiato', 'Danneggiato'),
+        ('smarrito', 'Smarrito'),
+    ]
+
+    prenotazione = models.ForeignKey(
+        'Prenotazione',
+        on_delete=models.CASCADE,
+        related_name='dispositivi_assegnati'
+    )
+    dispositivo = models.ForeignKey(
+        'Dispositivo',
+        on_delete=models.PROTECT,  # Non permettere cancellazione dispositivo con assegnazioni
+        related_name='assegnazioni_prenotazione'
+    )
+    
+    quantita = models.PositiveIntegerField(default=1)
+    stato_assegnazione = models.CharField(
+        max_length=20,
+        choices=STATO_ASSEGNAZIONE,
+        default='assegnato'
+    )
+    
+    data_assegnazione = models.DateTimeField(auto_now_add=True)
+    data_restituzione = models.DateTimeField(null=True, blank=True)
+    
+    # Audit
+    note_assegnazione = models.TextField(blank=True)
+    
+    class Meta:
+        verbose_name = 'Dispositivo Prenotazione'
+        verbose_name_plural = 'Dispositivi Prenotazioni'
+        unique_together = [['prenotazione', 'dispositivo']]
+        indexes = [
+            models.Index(fields=['prenotazione', 'stato_assegnazione']),
+            models.Index(fields=['dispositivo', 'data_assegnazione']),
+        ]
+    
+    def __str__(self):
+        return f"{self.prenotazione.id} - {self.dispositivo.nome} ({self.quantita}x)"
+
+
 class Prenotazione(models.Model):
     """
     Prenotazione di risorse con workflow avanzato.
+    
+    NOTA IMPORTANTE: I dispositivi specifici sono ora gestiti tramite PrenotazioneDispositivo
+    (intermediate model) che sostituisce il vecchio dispositivi_selezionati M2M.
+    Accedi ai dispositivi tramite: prenotazione.dispositivi_assegnati.all()
     """
     PRIORITA = [
         ('bassa', 'Bassa'),
         ('normale', 'Normale'),
         ('alta', 'Alta'),
         ('urgente', 'Urgente'),
+    ]
+
+    STATO_PRENOTAZIONE = [
+        ('bozza', 'In Bozza'),
+        ('in_attesa_approvazione', 'In Attesa di Approvazione'),
+        ('approvata', 'Approvata'),
+        ('in_corso', 'In Corso'),
+        ('completata', 'Completata'),
+        ('annullata', 'Annullata'),
+        ('rinviata', 'Rinviata'),
     ]
 
     # Relazioni principali
@@ -914,17 +987,14 @@ class Prenotazione(models.Model):
         related_name='prenotazioni'
     )
 
-    # Dispositivi specifici (per carrelli)
-    dispositivi_selezionati = models.ManyToManyField(
-        Dispositivo,
-        blank=True,
-        related_name='prenotazioni',
-        verbose_name='Dispositivi Specifici'
-    )
+    # RIMOSSO: dispositivi_selezionati M2M
+    # SOSTITUITO DA: PrenotazioneDispositivo (vedere modello sopra)
+    # I dispositivi sono ora accedibili via: prenotazione.dispositivi_assegnati.all()
 
     # Dettagli prenotazione
     inizio = models.DateTimeField(verbose_name='Inizio')
     fine = models.DateTimeField(verbose_name='Fine')
+    numero_persone = models.PositiveIntegerField(default=1)
     quantita = models.PositiveIntegerField(default=1)
     priorita = models.CharField(
         max_length=20,
@@ -932,12 +1002,11 @@ class Prenotazione(models.Model):
         default='normale'
     )
 
-    # Stato e workflow
-    stato = models.ForeignKey(
-        StatoPrenotazione,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
+    # Stato e workflow - simplificato per coerenza
+    stato = models.CharField(
+        max_length=30,
+        choices=STATO_PRENOTAZIONE,
+        default='bozza'
     )
 
     # Informazioni aggiuntive
@@ -973,44 +1042,125 @@ class Prenotazione(models.Model):
     notifiche_inviate = models.JSONField(default=list, blank=True)
     ultimo_aggiornamento_notifica = models.DateTimeField(null=True, blank=True)
 
-    # Audit trail
+    # Audit trail - NUOVO: created_by, modified_by per traccia completa
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='prenotazioni_create'
+    )
+    modified_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='prenotazioni_modificate'
+    )
+
+    # Timestamp
     creato_il = models.DateTimeField(auto_now_add=True)
     modificato_il = models.DateTimeField(auto_now=True)
     cancellato_il = models.DateTimeField(null=True, blank=True)
+
+    # Manager con soft-delete
+    objects = SoftDeleteManager.as_manager()
+    all_objects = models.Manager()
 
     class Meta:
         verbose_name = 'Prenotazione'
         verbose_name_plural = 'Prenotazioni'
         ordering = ['-inizio']
+        # INDICI MIGLIORATI per rilevazione conflitti e query frequenti
         indexes = [
-            models.Index(fields=['utente', 'inizio']),
+            # Rilevazione conflitti: trova prenotazioni della stessa risorsa in intervallo sovrapposto
             models.Index(fields=['risorsa', 'inizio', 'fine']),
+            # Query per prenotazioni dell'utente
+            models.Index(fields=['utente', 'inizio']),
+            # Filtri di stato
             models.Index(fields=['stato']),
+            models.Index(fields=['stato', 'inizio']),
+            # Intervalli temporali (per query di disponibilità)
             models.Index(fields=['inizio', 'fine']),
+            # Soft-delete
+            models.Index(fields=['cancellato_il']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(fine__gt=models.F('inizio')),
+                name='prenotazione_fine_dopo_inizio'
+            ),
         ]
 
     def __str__(self):
         return f"{self.utente.username} - {self.risorsa.nome} ({self.inizio.strftime('%d/%m/%Y %H:%M')})"
 
+    def clean(self):
+        """Validazione della prenotazione - IMPORTANTE: include capacità e conflitti."""
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone
+        
+        # Controllo base: fine dopo inizio
+        if self.fine <= self.inizio:
+            raise ValidationError({
+                'fine': 'L\'orario di fine deve essere successivo all\'inizio.'
+            })
+        
+        # Validazione capacità
+        if self.risorsa.capacita_massima and self.numero_persone > self.risorsa.capacita_massima:
+            raise ValidationError({
+                'numero_persone': f'Massimo {self.risorsa.capacita_massima} persone per questa risorsa.'
+            })
+        
+        # Controllo anticipo minimo/massimo
+        if self.inizio < timezone.now() + timezone.timedelta(days=self.risorsa.prenotazione_anticipo_minimo):
+            raise ValidationError({
+                'inizio': f'Devi prenotare almeno {self.risorsa.prenotazione_anticipo_minimo} giorni in anticipo.'
+            })
+        
+        if self.inizio > timezone.now() + timezone.timedelta(days=self.risorsa.prenotazione_anticipo_massimo):
+            raise ValidationError({
+                'inizio': f'Non puoi prenotare più di {self.risorsa.prenotazione_anticipo_massimo} giorni in anticipo.'
+            })
+
+    def check_conflitti(self):
+        """Verifica se ci sono conflitti di prenotazione con altre risorse."""
+        conflitti = Prenotazione.objects.filter(
+            risorsa=self.risorsa,
+            inizio__lt=self.fine,
+            fine__gt=self.inizio,
+            stato__in=['approvata', 'in_corso'],
+            cancellato_il__isnull=True
+        ).exclude(id=self.id if self.id else -1)
+        return conflitti.exists()
+
+    def get_dispositivi_assegnati(self):
+        """Recupera tutti i dispositivi assegnati a questa prenotazione."""
+        return self.dispositivi_assegnati.select_related('dispositivo', 'dispositivo__ubicazione')
+
+    def get_dispositivi_per_ubicazione(self):
+        """Raggruppa dispositivi per ubicazione."""
+        dispositivi = self.get_dispositivi_assegnati()
+        per_ubicazione = {}
+        for assegnazione in dispositivi:
+            loc = str(assegnazione.dispositivo.ubicazione)
+            if loc not in per_ubicazione:
+                per_ubicazione[loc] = []
+            per_ubicazione[loc].append(assegnazione.dispositivo)
+        return per_ubicazione
+
     def cancel(self, user, reason=""):
-        """Cancella la prenotazione."""
+        """Cancella la prenotazione (soft-delete)."""
+        from django.utils import timezone
         if not self.can_be_cancelled_by(user):
             return False, "Non hai i permessi per cancellare questa prenotazione"
 
         self.cancellato_il = timezone.now()
-
-        cancelled_status = StatoPrenotazione.objects.get_or_create(
-            nome='cancelled',
-            defaults={'descrizione': 'Cancellata', 'colore': '#dc3545'}
-        )[0]
-        self.stato = cancelled_status
+        self.stato = 'annullata'
 
         if reason:
             self.note_amministrative += f"\nCancellata da {user.username}: {reason}"
 
         self.save()
         return True, "Prenotazione cancellata con successo"
-
 
     @property
     def durata_minuti(self):
@@ -1049,11 +1199,7 @@ class Prenotazione(models.Model):
         return False
 
     def can_be_modified_by(self, user):
-        """Controllo permessi per modificare la prenotazione.
-
-        Per default l'utente creatore può modificare se l'inizio è nel futuro,
-        gli admin possono sempre modificare.
-        """
+        """Controllo permessi per modificare la prenotazione."""
         if user is None:
             return False
         if getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False):
@@ -1068,9 +1214,11 @@ class Prenotazione(models.Model):
             self.approvazione_richiesta = True
             self.approvato_da = approvatore
             self.data_approvazione = timezone.now()
+            self.stato = 'approvata'
             self.save()
             return True
-        except Exception:
+        except Exception as e:
+            import logging
             logging.getLogger('prenotazioni').exception('Errore in approve() for booking %s', getattr(self, 'id', None))
             return False
 
