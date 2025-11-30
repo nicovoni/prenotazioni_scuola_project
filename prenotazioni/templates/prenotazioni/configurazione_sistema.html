@@ -80,6 +80,17 @@
                 .step-text { font-weight:600; color:#495057; }
                 .step.completed .step-bullet { background:linear-gradient(135deg,#43e97b,#38f9d7); color:white; transform:translateY(-3px); box-shadow:0 8px 20px rgba(56,249,215,0.08); }
                 .step.active .step-bullet { background:linear-gradient(135deg,#667eea,#764ba2); color:white; transform:translateY(-4px); box-shadow:0 10px 26px rgba(102,126,234,0.14); }
+            </style>
+
+            <!-- DEBUG: Mostra il valore di step -->
+            <div style="background:#fff3cd; padding:15px; margin:15px 0; border:1px solid #ffc107; border-radius:4px; font-family:monospace; font-size:13px;">
+                <strong style="color:#856404;">🔍 DEBUG:</strong><br>
+                step="{{ step }}"<br>
+                current_step="{{ current_step }}"<br>
+                step == "admin": {{ step == "admin" }}<br>
+                form_admin exists: {{ form_admin|default:"FALSE" }}
+            </div>
+
                     <script>
                         (function(){
                             // Client-side validation for codice meccanografico and lookup helper
