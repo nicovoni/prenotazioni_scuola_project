@@ -773,9 +773,14 @@
                                     showInlineMessage('Dati trovati e compilati automaticamente. Verifica e salva.','info');
                                     try{ if(payload.lat && payload.lon) showMap(payload.lat, payload.lon); }catch(e){console.error('Map error:', e);}
 
-                                    // Populate remaining fields (email, sito, telefono, partita iva)
-                                    try{ if(typeof populateFieldsWithSchool === 'function') populateFieldsWithSchool(payload); }catch(e){console.error('Populate fields error:', e);}
+                                    // Populate email and sito web if present in payload
+                                    try{
+                                        if(payload.sito_web){ const s=document.getElementById('id_sito_web_scuola'); if(s){ s.value = payload.sito_web; s.readOnly = true; console.log('Set sito_web:', payload.sito_web); } }
+                                        if(payload.email_istituzionale){ const em=document.getElementById('id_email_istituzionale_scuola'); if(em){ em.value = payload.email_istituzionale; em.readOnly = true; console.log('Set email_istituzionale:', payload.email_istituzionale); } }
+                                    }catch(e){ console.error('Populate email/sito error:', e); }
 
+                                    // Populate remaining fields (telefono, partita iva) using local helper
+                                    try{ if(typeof populateFieldsWithSchool === 'function') populateFieldsWithSchool(payload); }catch(e){console.error('Populate fields error:', e);}
                                     // affiliated schools
                                     if (data.affiliated_schools && data.affiliated_schools.length > 0) {
                                         showAffiliatedSchoolsModal(data.affiliated_schools, payload);
