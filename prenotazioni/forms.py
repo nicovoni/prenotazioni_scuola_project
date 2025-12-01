@@ -99,6 +99,36 @@ class InformazioniScuolaForm(forms.ModelForm):
         # Require client to submit OSM identifiers from the autocomplete
         osm_id = (self.data.get('osm_id_scuola') or '').strip()
         osm_type = (self.data.get('osm_type_scuola') or '').strip()
+
+        # Allow addresses coming from the CSV lookup: client will set osm_type='csv' and osm_id='csv_<codice>'
+        if osm_type.lower().startswith('csv') and osm_id:
+            # Accept CSV-provided address without contacting Nominatim.
+            # Use values populated client-side (lat/lon, address components) and return.
+            lat = self.cleaned_data.get('latitudine_scuola')
+            lon = self.cleaned_data.get('longitudine_scuola')
+            try:
+                self.cleaned_data['latitudine_scuola'] = float(lat) if lat else None
+                self.cleaned_data['longitudine_scuola'] = float(lon) if lon else None
+            except Exception:
+                self.cleaned_data['latitudine_scuola'] = None
+                self.cleaned_data['longitudine_scuola'] = None
+
+            # Copy address components if present
+            cap = self.cleaned_data.get('codice_postale_scuola', '')
+            comune = self.cleaned_data.get('comune_scuola', '')
+            provincia = self.cleaned_data.get('provincia_scuola', '')
+            regione = self.cleaned_data.get('regione_scuola', '')
+            nazione = self.cleaned_data.get('nazione_scuola', '')
+
+            self.cleaned_data['codice_postale_scuola'] = cap
+            self.cleaned_data['comune_scuola'] = comune
+            self.cleaned_data['provincia_scuola'] = provincia
+            self.cleaned_data['regione_scuola'] = regione
+            self.cleaned_data['nazione_scuola'] = nazione
+
+            formatted = self.cleaned_data.get('indirizzo_scuola') or str(indirizzo).strip()
+            return formatted
+
         if not osm_id or not osm_type:
             raise ValidationError("Seleziona un suggerimento valido dall'elenco (scegli la scuola).")
 

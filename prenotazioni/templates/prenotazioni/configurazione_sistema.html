@@ -654,6 +654,9 @@
                                     marker.setLatLng([la, lo]);
                                 }
 
+                                // invalidate size to ensure map renders correctly after being shown
+                                try { setTimeout(function(){ if(map && map.invalidateSize) map.invalidateSize(); }, 200); } catch(e) {}
+
                                 // Attach a popup to the marker showing the school name (or codice as fallback)
                                 try {
                                     const nameEl = document.getElementById('id_nome_completo_scuola');
@@ -814,6 +817,14 @@
 
                                     // Populate remaining fields (telefono, partita iva) using local helper
                                     try{ if(typeof populateFieldsWithSchool === 'function') populateFieldsWithSchool(payload); }catch(e){console.error('Populate fields error:', e);}
+
+                                    // Mark this address as coming from CSV so server-side validation accepts it
+                                    try{
+                                        const osmIdEl = document.getElementById('id_osm_id_scuola');
+                                        const osmTypeEl = document.getElementById('id_osm_type_scuola');
+                                        if(osmIdEl) osmIdEl.value = 'csv_' + codice;
+                                        if(osmTypeEl) osmTypeEl.value = 'csv';
+                                    }catch(e){/* ignore */}
                                     // affiliated schools
                                     if (data.affiliated_schools && data.affiliated_schools.length > 0) {
                                         showAffiliatedSchoolsModal(data.affiliated_schools, payload);
