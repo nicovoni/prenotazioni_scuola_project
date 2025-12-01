@@ -1246,6 +1246,9 @@ def lookup_unica(request):
                     # Extract sito web e email istituzionale
                     sito_web = pick_from_csv(row, ['SITOWEBSCUOLA', 'sitowebscuola', 'sito_web', 'website'])
                     email_istituzionale = pick_from_csv(row, ['INDIRIZZOEMAILSCUOLA', 'indirizzoemailscuola', 'email', 'mail'])
+                    # Telefono e Partita IVA
+                    telefono = pick_from_csv(row, ['TELEFONO', 'telefono', 'telefonoscuola', 'NUMEROTELEFONO'])
+                    partita_iva = pick_from_csv(row, ['PARTITAIVA', 'PARTITA_IVA', 'partita_iva', 'PIVA'])
 
                     idx[codice_norm] = {
                         'codice': codice_norm,
@@ -1263,6 +1266,8 @@ def lookup_unica(request):
                         'sede_direttivo': sede_direttivo_norm,
                         'sito_web': sito_web,
                         'email_istituzionale': email_istituzionale,
+                        'telefono': telefono,
+                        'partita_iva': partita_iva,
                         'raw_row': row,
                     }
 
@@ -1383,6 +1388,8 @@ def lookup_unica(request):
                     'sede_direttivo': 'SI',
                     'sito_web': raw_row.get('SITOWEBSCUOLA') or data.get('sito_web') or '',
                     'email_istituzionale': raw_row.get('INDIRIZZOEMAILSCUOLA') or data.get('email_istituzionale') or '',
+                    'telefono': raw_row.get('TELEFONO') or data.get('telefono') or '',
+                    'partita_iva': raw_row.get('PARTITAIVA') or raw_row.get('PARTITA_IVA') or data.get('partita_iva') or '',
                 }
 
                 # Collect all plessi that reference this codice_istituto as affiliated

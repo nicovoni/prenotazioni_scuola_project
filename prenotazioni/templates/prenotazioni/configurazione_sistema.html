@@ -126,7 +126,9 @@
                                     provincia: 'id_provincia_scuola',
                                     regione: 'id_regione_scuola',
                                     sito_web: 'id_sito_web_scuola',
-                                    email: 'id_email_istituzionale_scuola'
+                                    email: 'id_email_istituzionale_scuola',
+                                    telefono: 'id_telefono_scuola',
+                                    partita_iva: 'id_partita_iva_scuola'
                                 };
                                 if(school.nome){ const e=getField(ids.nome); if(e){ e.value = school.nome; e.readOnly = true; } }
                                 if(school.indirizzo){ const e=getField(ids.indirizzo); if(e){ e.value = school.indirizzo; e.readOnly = true; } }
@@ -136,6 +138,8 @@
                                 if(school.regione){ const e=getField(ids.regione); if(e) e.value = school.regione; }
                                 if(school.sito_web){ const e=getField(ids.sito_web); if(e){ e.value = school.sito_web; e.readOnly = true; } }
                                 if(school.email_istituzionale){ const e=getField(ids.email); if(e){ e.value = school.email_istituzionale; e.readOnly = true; } }
+                                if(school.telefono){ const e=getField(ids.telefono); if(e){ e.value = school.telefono; } }
+                                if(school.partita_iva){ const e=getField(ids.partita_iva); if(e){ e.value = school.partita_iva; } }
                             }
 
                             // Build and show modal for affiliated schools
@@ -337,27 +341,7 @@
                                                     {% for error in form_school.nome_completo_scuola.errors %}{{ error }}{% endfor %}
                                                 </div>
                                             {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="{{ form_school.nome_breve_scuola.id_for_label }}" class="form-label">{{ form_school.nome_breve_scuola.label }}</label>
-                                            {{ form_school.nome_breve_scuola }}
-                                            {% if form_school.nome_breve_scuola.errors %}
-                                                <div class="text-danger small">
-                                                    {% for error in form_school.nome_breve_scuola.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Indirizzo con autocomplete -->
-                                <div class="mb-3">
-                                    <label for="{{ form_school.indirizzo_scuola.id_for_label }}" class="form-label"><strong>{{ form_school.indirizzo_scuola.label }} <span class="text-danger">*</span></strong></label>
-                                    {{ form_school.indirizzo_scuola }}
-                                    <div class="form-text">Usa la ricerca per trovare l'indirizzo della scuola</div>
-                                    {% if form_school.indirizzo_scuola.errors %}
+                                        <!-- Fax rimosso su richiesta dell'utente -->
                                         <div class="text-danger small">
                                             {% for error in form_school.indirizzo_scuola.errors %}{{ error }}{% endfor %}
                                         </div>

@@ -30,21 +30,19 @@ class InformazioniScuolaForm(forms.ModelForm):
     class Meta:
         model = InformazioniScuola
         fields = [
-            'nome_completo_scuola', 'nome_breve_scuola', 'codice_meccanografico_scuola',
+            'nome_completo_scuola', 'codice_meccanografico_scuola',
             'partita_iva_scuola', 'sito_web_scuola', 'email_istituzionale_scuola',
-            'telefono_scuola', 'fax_scuola', 'indirizzo_scuola', 'codice_postale_scuola',
+            'telefono_scuola', 'indirizzo_scuola', 'codice_postale_scuola',
             'comune_scuola', 'provincia_scuola', 'regione_scuola', 'nazione_scuola',
             'scuola_attiva'
         ]
         widgets = {
             'nome_completo_scuola': forms.TextInput(attrs={'class': 'form-control'}),
-            'nome_breve_scuola': forms.TextInput(attrs={'class': 'form-control'}),
             'codice_meccanografico_scuola': forms.TextInput(attrs={'class': 'form-control'}),
             'partita_iva_scuola': forms.TextInput(attrs={'class': 'form-control'}),
             'sito_web_scuola': forms.URLInput(attrs={'class': 'form-control'}),
             'email_istituzionale_scuola': forms.EmailInput(attrs={'class': 'form-control'}),
             'telefono_scuola': forms.TextInput(attrs={'class': 'form-control'}),
-            'fax_scuola': forms.TextInput(attrs={'class': 'form-control'}),
             'indirizzo_scuola': forms.TextInput(attrs={'class': 'form-control', 'id': 'id_indirizzo_autocomplete'}),
             'codice_postale_scuola': forms.TextInput(attrs={'class': 'form-control'}),
             'comune_scuola': forms.TextInput(attrs={'class': 'form-control'}),
