@@ -1313,8 +1313,11 @@ def lookup_unica(request):
                     main_institute = idx_data
                     break
         
-        # Strategia 3 (fallback finale): Se ancora non trovata, usa il plesso stesso
-        # (Log dettagliato per debug)
+        # Strategia 3 (fallback finale): Se ancora non trovata, prova a costruire
+        # un "main institute" sintetico usando i campi di riferimento dell'istituto
+        # (es. DENOMINAZIONEISTITUTORIFERIMENTO / CODICEISTITUTORIFERIMENTO).
+        # Questo è utile quando nel CSV non esiste una riga separata marcata come
+        # sede_direttivo='SI' ma sono presenti i campi di riferimento istituto.
         if main_institute is None:
             import logging
             logger = logging.getLogger('prenotazioni.lookup_unica')
@@ -1336,22 +1339,59 @@ def lookup_unica(request):
                 # Non fallire il flusso se l'indice non è iterabile
                 pass
 
-            # Log warning + debug context
+            # If we have a codice_istituto reference, we can synthesize a main
+            # institute using the DENOMINAZIONEISTITUTORIFERIMENTO field from the
+            # current row's raw CSV data. Otherwise fallback to using the plesso.
             logger.warning(
-                "Could not find main institute for requested codice '%s' (normalized: '%s'). Using plesso itself.",
+                "Could not find explicit main institute row for requested codice '%s' (normalized: '%s').",
                 requested_codice, codice_norm
             )
             logger.debug("Data for requested codice: %s", data)
             logger.debug("Candidates by codice_istituto (%s): %s", codice_istituto_value, candidates_by_codice)
             logger.debug("Candidates by name base (%s): %s", nome_base, candidates_by_name)
-            # Log a sample of index keys to help troubleshooting (limit to 50)
             try:
                 sample_keys = list(index.keys())[:50]
                 logger.debug("Index sample keys (first 50): %s", sample_keys)
             except Exception:
                 pass
 
-            main_institute = data
+            if codice_istituto_value:
+                # try to extract the institute-level name from the raw CSV row
+                raw_row = data.get('raw_row', {}) if isinstance(data, dict) else {}
+                denom_istituto = raw_row.get('DENOMINAZIONEISTITUTORIFERIMENTO') or raw_row.get('denominazioneistitutoriferimento') or raw_row.get('DENOMINAZIONEISTITUTORIFERIMENTO'.lower())
+                denom_istituto = (denom_istituto or '').strip()
+
+                synthesized = {
+                    'codice': codice_istituto_value,
+                    'raw_codice': codice_istituto_value,
+                    'nome': denom_istituto or data.get('nome') or '',
+                    'indirizzo': '',
+                    'cap': '',
+                    'comune': data.get('comune') or '',
+                    'provincia': data.get('provincia') or '',
+                    'regione': data.get('regione') or '',
+                    'lat': '',
+                    'lon': '',
+                    'codice_istituto': codice_istituto_value,
+                    'codice_istituto_raw': raw_row.get('CODICEISTITUTORIFERIMENTO') or '',
+                    'sede_direttivo': 'SI',
+                    'sito_web': raw_row.get('SITOWEBSCUOLA') or data.get('sito_web') or '',
+                    'email_istituzionale': raw_row.get('INDIRIZZOEMAILSCUOLA') or data.get('email_istituzionale') or '',
+                }
+
+                # Collect all plessi that reference this codice_istituto as affiliated
+                affiliated_schools = []
+                try:
+                    for idx_code, idx_data in index.items():
+                        if idx_data.get('codice_istituto') == codice_istituto_value:
+                            affiliated_schools.append(idx_data)
+                except Exception:
+                    pass
+
+                main_institute = synthesized
+            else:
+                # no institute reference: fallback al plesso come prima
+                main_institute = data
         
         # Trova tutte le scuole affiliate della principale
         if main_institute.get('codice_istituto'):
