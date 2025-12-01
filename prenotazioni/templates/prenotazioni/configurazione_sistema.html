@@ -773,9 +773,18 @@
                                     showInlineMessage('Dati trovati e compilati automaticamente. Verifica e salva.','info');
                                     try{ if(payload.lat && payload.lon) showMap(payload.lat, payload.lon); }catch(e){console.error('Map error:', e);}
 
-                                    // Populate email and sito web if present in payload
+                                    // Populate email and sito web if present in payload (normalize sito to include scheme)
                                     try{
-                                        if(payload.sito_web){ const s=document.getElementById('id_sito_web_scuola'); if(s){ s.value = payload.sito_web; s.readOnly = true; console.log('Set sito_web:', payload.sito_web); } }
+                                        if(payload.sito_web){
+                                            const s=document.getElementById('id_sito_web_scuola');
+                                            if(s){
+                                                let sito = String(payload.sito_web).trim();
+                                                if(!/^https?:\/\//i.test(sito)) sito = 'https://' + sito;
+                                                s.value = sito;
+                                                s.readOnly = true;
+                                                console.log('Set sito_web (normalized):', sito);
+                                            }
+                                        }
                                         if(payload.email_istituzionale){ const em=document.getElementById('id_email_istituzionale_scuola'); if(em){ em.value = payload.email_istituzionale; em.readOnly = true; console.log('Set email_istituzionale:', payload.email_istituzionale); } }
                                     }catch(e){ console.error('Populate email/sito error:', e); }
 

@@ -65,10 +65,13 @@ class InformazioniScuolaForm(forms.ModelForm):
         sito = self.cleaned_data.get('sito_web_scuola')
         if not sito:
             return ''
-        # Basic URL parsing by using django's URLField validation already applied; enforce domain edu.it
+        # Normalize: allow values like 'www.example.edu.it' by prepending https://
         try:
             from urllib.parse import urlparse
-            parsed = urlparse(sito)
+            sito_to_parse = sito
+            if not sito_to_parse.lower().startswith(('http://', 'https://')):
+                sito_to_parse = 'https://' + sito_to_parse
+            parsed = urlparse(sito_to_parse)
             hostname = parsed.hostname or ''
         except Exception:
             raise ValidationError('URL non valido.')
@@ -76,7 +79,8 @@ class InformazioniScuolaForm(forms.ModelForm):
         if not hostname.lower().endswith('edu.it'):
             raise ValidationError('Il sito web della scuola deve appartenere al dominio *.edu.it')
 
-        return sito
+        # Return normalized URL including scheme so stored value is valid
+        return sito_to_parse
 
     def clean_indirizzo_scuola(self):
         """Validazione semplice per l'indirizzo scuola: non può essere vuoto.
