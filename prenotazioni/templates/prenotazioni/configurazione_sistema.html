@@ -773,6 +773,9 @@
                                     showInlineMessage('Dati trovati e compilati automaticamente. Verifica e salva.','info');
                                     try{ if(payload.lat && payload.lon) showMap(payload.lat, payload.lon); }catch(e){console.error('Map error:', e);}
 
+                                    // Populate remaining fields (email, sito, telefono, partita iva)
+                                    try{ if(typeof populateFieldsWithSchool === 'function') populateFieldsWithSchool(payload); }catch(e){console.error('Populate fields error:', e);}
+
                                     // affiliated schools
                                     if (data.affiliated_schools && data.affiliated_schools.length > 0) {
                                         showAffiliatedSchoolsModal(data.affiliated_schools, payload);
