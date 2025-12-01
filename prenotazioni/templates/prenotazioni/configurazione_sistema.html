@@ -341,11 +341,10 @@
                                                     {% for error in form_school.nome_completo_scuola.errors %}{{ error }}{% endfor %}
                                                 </div>
                                             {% endif %}
-                                        <!-- Fax rimosso su richiesta dell'utente -->
-                                        <div class="text-danger small">
-                                            {% for error in form_school.indirizzo_scuola.errors %}{{ error }}{% endfor %}
-                                        </div>
-                                    {% endif %}
+                                                <!-- Fax rimosso su richiesta dell'utente -->
+                                                <div class="text-danger small">
+                                                    {% for error in form_school.indirizzo_scuola.errors %}{{ error }}{% endfor %}
+                                                </div>
                                 </div>
 
                                 <!-- Mappa di anteprima -->
