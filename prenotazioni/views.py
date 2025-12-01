@@ -1195,18 +1195,20 @@ def lookup_unica(request):
             with open(csv_path, newline='', encoding='utf-8') as fh:
                 reader = csv.DictReader(fh)
                 for row in reader:
-                    # Extract codice meccanografico - try multiple column name variations
-                    csv_codice = None
-                    for col in row.keys():
-                        col_lower = col.lower()
-                        if 'cod' in col_lower and ('scuola' in col_lower or 'istituto' in col_lower or 'mecc' in col_lower):
-                            csv_codice = row[col]
-                            break
-
-                    if not csv_codice and 'CODICESCUOLA' in row:
-                        csv_codice = row['CODICESCUOLA']
-                    if not csv_codice and 'CODICEISTITUTORIFERIMENTO' in row:
-                        csv_codice = row['CODICEISTITUTORIFERIMENTO']
+                    # Extract codice meccanografico: prefer CODICESCUOLA (plesso),
+                    # fallback to CODICEISTITUTORIFERIMENTO (istituto), then to heuristics.
+                    csv_codice = ''
+                    # Prefer explicit CODICESCUOLA if present
+                    if 'CODICESCUOLA' in row and row.get('CODICESCUOLA'):
+                        csv_codice = row.get('CODICESCUOLA')
+                    elif 'CODICEISTITUTORIFERIMENTO' in row and row.get('CODICEISTITUTORIFERIMENTO'):
+                        csv_codice = row.get('CODICEISTITUTORIFERIMENTO')
+                    else:
+                        for col in row.keys():
+                            col_lower = col.lower()
+                            if 'cod' in col_lower and ('scuola' in col_lower or 'istituto' in col_lower or 'mecc' in col_lower):
+                                csv_codice = row[col]
+                                break
                     if not csv_codice:
                         continue
 
@@ -1238,6 +1240,8 @@ def lookup_unica(request):
                     codice_istituto_norm = normalize_codice(codice_istituto) if codice_istituto else ''
                     sede_direttivo = pick_from_csv(row, ['INDICAZIONESEDEDIRETTIVO', 'indicazionesededirettivo', 'SEDE_DIRETTIVO'])
                     sede_direttivo_norm = (sede_direttivo or '').upper()
+                    # Also extract denomination of the institute-level (if present)
+                    denom_istituto = pick_from_csv(row, ['DENOMINAZIONEISTITUTORIFERIMENTO', 'denominazioneistitutoriferimento'])
                     
                     # Extract sito web e email istituzionale
                     sito_web = pick_from_csv(row, ['SITOWEBSCUOLA', 'sitowebscuola', 'sito_web', 'website'])
@@ -1254,9 +1258,12 @@ def lookup_unica(request):
                         'lat': lat,
                         'lon': lon,
                         'codice_istituto': codice_istituto_norm,
+                        'codice_istituto_raw': codice_istituto,
+                        'denom_istituto': denom_istituto,
                         'sede_direttivo': sede_direttivo_norm,
                         'sito_web': sito_web,
                         'email_istituzionale': email_istituzionale,
+                        'raw_row': row,
                     }
 
             # NON salvare come cache: il CSV è l'unica fonte di verità
@@ -1358,8 +1365,7 @@ def lookup_unica(request):
             if codice_istituto_value:
                 # try to extract the institute-level name from the raw CSV row
                 raw_row = data.get('raw_row', {}) if isinstance(data, dict) else {}
-                denom_istituto = raw_row.get('DENOMINAZIONEISTITUTORIFERIMENTO') or raw_row.get('denominazioneistitutoriferimento') or raw_row.get('DENOMINAZIONEISTITUTORIFERIMENTO'.lower())
-                denom_istituto = (denom_istituto or '').strip()
+                denom_istituto = (data.get('denom_istituto') or raw_row.get('DENOMINAZIONEISTITUTORIFERIMENTO') or raw_row.get('denominazioneistitutoriferimento') or '').strip()
 
                 synthesized = {
                     'codice': codice_istituto_value,
@@ -1383,6 +1389,9 @@ def lookup_unica(request):
                 affiliated_schools = []
                 try:
                     for idx_code, idx_data in index.items():
+                        # skip the requested plesso itself
+                        if idx_code == codice_norm:
+                            continue
                         if idx_data.get('codice_istituto') == codice_istituto_value:
                             affiliated_schools.append(idx_data)
                 except Exception:
@@ -1397,14 +1406,14 @@ def lookup_unica(request):
         if main_institute.get('codice_istituto'):
             for idx_code, idx_data in index.items():
                 if idx_data.get('codice_istituto') == main_institute.get('codice_istituto'):
-                    if idx_code != main_institute['codice']:  # Escludi la principale
+                    if idx_code != codice_norm:  # Escludi il plesso richiesto
                         affiliated_schools.append(idx_data)
         elif main_institute.get('nome'):
             # Fallback: trova plessi con lo stesso nome base
             nome_base = main_institute.get('nome', '').split(' - ')[0].strip()
             for idx_code, idx_data in index.items():
                 idx_nome_base = idx_data.get('nome', '').split(' - ')[0].strip()
-                if idx_nome_base == nome_base and idx_code != main_institute['codice']:
+                if idx_nome_base == nome_base and idx_code != codice_norm:
                     affiliated_schools.append(idx_data)
     
     return JsonResponse({

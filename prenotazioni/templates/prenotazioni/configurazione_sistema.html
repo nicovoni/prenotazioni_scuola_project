@@ -139,7 +139,7 @@
                             }
 
                             // Build and show modal for affiliated schools
-                            function showAffiliatedSchoolsModal(affiliatedSchools, mainInstitute){
+                            function showAffiliatedSchoolsModal(affiliatedSchools, mainInstitute, fullPayload){
                                 // remove existing modal if any
                                 const existing = document.getElementById('affiliated-schools-modal');
                                 if(existing) existing.remove();
@@ -157,8 +157,16 @@
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                             </div>
                                             <div class="modal-body">
-                                                <p>L'istituto <strong>${mainInstitute.nome || mainInstitute.codice}</strong> comprende le seguenti sedi:</p>
+                                                <p>
+                                                    L'istituto <strong>
+                                                        ${mainInstitute.denom_istituto || mainInstitute.nome || mainInstitute.codice || (fullPayload && (fullPayload.data && (fullPayload.data.denom_istituto || fullPayload.data.codice_istituto)) )}
+                                                    </strong> comprende le seguenti sedi:
+                                                </p>
                                                 <div class="list-group" id="_affiliated_list"></div>
+                                                <details style="margin-top:1rem;">
+                                                    <summary style="cursor:pointer">Mostra risposta JSON (debug)</summary>
+                                                    <pre id="_lookup_debug" style="max-height:300px; overflow:auto; background:#f8f9fa; padding:12px; border-radius:8px;">${JSON.stringify(fullPayload || {}, null, 2)}</pre>
+                                                </details>
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
@@ -172,12 +180,13 @@
                                     const btn = document.createElement('button');
                                     btn.type = 'button';
                                     btn.className = 'list-group-item list-group-item-action';
-                                    btn.innerHTML = `<strong>${school.nome || school.codice}</strong><br><small class="text-muted">${school.indirizzo||''} ${school.comune?('- '+school.comune):''}</small>`;
+                                    const displayName = school.nome || school.denom_istituto || school.codice || school.codice_istituto || school.raw_codice || '';
+                                    btn.innerHTML = `<strong>${displayName}</strong><br><small class="text-muted">${school.indirizzo||''} ${school.comune?('- '+school.comune):''}</small>`;
                                     btn.addEventListener('click', function(){
                                         populateFieldsWithSchool(school);
                                         const bs = bootstrap.Modal.getOrCreateInstance(modal);
                                         bs.hide();
-                                        showInlineMessage('Selezionata sede: ' + (school.nome || school.codice), 'info');
+                                        showInlineMessage('Selezionata sede: ' + (displayName || school.codice), 'info');
                                     });
                                     list.appendChild(btn);
                                 });
@@ -196,6 +205,8 @@
                                     if(!ok || data.error) { console.warn('Lookup error response:', data); throw new Error(data.message || data.error || 'lookup_failed'); }
                                     if(!data || !data.data) { throw new Error('no_data'); }
                                     const payload = data.data;
+                                    // Debug: log completo della risposta per troubleshoot
+                                    console.debug('lookup_unica response:', data);
 
                                     // populate default/main fields
                                     populateFieldsWithSchool(payload);
@@ -212,9 +223,14 @@
 
                                     showInlineMessage('Dati trovati e compilati automaticamente. Verifica e salva.','info');
 
-                                    // affiliated schools
+                                    // affiliated schools: deduplicate and pass full payload for debug
                                     if(data.affiliated_schools && data.affiliated_schools.length>0){
-                                        showAffiliatedSchoolsModal(data.affiliated_schools, payload);
+                                        const seen = new Set();
+                                        const deduped = data.affiliated_schools.filter(s => {
+                                            const key = (s.codice || s.raw_codice || s.codice_istituto || s.nome || '').toString();
+                                            if(seen.has(key)) return false; seen.add(key); return true;
+                                        });
+                                        showAffiliatedSchoolsModal(deduped, payload, {data: payload, affiliated_schools: deduped});
                                     }
                                 }).catch(err => {
                                     console.warn('Lookup error:', err);
