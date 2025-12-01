@@ -269,6 +269,10 @@ if DEBUG:
                 'level': 'INFO',
                 'class': 'logging.StreamHandler',
             },
+                'console_debug': {
+                    'level': 'DEBUG',
+                    'class': 'logging.StreamHandler',
+                },
         },
         'root': {
             'handlers': ['console'],
@@ -285,6 +289,11 @@ if DEBUG:
                 'level': 'INFO',
                 'propagate': False,
             },
+                'prenotazioni.lookup_unica': {
+                    'handlers': ['console_debug'],
+                    'level': 'DEBUG',
+                    'propagate': False,
+                },
         },
     }
 else:
@@ -296,6 +305,10 @@ else:
                 'level': 'ERROR',
                 'class': 'logging.StreamHandler',
             },
+                'console_debug': {
+                    'level': 'DEBUG',
+                    'class': 'logging.StreamHandler',
+                },
         },
         'root': {
             'handlers': ['console'],
@@ -312,6 +325,11 @@ else:
                 'level': 'ERROR',
                 'propagate': False,
             },
+                'prenotazioni.lookup_unica': {
+                    'handlers': ['console_debug'],
+                    'level': 'DEBUG',
+                    'propagate': False,
+                },
         },
     }
 

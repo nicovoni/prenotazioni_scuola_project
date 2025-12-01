@@ -1232,9 +1232,12 @@ def lookup_unica(request):
                     lat = pick_from_csv(row, ['latitudine', 'lat', 'latitude', 'LAT'])
                     lon = pick_from_csv(row, ['longitudine', 'lon', 'longitude', 'LON'])
                     
-                    # Extract codice istituto principale
+                    # Extract codice istituto principale and normalize it for reliable matching
                     codice_istituto = pick_from_csv(row, ['CODICEISTITUTORIFERIMENTO', 'codiceistitutoriferimento'])
+                    # Normalize codice_istituto to remove spaces and uppercase, so comparisons are consistent
+                    codice_istituto_norm = normalize_codice(codice_istituto) if codice_istituto else ''
                     sede_direttivo = pick_from_csv(row, ['INDICAZIONESEDEDIRETTIVO', 'indicazionesededirettivo', 'SEDE_DIRETTIVO'])
+                    sede_direttivo_norm = (sede_direttivo or '').upper()
                     
                     # Extract sito web e email istituzionale
                     sito_web = pick_from_csv(row, ['SITOWEBSCUOLA', 'sitowebscuola', 'sito_web', 'website'])
@@ -1250,8 +1253,8 @@ def lookup_unica(request):
                         'regione': regione,
                         'lat': lat,
                         'lon': lon,
-                        'codice_istituto': codice_istituto,
-                        'sede_direttivo': sede_direttivo,
+                        'codice_istituto': codice_istituto_norm,
+                        'sede_direttivo': sede_direttivo_norm,
                         'sito_web': sito_web,
                         'email_istituzionale': email_istituzionale,
                     }
@@ -1311,10 +1314,43 @@ def lookup_unica(request):
                     break
         
         # Strategia 3 (fallback finale): Se ancora non trovata, usa il plesso stesso
-        # (Ma log per debug)
+        # (Log dettagliato per debug)
         if main_institute is None:
             import logging
-            logging.warning(f"Could not find main institute for plesso {codice_norm}. Using plesso itself.")
+            logger = logging.getLogger('prenotazioni.lookup_unica')
+            # Nome base usato nei confronti se disponibile
+            nome_base = (data.get('nome') or '').split(' - ')[0].strip()
+
+            # Candidate matches by codice_istituto and by nome_base
+            codice_istituto_value = data.get('codice_istituto')
+            candidates_by_codice = []
+            candidates_by_name = []
+            try:
+                for idx_code, idx_data in index.items():
+                    if codice_istituto_value and idx_data.get('codice_istituto') == codice_istituto_value:
+                        candidates_by_codice.append(idx_code)
+                    idx_nome_base = (idx_data.get('nome') or '').split(' - ')[0].strip()
+                    if nome_base and idx_nome_base == nome_base:
+                        candidates_by_name.append(idx_code)
+            except Exception:
+                # Non fallire il flusso se l'indice non è iterabile
+                pass
+
+            # Log warning + debug context
+            logger.warning(
+                "Could not find main institute for requested codice '%s' (normalized: '%s'). Using plesso itself.",
+                requested_codice, codice_norm
+            )
+            logger.debug("Data for requested codice: %s", data)
+            logger.debug("Candidates by codice_istituto (%s): %s", codice_istituto_value, candidates_by_codice)
+            logger.debug("Candidates by name base (%s): %s", nome_base, candidates_by_name)
+            # Log a sample of index keys to help troubleshooting (limit to 50)
+            try:
+                sample_keys = list(index.keys())[:50]
+                logger.debug("Index sample keys (first 50): %s", sample_keys)
+            except Exception:
+                pass
+
             main_institute = data
         
         # Trova tutte le scuole affiliate della principale
