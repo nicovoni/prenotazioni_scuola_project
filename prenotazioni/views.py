@@ -27,11 +27,21 @@ def setup_amministratore(request):
     from django.db import transaction
     from django.core.paginator import Paginator
     
+    from .models import ConfigurazioneSistema
     User = get_user_model()
 
-    # Step 0: Se setup è già completato (esiste superuser)
-    if User.objects.filter(is_superuser=True).exists():
-        # Mostra dashboard di gestione configurazioni
+    # Step 0: Se setup è già completato (flag DB) oppure esiste un superuser
+    # ma non siamo in un wizard in corso (sessione senza admin_user_id),
+    # allora mostra la dashboard di configurazione.
+    session = request.session
+    setup_flag = ConfigurazioneSistema.ottieni_configurazione('SETUP_COMPLETED', default=None)
+    if setup_flag is not None:
+        return _show_config_dashboard(request)
+
+    # Backward-compat: se non esiste il flag, ma esiste un superuser e
+    # non c'è un wizard in corso nella sessione, consideriamo il setup
+    # già eseguito.
+    if User.objects.filter(is_superuser=True).exists() and not session.get('admin_user_id'):
         return _show_config_dashboard(request)
 
     # ============================================================================
@@ -113,7 +123,7 @@ def setup_amministratore(request):
                         username=username,
                         email=email,
                         is_staff=True,
-                        is_superuser=False
+                        is_superuser=True
                     )
                     
                     # Salva in sessione per i prossimi step
@@ -307,7 +317,22 @@ def setup_amministratore(request):
                     messages.success(request, '✓ Account promosso a superuser!')
             except User.DoesNotExist:
                 pass
-        
+            # Segna nel DB che il setup è completato (flag persistente)
+            try:
+                from django.utils import timezone
+                ConfigurazioneSistema.objects.update_or_create(
+                    chiave_configurazione='SETUP_COMPLETED',
+                    defaults={
+                        'valore_configurazione': timezone.now().isoformat(),
+                        'tipo_configurazione': 'sistema',
+                        'descrizione_configurazione': 'Setup wizard completato'
+                    }
+                )
+            except Exception:
+                # Non bloccare l'utente se il salvataggio della configurazione fallisce
+                import logging
+                logging.getLogger('prenotazioni').exception('Impossibile salvare SETUP_COMPLETED')
+
         context['wizard_completed'] = True
 
     return render(request, 'prenotazioni/configurazione_sistema.html', context)
