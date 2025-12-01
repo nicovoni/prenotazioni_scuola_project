@@ -39,10 +39,10 @@ class InformazioniScuolaForm(forms.ModelForm):
         widgets = {
             'nome_completo_scuola': forms.TextInput(attrs={'class': 'form-control'}),
             'codice_meccanografico_scuola': forms.TextInput(attrs={'class': 'form-control'}),
-            'partita_iva_scuola': forms.TextInput(attrs={'class': 'form-control'}),
+            'partita_iva_scuola': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Non disponibile nel dataset ufficiale - inserire manualmente'}),
+            'telefono_scuola': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Non disponibile nel dataset ufficiale - inserire manualmente'}),
             'sito_web_scuola': forms.URLInput(attrs={'class': 'form-control'}),
             'email_istituzionale_scuola': forms.EmailInput(attrs={'class': 'form-control'}),
-            'telefono_scuola': forms.TextInput(attrs={'class': 'form-control'}),
             'indirizzo_scuola': forms.TextInput(attrs={'class': 'form-control', 'id': 'id_indirizzo_autocomplete'}),
             'codice_postale_scuola': forms.TextInput(attrs={'class': 'form-control'}),
             'comune_scuola': forms.TextInput(attrs={'class': 'form-control'}),

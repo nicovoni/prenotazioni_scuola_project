@@ -140,6 +140,14 @@
                                 if(school.email_istituzionale){ const e=getField(ids.email); if(e){ e.value = school.email_istituzionale; e.readOnly = true; } }
                                 if(school.telefono){ const e=getField(ids.telefono); if(e){ e.value = school.telefono; } }
                                 if(school.partita_iva){ const e=getField(ids.partita_iva); if(e){ e.value = school.partita_iva; } }
+
+                                // Toggle helper notes for telefono and partita IVA
+                                try{
+                                    const telNote = document.getElementById('telefono-note');
+                                    const pivaNote = document.getElementById('piva-note');
+                                    if(telNote){ if(school.telefono){ telNote.textContent = 'Telefono auto-compilato dal dataset.'; telNote.classList.remove('text-muted'); telNote.classList.add('text-success'); } else { telNote.textContent = 'Non disponibile nel dataset ufficiale — inserire manualmente se necessario.'; telNote.classList.remove('text-success'); telNote.classList.add('text-muted'); } }
+                                    if(pivaNote){ if(school.partita_iva){ pivaNote.textContent = 'Partita IVA auto-compilata dal dataset.'; pivaNote.classList.remove('text-muted'); pivaNote.classList.add('text-success'); } else { pivaNote.textContent = 'Non disponibile nel dataset ufficiale — inserire manualmente se necessario.'; pivaNote.classList.remove('text-success'); pivaNote.classList.add('text-muted'); } }
+                                }catch(e){ /* ignore UI note failures */ }
                             }
 
                             // Build and show modal for affiliated schools
@@ -289,6 +297,16 @@
                                         </div>
                                     {% endif %}
                                 </div>
+
+                    <script>
+                        // Initialize Bootstrap tooltips for info badges
+                        document.addEventListener('DOMContentLoaded', function(){
+                            try{
+                                var t = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                                t.forEach(function (el) { new bootstrap.Tooltip(el); });
+                            }catch(e){ /* ignore if bootstrap not loaded yet */ }
+                        });
+                    </script>
                                 <div class="d-flex justify-content-between align-items-center mt-4">
                                     <button type="submit" name="step1" class="btn btn-primary btn-lg">
                                         ➕ Crea Amministratore →
@@ -458,13 +476,14 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label for="{{ form_school.telefono_scuola.id_for_label }}" class="form-label">{{ form_school.telefono_scuola.label }}</label>
+                                            <label for="{{ form_school.telefono_scuola.id_for_label }}" class="form-label">{{ form_school.telefono_scuola.label }} <span class="badge bg-secondary ms-2" data-bs-toggle="tooltip" title="Telefono non presente nel dataset ufficiale"> <i class="bi bi-info-circle"></i> </span></label>
                                             {{ form_school.telefono_scuola }}
                                             {% if form_school.telefono_scuola.errors %}
                                                 <div class="text-danger small">
                                                     {% for error in form_school.telefono_scuola.errors %}{{ error }}{% endfor %}
                                                 </div>
                                             {% endif %}
+                                            <div id="telefono-note" class="form-text text-muted">Non disponibile nel dataset ufficiale — inserire manualmente se necessario.</div>
                                         </div>
                                     </div>
                                 </div>
@@ -485,13 +504,14 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label for="{{ form_school.partita_iva_scuola.id_for_label }}" class="form-label">{{ form_school.partita_iva_scuola.label }}</label>
+                                            <label for="{{ form_school.partita_iva_scuola.id_for_label }}" class="form-label">{{ form_school.partita_iva_scuola.label }} <span class="badge bg-secondary ms-2" data-bs-toggle="tooltip" title="Partita IVA non presente nel dataset ufficiale"> <i class="bi bi-info-circle"></i> </span></label>
                                             {{ form_school.partita_iva_scuola }}
-                                            {% if form_school.partita_iva_scuola.errors %}
-                                                <div class="text-danger small">
-                                                    {% for error in form_school.partita_iva_scuola.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
+                                                {% if form_school.partita_iva_scuola.errors %}
+                                                    <div class="text-danger small">
+                                                        {% for error in form_school.partita_iva_scuola.errors %}{{ error }}{% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                                <div id="piva-note" class="form-text text-muted">Non disponibile nel dataset ufficiale — inserire manualmente se necessario.</div>
                                         </div>
                                     </div>
                                 </div>
@@ -774,7 +794,9 @@
                                     cap: 'id_codice_postale_scuola',
                                     comune: 'id_comune_scuola',
                                     provincia: 'id_provincia_scuola',
-                                    regione: 'id_regione_scuola'
+                                    regione: 'id_regione_scuola',
+                                    telefono: 'id_telefono_scuola',
+                                    partita_iva: 'id_partita_iva_scuola'
                                 };
                                 if(school.nome){ const e=document.getElementById(ids.nome); if(e){ e.value = school.nome; e.readOnly = true; } }
                                 if(school.indirizzo){ const e=document.getElementById(ids.indirizzo); if(e){ e.value = school.indirizzo; e.readOnly = true; } }
@@ -784,6 +806,14 @@
                                 if(school.comune){ const e=document.getElementById(ids.comune); if(e) e.value = school.comune; }
                                 if(school.provincia){ const e=document.getElementById(ids.provincia); if(e) e.value = school.provincia; }
                                 if(school.regione){ const e=document.getElementById(ids.regione); if(e) e.value = school.regione; }
+                                if(school.telefono){ const e=document.getElementById(ids.telefono); if(e) e.value = school.telefono; }
+                                if(school.partita_iva){ const e=document.getElementById(ids.partita_iva); if(e) e.value = school.partita_iva; }
+                                try{
+                                    const telNote = document.getElementById('telefono-note');
+                                    const pivaNote = document.getElementById('piva-note');
+                                    if(telNote){ if(school.telefono){ telNote.textContent = 'Telefono auto-compilato dal dataset.'; telNote.classList.remove('text-muted'); telNote.classList.add('text-success'); } else { telNote.textContent = 'Non disponibile nel dataset ufficiale — inserire manualmente se necessario.'; telNote.classList.remove('text-success'); telNote.classList.add('text-muted'); } }
+                                    if(pivaNote){ if(school.partita_iva){ pivaNote.textContent = 'Partita IVA auto-compilata dal dataset.'; pivaNote.classList.remove('text-muted'); pivaNote.classList.add('text-success'); } else { pivaNote.textContent = 'Non disponibile nel dataset ufficiale — inserire manualmente se necessario.'; pivaNote.classList.remove('text-success'); pivaNote.classList.add('text-muted'); } }
+                                }catch(e){ }
                                 try{ if(school.lat && school.lon) showMap(parseFloat(school.lat), parseFloat(school.lon)); }catch(e){console.error('Map error:', e);}
                             }
 
