@@ -305,7 +305,7 @@ else:
         'disable_existing_loggers': False,
         'handlers': {
             'console': {
-                'level': 'ERROR',
+                'level': 'INFO',
                 'class': 'logging.StreamHandler',
             },
                 'console_debug': {
@@ -325,7 +325,7 @@ else:
             },
             'prenotazioni': {
                 'handlers': ['console'],
-                'level': 'ERROR',
+                'level': 'INFO',
                 'propagate': False,
             },
                 'prenotazioni.lookup_unica': {
