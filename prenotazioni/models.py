@@ -404,6 +404,16 @@ class ProfiloUtente(models.Model):
     @property
     def nome_completo_utente(self):
         return f"{self.nome_utente} {self.cognome_utente}"
+    
+    @property
+    def eta_utente(self):
+        """Calcola l'età basata su `data_nascita_utente` se presente."""
+        if self.data_nascita_utente:
+            oggi = timezone.now().date()
+            return oggi.year - self.data_nascita_utente.year - (
+                (oggi.month, oggi.day) < (self.data_nascita_utente.month, self.data_nascita_utente.day)
+            )
+        return None
 
 
 class PasswordHistory(models.Model):
@@ -417,14 +427,6 @@ class PasswordHistory(models.Model):
         verbose_name_plural = 'Storico Password'
         ordering = ['-created_at']
 
-    @property
-    def eta_utente(self):
-        if self.data_nascita_utente:
-            oggi = timezone.now().date()
-            return oggi.year - self.data_nascita_utente.year - (
-                (oggi.month, oggi.day) < (self.data_nascita_utente.month, self.data_nascita_utente.day)
-            )
-        return None
 
 
 # Nota: Rimuovendo il modello custom Utente per usare auth.User standard
