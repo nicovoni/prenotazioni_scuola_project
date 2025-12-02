@@ -1089,7 +1089,11 @@
                                                                 {% if dispositivo.specifiche.processore %} • {% endif %}{{ dispositivo.specifiche.storage }}
                                                             {% endif %}
                                                         </small>
-                                                        {% if not (dispositivo.specifiche and (dispositivo.specifiche.processore or dispositivo.specifiche.storage)) %}
+                                                        {% if dispositivo.specifiche and dispositivo.specifiche.processore %}
+                                                            {# handled above #}
+                                                        {% elif dispositivo.specifiche and dispositivo.specifiche.storage %}
+                                                            {# handled above #}
+                                                        {% else %}
                                                             <small class="text-muted">-</small>
                                                         {% endif %}
                                                     </td>
