@@ -2,6 +2,15 @@ from django.contrib.auth import get_user_model
 
 from django.http import JsonResponse
 from django.conf import settings
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import PasswordChangeView
+from django.urls import reverse_lazy
+from django.utils import timezone
+from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
+from django import forms
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.hashers import check_password
 
 def debug_devices(request):
     """Endpoint di debug: ritorna JSON con i dispositivi catalogati.
@@ -107,6 +116,90 @@ def sanity_check(request):
         result['pending_migrations_error'] = str(e)
 
     return JsonResponse(result)
+
+
+class ForcedPasswordChangeForm(forms.Form):
+    old_password = forms.CharField(widget=forms.PasswordInput, required=True)
+    new_password1 = forms.CharField(widget=forms.PasswordInput, required=True)
+    new_password2 = forms.CharField(widget=forms.PasswordInput, required=True)
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def clean_old_password(self):
+        old = self.cleaned_data.get('old_password')
+        if not self.user.check_password(old):
+            raise forms.ValidationError('Password corrente non corretta')
+        return old
+
+    def clean(self):
+        cleaned = super().clean()
+        p1 = cleaned.get('new_password1')
+        p2 = cleaned.get('new_password2')
+        if p1 and p2 and p1 != p2:
+            raise forms.ValidationError('Le password non coincidono')
+
+        # Validate complexity via Django validators
+        if p1:
+            validate_password(p1, self.user)
+
+            # Check password history
+            from .models import PasswordHistory
+            history = PasswordHistory.objects.filter(utente=self.user).order_by('-created_at')[:5]
+            for h in history:
+                try:
+                    if check_password(p1, h.password_hash):
+                        raise forms.ValidationError('Questa password è già stata usata in precedenza')
+                except Exception:
+                    continue
+
+        return cleaned
+
+
+class ForcedPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
+    template_name = 'registration/forced_password_change.html'
+    success_url = reverse_lazy('prenotazioni:setup_amministratore')
+    form_class = None  # we'll override in get_form
+
+    def get_form(self, form_class=None):
+        return ForcedPasswordChangeForm(self.request.user, **self.get_form_kwargs())
+
+    def form_valid(self, form):
+        # change password
+        new_password = form.cleaned_data['new_password1']
+        user = self.request.user
+        user.set_password(new_password)
+        user.save()
+
+        # update password history
+        from .models import PasswordHistory
+        try:
+            PasswordHistory.objects.create(utente=user, password_hash=user.password)
+        except Exception:
+            pass
+
+        # update profile
+        try:
+            profil = user.profilo_utente
+            profil.must_change_password = False
+            profil.password_last_changed = timezone.now()
+            profil.save()
+        except Exception:
+            pass
+
+        # keep the user logged in after password change
+        update_session_auth_hash(self.request, user)
+
+        # ensure wizard starts: set admin_user_id in session
+        try:
+            self.request.session['admin_user_id'] = user.id
+            self.request.session.save()
+        except Exception:
+            pass
+
+        messages.success(self.request, 'Password aggiornata con successo. Procedi con la configurazione.')
+        return super().form_valid(form)
 
 def setup_amministratore(request):
     """

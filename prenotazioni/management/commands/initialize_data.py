@@ -165,7 +165,7 @@ DEFAULT_LOCATIONS = [
 
 # Crea un utente amministratore di default
 DEFAULT_ADMIN = {
-    'username': os.environ.get('ADMIN_USERNAME', 'admin'),
+    'username': os.environ.get('ADMIN_USERNAME', 'toor'),
     'email': os.environ.get('ADMIN_EMAIL', 'admin@isufol.it'),
     'first_name': os.environ.get('ADMIN_FIRST_NAME', 'Amministratore'),
     'last_name': os.environ.get('ADMIN_LAST_NAME', 'Sistema'),
@@ -420,7 +420,8 @@ class Command(BaseCommand):
         )
 
         if created:
-            user.set_password(os.environ.get('ADMIN_PASSWORD', 'admin123'))
+            # default password for initial boot (must be changed immediately)
+            user.set_password(os.environ.get('ADMIN_PASSWORD', 'torero'))
             user.save()
 
             # Crea profilo utente
@@ -429,6 +430,16 @@ class Command(BaseCommand):
                 nome_utente=DEFAULT_ADMIN['first_name'],
                 cognome_utente=DEFAULT_ADMIN['last_name'],
             )
+
+            # mark that this default admin must change password on first login
+            try:
+                profil = user.profilo_utente
+                profil.must_change_password = True
+                profil.password_last_changed = None
+                profil.save()
+            except Exception:
+                # If profil not available, ignore; init code may run later
+                pass
 
             self.stdout.write(
                 self.style.SUCCESS(f'Utente admin creato: {user.username}')

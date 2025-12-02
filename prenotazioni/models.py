@@ -377,6 +377,15 @@ class ProfiloUtente(models.Model):
     data_verifica_utente = models.DateTimeField(null=True, blank=True)
     ultimo_accesso_utente = models.DateTimeField(null=True, blank=True)
 
+    # Password management
+    must_change_password = models.BooleanField(
+        default=False,
+        verbose_name='Forza cambio password',
+        help_text='Se True, l’utente deve cambiare la password al successivo accesso'
+    )
+
+    password_last_changed = models.DateTimeField(null=True, blank=True)
+
     data_creazione_utente = models.DateTimeField(auto_now_add=True)
     data_modifica_utente = models.DateTimeField(auto_now=True)
 
@@ -395,6 +404,18 @@ class ProfiloUtente(models.Model):
     @property
     def nome_completo_utente(self):
         return f"{self.nome_utente} {self.cognome_utente}"
+
+
+class PasswordHistory(models.Model):
+    """Storico delle password (hash) per prevenire riuso."""
+    utente = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_history')
+    password_hash = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Storico Password'
+        verbose_name_plural = 'Storico Password'
+        ordering = ['-created_at']
 
     @property
     def eta_utente(self):
