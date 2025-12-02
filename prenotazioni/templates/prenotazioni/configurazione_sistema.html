@@ -1061,28 +1061,35 @@
                                             {% for dispositivo in dispositivi_esistenti %}
                                                 <tr>
                                                     <td>
-                                                        <strong>{{ dispositivo.produttore_display }} {{ dispositivo.nome }}</strong>
+                                                        <strong>{{ dispositivo.marca }} {{ dispositivo.nome }}</strong>
                                                         {% if dispositivo.modello %}
                                                             <br><small class="text-muted">{{ dispositivo.modello }}</small>
                                                         {% endif %}
                                                     </td>
                                                     <td>
-                                                        <span class="badge bg-info">{{ dispositivo.categoria_display }}</span>
-                                                        {% if dispositivo.is_mobile %}<br><small class="text-success">Mobile</small>{% endif %}
-                                                    </td>
-                                                    <td>
-                                                        <small>{{ dispositivo.get_sistema_operativo_display }}</small>
+                                                        <span class="badge bg-info">{{ dispositivo.categoria }}</span>
+                                                        {% comment %} show mobile hint if specifiche indicate mobile-type {% endcomment %}
+                                                        {% if dispositivo.specifiche and dispositivo.specifiche.mobile %}<br><small class="text-success">Mobile</small>{% endif %}
                                                     </td>
                                                     <td>
                                                         <small>
-                                                            {% if dispositivo.processore %}
-                                                                {{ dispositivo.processore }}
-                                                            {% endif %}
-                                                            {% if dispositivo.storage %}
-                                                                {% if dispositivo.processore %} • {% endif %}{{ dispositivo.storage }}
+                                                            {% if dispositivo.specifiche and dispositivo.specifiche.sistema_operativo %}
+                                                                {{ dispositivo.specifiche.sistema_operativo }}
+                                                            {% else %}
+                                                                -
                                                             {% endif %}
                                                         </small>
-                                                        {% if not dispositivo.processore and not dispositivo.storage %}
+                                                    </td>
+                                                    <td>
+                                                        <small>
+                                                            {% if dispositivo.specifiche and dispositivo.specifiche.processore %}
+                                                                {{ dispositivo.specifiche.processore }}
+                                                            {% endif %}
+                                                            {% if dispositivo.specifiche and dispositivo.specifiche.storage %}
+                                                                {% if dispositivo.specifiche.processore %} • {% endif %}{{ dispositivo.specifiche.storage }}
+                                                            {% endif %}
+                                                        </small>
+                                                        {% if not (dispositivo.specifiche and (dispositivo.specifiche.processore or dispositivo.specifiche.storage)) %}
                                                             <small class="text-muted">-</small>
                                                         {% endif %}
                                                     </td>

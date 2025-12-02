@@ -354,28 +354,17 @@ class DeviceForm(forms.ModelForm):
 
 class DeviceWizardForm(forms.ModelForm):
     """Form semplificato per wizard configurazione."""
-    
-    # Campo ubicazione richiesto per FK a UbicazioneRisorsa
-    ubicazione = forms.ModelChoiceField(
-        queryset=ResourceLocation.objects.all(),
-        label='Ubicazione Dispositivo',
-        empty_label='-- Seleziona ubicazione --',
-        widget=forms.Select(attrs={'class': 'form-control mb-2'}),
-        help_text='Dove si trova fisicamente il dispositivo'
-    )
-
-    # Extra fields expected by the template — map to model fields on save
-    produttore = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control mb-2'}))
-    sistema_operativo = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control mb-2'}))
-    tipo_display = forms.ChoiceField(required=False, choices=getattr(Device, 'TIPO_DISPOSITIVO', []), widget=forms.Select(attrs={'class': 'form-control mb-2'}))
-    processore = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control mb-2'}))
-    storage = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control mb-2'}))
-    schermo = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control mb-2'}))
-    caratteristiche_extra = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}))
+    """
+    Il form del wizard per i dispositivi ora cattura i campi principali del
+    modello: `nome`, `tipo`, `marca`, `modello`, `categoria`.
+    Non richiede più l'ubicazione: i dispositivi sono cataloghi generici
+    di modelli/produttori/specifiche e saranno associati a laboratori/carrelli
+    nella fase successiva.
+    """
     
     class Meta:
         model = Device
-        fields = ['nome', 'tipo', 'marca', 'modello', 'categoria', 'ubicazione']
+        fields = ['nome', 'tipo', 'marca', 'modello', 'categoria']
         widgets = {
             'nome': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'es: iPad Pro 12.9'}),
             'tipo': forms.Select(attrs={'class': 'form-control mb-2'}),
@@ -434,12 +423,7 @@ class DeviceWizardForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Ensure the ubicazione queryset is always fresh at form instantiation time
-        try:
-            self.fields['ubicazione'].queryset = ResourceLocation.objects.all()
-        except Exception:
-            # If ResourceLocation model isn't available or field missing, ignore
-            pass
+        # No special init required for this simplified wizard form
 
 
 # =====================================================

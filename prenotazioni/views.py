@@ -176,20 +176,9 @@ def setup_amministratore(request):
         if not admin_user_id or not school_instance:
             messages.error(request, 'Completa i step precedenti prima di continuare.')
             return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=school")
-        # Ensure at least one UbicazioneRisorsa exists so the wizard can select a location
-        ubicazioni = UbicazioneRisorsa.objects.all()
-        if not ubicazioni.exists():
-            try:
-                UbicazioneRisorsa.objects.create(
-                    nome='Plesso Principale',
-                    edificio='A',
-                    piano='0',
-                    aula='Centrale',
-                    codice_meccanografico=(getattr(school_instance, 'codice_meccanografico_scuola', None) or 'DEFAULT')
-                )
-            except Exception:
-                # ignore creation errors; form will surface validation issues
-                pass
+        # Devices are catalog entries without a required ubicazione in the wizard.
+        # Do not create default UbicazioneRisorsa here — ubicazioni are managed
+        # in the resources/carrelli step where devices are assigned to locations.
 
         import logging
         logger = logging.getLogger('prenotazioni.setup')
@@ -235,6 +224,24 @@ def setup_amministratore(request):
                         print('DEBUG: form_device invalid — could not serialize errors')
                         logger.warning('DeviceWizardForm invalid (could not serialize errors)')
                     messages.error(request, 'Errore nel form dispositivo. Controlla i campi e riprova.')
+            elif 'remove_device' in request.POST:
+                # Soft-delete the specified device (mark cancellato_il)
+                device_id = request.POST.get('device_id')
+                try:
+                    from django.utils import timezone as _tz
+                    if device_id:
+                        # Use all_objects to find even already soft-deleted entries if necessary
+                        dev_qs = Dispositivo.all_objects.filter(pk=device_id)
+                        if dev_qs.exists():
+                            dev_qs.update(cancellato_il=_tz.now())
+                            messages.success(request, 'Dispositivo rimosso (soft-delete).')
+                        else:
+                            messages.error(request, 'Dispositivo non trovato.')
+                    else:
+                        messages.error(request, 'ID dispositivo mancante.')
+                except Exception as e:
+                    logger.exception('Errore rimuovendo dispositivo')
+                    messages.error(request, f'Errore rimuovendo dispositivo: {e}')
                     
             elif 'step_device_continue' in request.POST:
                 if Dispositivo.objects.exists():
