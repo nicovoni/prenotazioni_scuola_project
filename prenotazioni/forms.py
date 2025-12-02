@@ -397,6 +397,15 @@ class DeviceWizardForm(forms.ModelForm):
 
         return instance
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ensure the ubicazione queryset is always fresh at form instantiation time
+        try:
+            self.fields['ubicazione'].queryset = ResourceLocation.objects.all()
+        except Exception:
+            # If ResourceLocation model isn't available or field missing, ignore
+            pass
+
 
 # =====================================================
 # RISORSE E LOCALIZZAZIONI

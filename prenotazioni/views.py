@@ -191,6 +191,9 @@ def setup_amministratore(request):
                 # ignore creation errors; form will surface validation issues
                 pass
 
+        import logging
+        logger = logging.getLogger('prenotazioni.setup')
+
         form_device = DeviceWizardForm()
         dispositivi_esistenti = Dispositivo.objects.all().order_by('marca', 'nome')
         context['form_device'] = form_device
@@ -198,23 +201,31 @@ def setup_amministratore(request):
         
         if request.method == 'POST':
             if 'add_device' in request.POST:
+                # Log incoming POST for diagnostics
+                try:
+                    logger.debug('Device POST payload: %s', dict(request.POST))
+                except Exception:
+                    logger.debug('Device POST payload (could not convert to dict)')
+
                 form_device = DeviceWizardForm(request.POST)
                 context['form_device'] = form_device
-                
+
                 if form_device.is_valid():
-                    # Save the device; DeviceWizardForm.save will auto-generate required fields
                     try:
                         new_dev = form_device.save()
-                    except Exception as e:
-                        messages.error(request, f'Errore salvando il dispositivo: {e}')
-                        new_dev = None
-                    if new_dev:
+                        logger.info('Device created via wizard: id=%s codice=%s', getattr(new_dev, 'id', None), getattr(new_dev, 'codice_inventario', None))
                         messages.success(request, '✓ Dispositivo aggiunto!')
                         return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=device")
-                    else:
-                        messages.error(request, 'Errore durante il salvataggio del dispositivo.')
+                    except Exception as e:
+                        logger.exception('Errore salvando dispositivo dal wizard')
+                        messages.error(request, f'Errore salvando il dispositivo: {e}')
                 else:
-                    messages.error(request, 'Errore nel form dispositivo.')
+                    # Log validation errors for debugging
+                    try:
+                        logger.warning('DeviceWizardForm invalid: %s', form_device.errors.as_json())
+                    except Exception:
+                        logger.warning('DeviceWizardForm invalid (could not serialize errors)')
+                    messages.error(request, 'Errore nel form dispositivo. Controlla i campi e riprova.')
                     
             elif 'step_device_continue' in request.POST:
                 if Dispositivo.objects.exists():
