@@ -15,6 +15,7 @@ class PrenotazioniConfig(AppConfig):
         """
         import sys
         import logging
+        import os
         # Do not connect runtime signals during management commands that operate on the DB schema
         management_cmds = {'makemigrations', 'migrate', 'collectstatic', 'test', 'shell', 'flush'}
         if any(cmd in sys.argv for cmd in management_cmds):
@@ -27,4 +28,35 @@ class PrenotazioniConfig(AppConfig):
                 models.connect_signals()
         except Exception:
             logging.getLogger('prenotazioni').exception('Failed to connect prenotazioni signals')
+
+        # Detailed startup checks: DB connectivity and basic application health info.
+        try:
+            from django.conf import settings
+            from django.db import connection
+            from django.contrib.auth import get_user_model
+            logger = logging.getLogger('prenotazioni.startup')
+
+            logger.info('prenotazioni app ready. DEBUG=%s, SANITY_KEY=%s', getattr(settings, 'DEBUG', False), bool(getattr(settings, 'SANITY_KEY', None)))
+
+            # Try a light DB connectivity check
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute('SELECT 1')
+                    cursor.fetchone()
+                logger.info('Database connectivity: OK')
+            except Exception as db_e:
+                logger.exception('Database connectivity check failed: %s', db_e)
+
+            # Read basic counts (non-destructive)
+            try:
+                User = get_user_model()
+                su_count = User.objects.filter(is_superuser=True).count()
+                from .models import Dispositivo
+                dev_count = Dispositivo.objects.count()
+                logger.info('Counts - superusers=%s, dispositivi=%s', su_count, dev_count)
+            except Exception as read_e:
+                logger.exception('Error fetching basic counts: %s', read_e)
+
+        except Exception:
+            logging.getLogger('prenotazioni.startup').exception('Unexpected error during prenotazioni startup checks')
 

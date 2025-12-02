@@ -50,6 +50,64 @@ def debug_create_test_device(request):
     except Exception as e:
         return JsonResponse({'created': False, 'error': str(e)}, status=500)
 
+
+def sanity_check(request):
+    """Sanity check endpoint.
+
+    Accessible when `DEBUG=True` or when the request provides a valid key via
+    `SANITY_KEY` (either in query `?key=` or header `X-SANITY-KEY`).
+
+    Returns basic app health: DB connectivity, counts and unapplied migrations.
+    """
+    # Authorization: allow in DEBUG or when correct key provided or staff user
+    key_ok = False
+    provided_key = request.GET.get('key') or request.headers.get('X-SANITY-KEY')
+    if getattr(settings, 'DEBUG', False):
+        key_ok = True
+    elif provided_key and provided_key == getattr(settings, 'SANITY_KEY', None):
+        key_ok = True
+    elif hasattr(request, 'user') and request.user.is_staff:
+        key_ok = True
+
+    if not key_ok:
+        return JsonResponse({'error': 'forbidden'}, status=403)
+
+    result = {'ok': True}
+    from django.db import connection
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+            cursor.fetchone()
+        result['db'] = 'ok'
+    except Exception as e:
+        result['db'] = 'error'
+        result['db_error'] = str(e)
+
+    # Basic read-only checks
+    try:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        result['superusers'] = User.objects.filter(is_superuser=True).count()
+    except Exception as e:
+        result['superusers_error'] = str(e)
+
+    try:
+        from .models import Dispositivo
+        result['dispositivi'] = Dispositivo.objects.count()
+    except Exception as e:
+        result['dispositivi_error'] = str(e)
+
+    # Check for unapplied migrations (best-effort)
+    try:
+        from django.db.migrations.executor import MigrationExecutor
+        executor = MigrationExecutor(connection)
+        plan = executor.migration_plan(executor.loader.graph.leaf_nodes())
+        result['pending_migrations'] = len(plan)
+    except Exception as e:
+        result['pending_migrations_error'] = str(e)
+
+    return JsonResponse(result)
+
 def setup_amministratore(request):
     """
     Wizard di configurazione iniziale e gestione configurazioni post-setup.

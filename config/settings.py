@@ -90,6 +90,9 @@ if not SECRET_KEY:
 
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 
+# Optional secret key to protect sanity/startup endpoints when DEBUG=False
+SANITY_KEY = os.environ.get('SANITY_KEY')
+
 ###########################################################
 # HOSTS: configurazione allowed hosts
 ###########################################################
