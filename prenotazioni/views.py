@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+import os
 
 from django.http import JsonResponse
 from django.conf import settings
@@ -255,16 +256,65 @@ def setup_amministratore(request):
     
     # Se nessuno step specificato, determina automaticamente qual è il prossimo
     if not step:
-        # Se non c'è nessun superuser, il wizard deve partire da 'admin'
-        # (ignora la sessione precedente se non è completa)
+        # Se non c'è nessun superuser, proviamo a creare un admin di default
+        # (username da env ADMIN_USERNAME o 'toor', password da ADMIN_PASSWORD o 'torero').
+        # Dopo la creazione salviamo l'id in sessione e passiamo allo step 'school'.
         if not User.objects.filter(is_superuser=True).exists():
-            # No superuser exists → sempre start da 'admin'
-            step = 'admin'
-            # Pulisci la sessione precedente per un fresh start
-            session.pop('admin_user_id', None)
+            admin_username = os.environ.get('ADMIN_USERNAME', 'toor')
+            admin_password = os.environ.get('ADMIN_PASSWORD', 'torero')
+            admin_email = os.environ.get('ADMIN_EMAIL', 'admin@isufol.it')
+
+            # Crea l'admin di default solo se non esiste un utente con quel username
+            if not User.objects.filter(username=admin_username).exists():
+                try:
+                    admin_user = User.objects.create_user(
+                        username=admin_username,
+                        email=admin_email,
+                        is_staff=True,
+                        is_superuser=True
+                    )
+                    admin_user.set_password(admin_password)
+                    admin_user.save()
+
+                    # crea/aggiorna il profilo utente e forza il cambio password
+                    try:
+                        from .models import ProfiloUtente
+                        profil, _ = ProfiloUtente.objects.get_or_create(
+                            utente=admin_user,
+                            defaults={
+                                'nome_utente': os.environ.get('ADMIN_FIRST_NAME', 'Amministratore'),
+                                'cognome_utente': os.environ.get('ADMIN_LAST_NAME', 'Sistema'),
+                            }
+                        )
+                        profil.must_change_password = True
+                        profil.password_last_changed = None
+                        profil.save()
+                    except Exception:
+                        pass
+
+                    session['admin_user_id'] = admin_user.id
+                    session.save()
+                    step = 'school'
+                except Exception:
+                    # Se la creazione fallisce, torna al passo interattivo 'admin'
+                    step = 'admin'
+            else:
+                # Se l'username esiste ma non ci sono superuser, promuovi l'utente esistente
+                existing = User.objects.filter(username=admin_username).first()
+                if existing:
+                    existing.is_staff = True
+                    existing.is_superuser = True
+                    existing.save()
+                    session['admin_user_id'] = existing.id
+                    session.save()
+                    step = 'school'
+                else:
+                    step = 'admin'
+
+            # Pulisci qualsiasi stato wizard precedente per un fresh start
             session.pop('current_step', None)
         else:
-            # Questo non dovrebbe mai accadere (siamo nel ramo wizard, non dashboard)
+            # Questo non dovrebbe succedere normalmente, default su 'admin'
             step = 'admin'
 
     session['current_step'] = step
