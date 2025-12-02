@@ -363,6 +363,15 @@ class DeviceWizardForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-control mb-2'}),
         help_text='Dove si trova fisicamente il dispositivo'
     )
+
+    # Extra fields expected by the template — map to model fields on save
+    produttore = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control mb-2'}))
+    sistema_operativo = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control mb-2'}))
+    tipo_display = forms.ChoiceField(required=False, choices=getattr(Device, 'TIPO_DISPOSITIVO', []), widget=forms.Select(attrs={'class': 'form-control mb-2'}))
+    processore = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control mb-2'}))
+    storage = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control mb-2'}))
+    schermo = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control mb-2'}))
+    caratteristiche_extra = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}))
     
     class Meta:
         model = Device
@@ -386,6 +395,32 @@ class DeviceWizardForm(forms.ModelForm):
         # Ensure codice_inventario exists (model requires it)
         if not getattr(instance, 'codice_inventario', None):
             instance.codice_inventario = 'AUTO-' + uuid.uuid4().hex[:8].upper()
+
+        # Map template-specific fields to model fields
+        try:
+            produttore = self.cleaned_data.get('produttore')
+            if produttore:
+                instance.marca = produttore
+
+            tipo_disp = self.cleaned_data.get('tipo_display')
+            if tipo_disp:
+                instance.tipo = tipo_disp
+
+            so = self.cleaned_data.get('sistema_operativo')
+            proc = self.cleaned_data.get('processore')
+            stor = self.cleaned_data.get('storage')
+            sch = self.cleaned_data.get('schermo')
+            extra = self.cleaned_data.get('caratteristiche_extra')
+            # Merge into specifiche JSON
+            spec = instance.specifiche or {}
+            if so: spec['sistema_operativo'] = so
+            if proc: spec['processore'] = proc
+            if stor: spec['storage'] = stor
+            if sch: spec['schermo'] = sch
+            if extra: spec['caratteristiche_extra'] = extra
+            instance.specifiche = spec
+        except Exception:
+            pass
 
         if commit:
             instance.save()

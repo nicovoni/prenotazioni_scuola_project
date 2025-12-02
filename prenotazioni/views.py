@@ -201,7 +201,11 @@ def setup_amministratore(request):
         
         if request.method == 'POST':
             if 'add_device' in request.POST:
-                # Log incoming POST for diagnostics
+                # Ensure we have visible output for debugging (print goes to console)
+                try:
+                    print('DEBUG: Device POST payload:', dict(request.POST))
+                except Exception:
+                    print('DEBUG: Device POST payload: (could not convert)')
                 try:
                     logger.debug('Device POST payload: %s', dict(request.POST))
                 except Exception:
@@ -212,18 +216,23 @@ def setup_amministratore(request):
 
                 if form_device.is_valid():
                     try:
+                        print('DEBUG: form_device is valid — attempting to save')
                         new_dev = form_device.save()
+                        print('DEBUG: new_dev after save:', getattr(new_dev, 'id', None), getattr(new_dev, 'codice_inventario', None))
                         logger.info('Device created via wizard: id=%s codice=%s', getattr(new_dev, 'id', None), getattr(new_dev, 'codice_inventario', None))
                         messages.success(request, '✓ Dispositivo aggiunto!')
                         return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=device")
                     except Exception as e:
+                        print('ERROR: exception saving device:', e)
                         logger.exception('Errore salvando dispositivo dal wizard')
                         messages.error(request, f'Errore salvando il dispositivo: {e}')
                 else:
                     # Log validation errors for debugging
                     try:
+                        print('DEBUG: form_device invalid — errors:', getattr(form_device, 'errors', None))
                         logger.warning('DeviceWizardForm invalid: %s', form_device.errors.as_json())
                     except Exception:
+                        print('DEBUG: form_device invalid — could not serialize errors')
                         logger.warning('DeviceWizardForm invalid (could not serialize errors)')
                     messages.error(request, 'Errore nel form dispositivo. Controlla i campi e riprova.')
                     
