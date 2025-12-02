@@ -44,7 +44,13 @@ class PrenotazioniConfig(AppConfig):
                     from django.contrib.auth import get_user_model
                     logger = logging.getLogger('prenotazioni.startup')
 
-                    logger.info('prenotazioni delayed startup checks. DEBUG=%s, SANITY_KEY=%s', getattr(settings, 'DEBUG', False), bool(getattr(settings, 'SANITY_KEY', None)))
+                    msg = f"prenotazioni delayed startup checks. DEBUG={getattr(settings, 'DEBUG', False)}, SANITY_KEY_SET={bool(getattr(settings, 'SANITY_KEY', None))}"
+                    logger.info(msg)
+                    try:
+                        # Print to stdout as well so platform logs (Render) capture it
+                        print(msg, flush=True)
+                    except Exception:
+                        pass
 
                     # Try a light DB connectivity check
                     try:
@@ -52,8 +58,16 @@ class PrenotazioniConfig(AppConfig):
                             cursor.execute('SELECT 1')
                             cursor.fetchone()
                         logger.info('Database connectivity: OK')
+                        try:
+                            print('Database connectivity: OK', flush=True)
+                        except Exception:
+                            pass
                     except Exception as db_e:
                         logger.exception('Database connectivity check failed: %s', db_e)
+                        try:
+                            print('Database connectivity check failed: %s' % (db_e,), flush=True)
+                        except Exception:
+                            pass
 
                     # Read basic counts (non-destructive)
                     try:
@@ -61,9 +75,18 @@ class PrenotazioniConfig(AppConfig):
                         su_count = User.objects.filter(is_superuser=True).count()
                         from .models import Dispositivo
                         dev_count = Dispositivo.objects.count()
-                        logger.info('Counts - superusers=%s, dispositivi=%s', su_count, dev_count)
+                        counts_msg = f'Counts - superusers={su_count}, dispositivi={dev_count}'
+                        logger.info(counts_msg)
+                        try:
+                            print(counts_msg, flush=True)
+                        except Exception:
+                            pass
                     except Exception as read_e:
                         logger.exception('Error fetching basic counts: %s', read_e)
+                        try:
+                            print('Error fetching basic counts: %s' % (read_e,), flush=True)
+                        except Exception:
+                            pass
 
                 except Exception:
                     logging.getLogger('prenotazioni.startup').exception('Unexpected error during delayed startup checks')
