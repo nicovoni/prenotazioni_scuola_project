@@ -24,5 +24,6 @@ urlpatterns = [
     path('setup/', setup_amministratore, name='setup_amministratore'),
     path('lookup_unica/', lookup_unica, name='lookup_unica'),
     path('debug/devices/', debug_devices, name='debug_devices'),
+    path('debug/devices/create_test/', debug_create_test_device, name='debug_create_test_device'),
     path('', include(router.urls)),
 ]

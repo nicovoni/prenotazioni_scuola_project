@@ -16,6 +16,40 @@ def debug_devices(request):
     devices = list(Dispositivo.objects.all().values('id', 'marca', 'nome', 'modello', 'codice_inventario', 'specifiche')[:200])
     return JsonResponse({'count': len(devices), 'devices': devices})
 
+
+def debug_create_test_device(request):
+    """DEBUG-only endpoint: tenta di creare un dispositivo di test e ritorna il risultato.
+
+    Utile per verificare se l'app è in grado di scrivere sul database dall'ambiente
+    in cui gira (es. Render). Accessibile solo se `DEBUG=True` o utente staff.
+    """
+    if not (getattr(settings, 'DEBUG', False) or (hasattr(request, 'user') and request.user.is_staff)):
+        return JsonResponse({'error': 'forbidden'}, status=403)
+
+    try:
+        import uuid
+        from .models import Dispositivo, CategoriaDispositivo
+
+        cat = CategoriaDispositivo.objects.first()
+        tipo_val = 'laptop'
+        # prefer a valid choice if available
+        if hasattr(Dispositivo, 'TIPO_DISPOSITIVO') and len(Dispositivo.TIPO_DISPOSITIVO) > 0:
+            tipo_val = Dispositivo.TIPO_DISPOSITIVO[0][0]
+
+        codice = 'TEST-' + uuid.uuid4().hex[:8].upper()
+        d = Dispositivo(
+            nome='DeviceTest',
+            marca='TEST-MARK',
+            modello='TD-1',
+            tipo=tipo_val,
+            categoria=cat,
+            codice_inventario=codice,
+        )
+        d.save()
+        return JsonResponse({'created': True, 'id': d.id, 'codice_inventario': d.codice_inventario})
+    except Exception as e:
+        return JsonResponse({'created': False, 'error': str(e)}, status=500)
+
 def setup_amministratore(request):
     """
     Wizard di configurazione iniziale e gestione configurazioni post-setup.
