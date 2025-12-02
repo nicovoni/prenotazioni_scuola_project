@@ -148,6 +148,24 @@
                                     if(telNote){ if(school.telefono){ telNote.textContent = 'Telefono auto-compilato dal dataset.'; telNote.classList.remove('text-muted'); telNote.classList.add('text-success'); } else { telNote.textContent = 'Non disponibile nel dataset ufficiale — inserire manualmente se necessario.'; telNote.classList.remove('text-success'); telNote.classList.add('text-muted'); } }
                                     if(pivaNote){ if(school.partita_iva){ pivaNote.textContent = 'Partita IVA auto-compilata dal dataset.'; pivaNote.classList.remove('text-muted'); pivaNote.classList.add('text-success'); } else { pivaNote.textContent = 'Non disponibile nel dataset ufficiale — inserire manualmente se necessario.'; pivaNote.classList.remove('text-success'); pivaNote.classList.add('text-muted'); } }
                                 }catch(e){ /* ignore UI note failures */ }
+
+                                // Populate hidden fields for server-side validation when data comes from CSV
+                                try{
+                                    const latEl = document.getElementById('id_latitudine_scuola');
+                                    const lonEl = document.getElementById('id_longitudine_scuola');
+                                    const osmIdEl = document.getElementById('id_osm_id_scuola');
+                                    const osmTypeEl = document.getElementById('id_osm_type_scuola');
+                                    if(school.lat && latEl) latEl.value = school.lat;
+                                    if(school.lon && lonEl) lonEl.value = school.lon;
+                                    // Use a deterministic fake osm_id/osm_type to signal CSV provenance
+                                    if(osmIdEl) osmIdEl.value = school.codice ? ('csv_' + school.codice) : (school.codice_istituto_raw || 'csv_unknown');
+                                    if(osmTypeEl) osmTypeEl.value = 'csv';
+
+                                    // If lat/lon available, show the map preview
+                                    if(school.lat && school.lon && typeof showMap === 'function'){
+                                        try{ showMap(parseFloat(school.lat), parseFloat(school.lon)); }catch(e){}
+                                    }
+                                }catch(e){ /* ignore hidden field failures */ }
                             }
 
                             // Build and show modal for affiliated schools
@@ -645,28 +663,46 @@
                                 if (!container) return;
                                 container.style.display = 'block';
                                 const la = parseFloat(lat); const lo = parseFloat(lng);
-                                if (!map) {
-                                    map = L.map(container, { zoomControl: false, attributionControl: false }).setView([la, lo], 16);
-                                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-                                    marker = L.marker([la, lo]).addTo(map);
-                                } else {
-                                    map.setView([la, lo], 16);
-                                    marker.setLatLng([la, lo]);
-                                }
 
-                                // invalidate size to ensure map renders correctly after being shown
-                                try { setTimeout(function(){ if(map && map.invalidateSize) map.invalidateSize(); }, 200); } catch(e) {}
+                                // Delay initialization slightly to ensure the container is laid out
+                                // (this prevents tiles appearing blank when the container was hidden).
+                                setTimeout(function(){
+                                    try {
+                                        if (!map) {
+                                            map = L.map(container, { zoomControl: false, attributionControl: false }).setView([la, lo], 16);
+                                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+                                            marker = L.marker([la, lo]).addTo(map);
+                                        } else {
+                                            map.setView([la, lo], 16);
+                                            if (marker) marker.setLatLng([la, lo]);
+                                        }
 
-                                // Attach a popup to the marker showing the school name (or codice as fallback)
-                                try {
-                                    const nameEl = document.getElementById('id_nome_completo_scuola');
-                                    const codeEl = document.getElementById('id_codice_meccanografico_scuola');
-                                    const popupText = (nameEl && nameEl.value && nameEl.value.trim()) ? nameEl.value.trim() : (codeEl ? codeEl.value : 'Sede selezionata');
-                                    if (marker && marker.bindPopup) {
-                                        marker.bindPopup(popupText);
-                                        marker.openPopup();
+                                        // Invalidate size to ensure map renders correctly after being shown
+                                        if (map && map.invalidateSize) map.invalidateSize();
+
+                                        // Build HTML popup: bold name + small address on separate line
+                                        const nameEl = document.getElementById('id_nome_completo_scuola');
+                                        const addrEl = document.getElementById('id_indirizzo_autocomplete');
+                                        const codeEl = document.getElementById('id_codice_meccanografico_scuola');
+                                        const nameText = (nameEl && nameEl.value && nameEl.value.trim()) ? nameEl.value.trim() : (codeEl ? codeEl.value : 'Sede selezionata');
+                                        const addrText = (addrEl && addrEl.value) ? addrEl.value.trim() : '';
+                                        let popupHtml = '<strong>' + escapeHtml(nameText) + '</strong>';
+                                        if (addrText) popupHtml += '<br/><small>' + escapeHtml(addrText) + '</small>';
+
+                                        if (marker && marker.bindPopup) {
+                                            marker.bindPopup(popupHtml, { maxWidth: 300 });
+                                            marker.openPopup();
+                                        }
+                                    } catch(e) {
+                                        console.error('Map init error:', e);
                                     }
-                                } catch(e) { console.error('Popup map error:', e); }
+                                }, 120);
+                            }
+
+                            // simple HTML-escape helper for popup content
+                            function escapeHtml(s){
+                                if(!s) return '';
+                                return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;');
                             }
 
                             // show map if lat/lon prefilled
