@@ -1,5 +1,21 @@
 from django.contrib.auth import get_user_model
 
+from django.http import JsonResponse
+from django.conf import settings
+
+def debug_devices(request):
+    """Endpoint di debug: ritorna JSON con i dispositivi catalogati.
+
+    Accessibile solo in `DEBUG` o a utenti staff autenticati.
+    Utile per diagnosticare rapidamente lo stato della tabella `Dispositivo`.
+    """
+    if not (getattr(settings, 'DEBUG', False) or (hasattr(request, 'user') and request.user.is_staff)):
+        return JsonResponse({'error': 'forbidden'}, status=403)
+
+    from .models import Dispositivo
+    devices = list(Dispositivo.objects.all().values('id', 'marca', 'nome', 'modello', 'codice_inventario', 'specifiche')[:200])
+    return JsonResponse({'count': len(devices), 'devices': devices})
+
 def setup_amministratore(request):
     """
     Wizard di configurazione iniziale e gestione configurazioni post-setup.

@@ -23,5 +23,6 @@ urlpatterns = [
     path('admin-operazioni/', login_required(admin_required(admin_operazioni)), name='admin_operazioni'),
     path('setup/', setup_amministratore, name='setup_amministratore'),
     path('lookup_unica/', lookup_unica, name='lookup_unica'),
+    path('debug/devices/', debug_devices, name='debug_devices'),
     path('', include(router.urls)),
 ]
