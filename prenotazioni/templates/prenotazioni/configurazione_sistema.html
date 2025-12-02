@@ -966,97 +966,48 @@
                                     {% endif %}
                                 </div>
 
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="{{ form_device.produttore.id_for_label }}" class="form-label">{{ form_device.produttore.label }}</label>
-                                            {{ form_device.produttore }}
-                                            {% if form_device.produttore.errors %}
-                                                <div class="text-danger small">
-                                                    {% for error in form_device.produttore.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="{{ form_device.sistema_operativo.id_for_label }}" class="form-label">{{ form_device.sistema_operativo.label }}</label>
-                                            {{ form_device.sistema_operativo }}
-                                            {% if form_device.sistema_operativo.errors %}
-                                                <div class="text-danger small">
-                                                    {% for error in form_device.sistema_operativo.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="{{ form_device.modello.id_for_label }}" class="form-label">{{ form_device.modello.label }}</label>
-                                            {{ form_device.modello }}
-                                            {% if form_device.modello.errors %}
-                                                <div class="text-danger small">
-                                                    {% for error in form_device.modello.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="{{ form_device.tipo_display.id_for_label }}" class="form-label">{{ form_device.tipo_display.label }}</label>
-                                            {{ form_device.tipo_display }}
-                                            {% if form_device.tipo_display.errors %}
-                                                <div class="text-danger small">
-                                                    {% for error in form_device.tipo_display.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <div class="mb-3">
-                                    <label for="{{ form_device.processore.id_for_label }}" class="form-label">{{ form_device.processore.label }}</label>
-                                    {{ form_device.processore }}
-                                    {% if form_device.processore.errors %}
+                                    <label for="{{ form_device.marca.id_for_label }}" class="form-label">{{ form_device.marca.label }}</label>
+                                    {{ form_device.marca }}
+                                    {% if form_device.marca.errors %}
                                         <div class="text-danger small">
-                                            {% for error in form_device.processore.errors %}{{ error }}{% endfor %}
+                                            {% for error in form_device.marca.errors %}{{ error }}{% endfor %}
                                         </div>
                                     {% endif %}
                                 </div>
-
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="{{ form_device.storage.id_for_label }}" class="form-label">{{ form_device.storage.label }}</label>
-                                            {{ form_device.storage }}
-                                            {% if form_device.storage.errors %}
-                                                <div class="text-danger small">
-                                                    {% for error in form_device.storage.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="{{ form_device.schermo.id_for_label }}" class="form-label">{{ form_device.schermo.label }}</label>
-                                            {{ form_device.schermo }}
-                                            {% if form_device.schermo.errors %}
-                                                <div class="text-danger small">
-                                                    {% for error in form_device.schermo.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <div class="mb-3">
-                                    <label for="{{ form_device.caratteristiche_extra.id_for_label }}" class="form-label">{{ form_device.caratteristiche_extra.label }}</label>
-                                    {{ form_device.caratteristiche_extra }}
-                                    {% if form_device.caratteristiche_extra.errors %}
+                                    <label for="{{ form_device.modello.id_for_label }}" class="form-label">{{ form_device.modello.label }}</label>
+                                    {{ form_device.modello }}
+                                    {% if form_device.modello.errors %}
                                         <div class="text-danger small">
-                                            {% for error in form_device.caratteristiche_extra.errors %}{{ error }}{% endfor %}
+                                            {% for error in form_device.modello.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form_device.tipo.id_for_label }}" class="form-label">{{ form_device.tipo.label }}</label>
+                                    {{ form_device.tipo }}
+                                    {% if form_device.tipo.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form_device.tipo.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form_device.categoria.id_for_label }}" class="form-label">{{ form_device.categoria.label }}</label>
+                                    {{ form_device.categoria }}
+                                    {% if form_device.categoria.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form_device.categoria.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form_device.ubicazione.id_for_label }}" class="form-label">{{ form_device.ubicazione.label }}</label>
+                                    {{ form_device.ubicazione }}
+                                    {% if form_device.ubicazione.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form_device.ubicazione.errors %}{{ error }}{% endfor %}
                                         </div>
                                     {% endif %}
                                 </div>
