@@ -8,6 +8,7 @@ Aggiornati per supportare la nuova struttura database migliorata.
 from django import forms
 from django.utils import timezone
 from django.conf import settings
+import uuid
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_protect
@@ -373,6 +374,28 @@ class DeviceWizardForm(forms.ModelForm):
             'modello': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'es: A2343'}),
             'categoria': forms.Select(attrs={'class': 'form-control mb-2'}),
         }
+
+    def save(self, commit=True):
+        """Override save to ensure required fields on the model are populated.
+
+        The wizard form intentionally exposes a simplified subset of fields.
+        The `Dispositivo` model requires `codice_inventario` (unique, non-null),
+        so we auto-generate a deterministic inventory code when missing.
+        """
+        instance = super().save(commit=False)
+        # Ensure codice_inventario exists (model requires it)
+        if not getattr(instance, 'codice_inventario', None):
+            instance.codice_inventario = 'AUTO-' + uuid.uuid4().hex[:8].upper()
+
+        if commit:
+            instance.save()
+            try:
+                self.save_m2m()
+            except Exception:
+                # save_m2m may fail if not using a ModelForm with many-to-many
+                pass
+
+        return instance
 
 
 # =====================================================

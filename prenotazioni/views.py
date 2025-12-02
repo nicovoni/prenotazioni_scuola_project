@@ -176,7 +176,21 @@ def setup_amministratore(request):
         if not admin_user_id or not school_instance:
             messages.error(request, 'Completa i step precedenti prima di continuare.')
             return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=school")
-        
+        # Ensure at least one UbicazioneRisorsa exists so the wizard can select a location
+        ubicazioni = UbicazioneRisorsa.objects.all()
+        if not ubicazioni.exists():
+            try:
+                UbicazioneRisorsa.objects.create(
+                    nome='Plesso Principale',
+                    edificio='A',
+                    piano='0',
+                    aula='Centrale',
+                    codice_meccanografico=(getattr(school_instance, 'codice_meccanografico_scuola', None) or 'DEFAULT')
+                )
+            except Exception:
+                # ignore creation errors; form will surface validation issues
+                pass
+
         form_device = DeviceWizardForm()
         dispositivi_esistenti = Dispositivo.objects.all().order_by('marca', 'nome')
         context['form_device'] = form_device
@@ -188,9 +202,17 @@ def setup_amministratore(request):
                 context['form_device'] = form_device
                 
                 if form_device.is_valid():
-                    form_device.save()
-                    messages.success(request, '✓ Dispositivo aggiunto!')
-                    return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=device")
+                    # Save the device; DeviceWizardForm.save will auto-generate required fields
+                    try:
+                        new_dev = form_device.save()
+                    except Exception as e:
+                        messages.error(request, f'Errore salvando il dispositivo: {e}')
+                        new_dev = None
+                    if new_dev:
+                        messages.success(request, '✓ Dispositivo aggiunto!')
+                        return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=device")
+                    else:
+                        messages.error(request, 'Errore durante il salvataggio del dispositivo.')
                 else:
                     messages.error(request, 'Errore nel form dispositivo.')
                     
