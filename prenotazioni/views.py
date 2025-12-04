@@ -132,13 +132,21 @@ class ForcedPasswordChangeForm(forms.Form):
         avoid "multiple values for argument 'user'" errors, handle both.
         """
         user = None
-        # If first positional arg is provided, treat it as user
+        # If first positional arg is provided, treat it as user and drop it
         if args:
             user = args[0]
             args = args[1:]
-        # Else allow 'user' in kwargs
-        if user is None and 'user' in kwargs:
-            user = kwargs.pop('user')
+
+        # If 'user' present in kwargs and we haven't set user, take it.
+        # If we already got user from positional args, remove 'user' from
+        # kwargs so it is not passed to the base Form initializer which
+        # doesn't expect it (this prevents "multiple values for 'user'").
+        if 'user' in kwargs:
+            if user is None:
+                user = kwargs.pop('user')
+            else:
+                # drop duplicate 'user' kwarg
+                kwargs.pop('user')
 
         super().__init__(*args, **kwargs)
         self.user = user
