@@ -124,7 +124,22 @@ class ForcedPasswordChangeForm(forms.Form):
     new_password1 = forms.CharField(widget=forms.PasswordInput, required=True)
     new_password2 = forms.CharField(widget=forms.PasswordInput, required=True)
 
-    def __init__(self, user, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
+        """Support both positional user (first arg) and keyword 'user'.
+
+        Some call sites (Django internals) may pass `user` in kwargs while
+        others call the form with the user as the first positional arg. To
+        avoid "multiple values for argument 'user'" errors, handle both.
+        """
+        user = None
+        # If first positional arg is provided, treat it as user
+        if args:
+            user = args[0]
+            args = args[1:]
+        # Else allow 'user' in kwargs
+        if user is None and 'user' in kwargs:
+            user = kwargs.pop('user')
+
         super().__init__(*args, **kwargs)
         self.user = user
 
@@ -144,6 +159,37 @@ class ForcedPasswordChangeForm(forms.Form):
         # Validate complexity via Django validators
         if p1:
             validate_password(p1, self.user)
+
+            # Optional: use zxcvbn for advanced password strength checks
+            try:
+                from django.conf import settings as _settings
+                from zxcvbn import zxcvbn
+                min_score = int(getattr(_settings, 'PASSWORD_MIN_ZXCVBN_SCORE', 3))
+                try:
+                    zx = zxcvbn(p1, user_inputs=[
+                        getattr(self.user, 'username', ''),
+                        getattr(self.user, 'first_name', ''),
+                        getattr(self.user, 'last_name', ''),
+                        getattr(self.user, 'email', ''),
+                    ])
+                    score = int(zx.get('score', 0))
+                    if score < min_score:
+                        feedback = zx.get('feedback') or {}
+                        suggestions = feedback.get('suggestions', []) if isinstance(feedback, dict) else []
+                        warning = feedback.get('warning', '') if isinstance(feedback, dict) else ''
+                        msg = 'Password troppo debole.'
+                        if warning:
+                            msg += f' {warning}'
+                        if suggestions:
+                            msg += ' ' + ' '.join(suggestions[:2])
+                        raise forms.ValidationError(msg)
+                except Exception:
+                    # If zxcvbn fails for any reason, do not block password
+                    # change; rely on Django validators as a fallback.
+                    pass
+            except Exception:
+                # zxcvbn not installed or import failed — skip advanced check
+                pass
 
             # Check password history
             from .models import PasswordHistory
@@ -172,10 +218,20 @@ class ForcedPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
         user.set_password(new_password)
         user.save()
 
-        # update password history
+        # update password history (store only the hashed password)
+        from django.conf import settings as _settings
         from .models import PasswordHistory
         try:
             PasswordHistory.objects.create(utente=user, password_hash=user.password)
+            # Prune older password history entries, keep the most recent N
+            try:
+                keep = int(getattr(_settings, 'PASSWORD_HISTORY_COUNT', 5))
+            except Exception:
+                keep = 5
+            # Order descending by created_at, keep first `keep`, delete the rest
+            old_qs = PasswordHistory.objects.filter(utente=user).order_by('-created_at')[keep:]
+            if old_qs.exists():
+                old_qs.delete()
         except Exception:
             pass
 
@@ -259,6 +315,7 @@ def setup_amministratore(request):
     # Determinare lo step corrente
     step = request.GET.get('step', '').strip()
     session = request.session
+    one_time_admin_password = None
     
     # Se nessuno step specificato, determina automaticamente qual è il prossimo
     if not step:
@@ -313,12 +370,12 @@ def setup_amministratore(request):
 
                     # Keep admin id in session for this user so they can continue the wizard
                     session['admin_user_id'] = admin_user.id
-                    # Also keep the default password only in session (temporary) so the creator
-                    # can see it in their browser. This is not persisted to DB.
+                    # Mark that a wizard is in progress and store username only.
+                    # DO NOT store the plaintext password in session or DB.
                     session['wizard_in_progress'] = True
                     session['wizard_admin_username'] = admin_username
-                    session['wizard_admin_password'] = admin_password
-                    session.save()
+                    # Expose the password only for the current response (one-time display)
+                    one_time_admin_password = admin_password
                     step = 'admin'
                 except Exception:
                     # Se la creazione fallisce, torna al passo interattivo 'admin'
@@ -379,7 +436,9 @@ def setup_amministratore(request):
     # Passa flag wizard alla template (se presente)
     context['wizard_in_progress'] = session.get('wizard_in_progress', False)
     context['wizard_admin_username'] = session.get('wizard_admin_username')
-    context['wizard_admin_password'] = session.get('wizard_admin_password')
+    # If we just created an admin during this request, expose the one-time
+    # password in the response context only. Do NOT persist it in session.
+    context['wizard_admin_password'] = one_time_admin_password
     # Persistent wizard flag (set when admin created by wizard)
     try:
         wizard_admin_flag = ConfigurazioneSistema.ottieni_configurazione('SETUP_WIZARD_ADMIN', default=None)
@@ -448,38 +507,47 @@ def setup_amministratore(request):
         
         if request.method == 'POST':
             if 'add_device' in request.POST:
-                # Ensure we have visible output for debugging (print goes to console)
+                # Sanitize POST for logging to avoid accidental password leaks.
+                def _sanitize_post(post):
+                    safe = {}
+                    try:
+                        for k, v in post.items():
+                            lk = k.lower()
+                            if 'pass' in lk or 'pwd' in lk or 'password' in lk:
+                                safe[k] = '***REDACTED***'
+                            else:
+                                # keep short values only
+                                try:
+                                    safe[k] = v if len(str(v)) <= 200 else str(v)[:200] + '...'
+                                except Exception:
+                                    safe[k] = '***UNSERIALIZABLE***'
+                    except Exception:
+                        return {'_error': 'could not sanitize POST'}
+                    return safe
+
                 try:
-                    print('DEBUG: Device POST payload:', dict(request.POST))
+                    logger.debug('Device POST payload (sanitized): %s', _sanitize_post(request.POST))
                 except Exception:
-                    print('DEBUG: Device POST payload: (could not convert)')
-                try:
-                    logger.debug('Device POST payload: %s', dict(request.POST))
-                except Exception:
-                    logger.debug('Device POST payload (could not convert to dict)')
+                    logger.debug('Device POST payload (could not sanitize)')
 
                 form_device = DeviceWizardForm(request.POST)
                 context['form_device'] = form_device
 
                 if form_device.is_valid():
                     try:
-                        print('DEBUG: form_device is valid — attempting to save')
+                        logger.debug('form_device is valid — attempting to save')
                         new_dev = form_device.save()
-                        print('DEBUG: new_dev after save:', getattr(new_dev, 'id', None), getattr(new_dev, 'codice_inventario', None))
                         logger.info('Device created via wizard: id=%s codice=%s', getattr(new_dev, 'id', None), getattr(new_dev, 'codice_inventario', None))
                         messages.success(request, '✓ Dispositivo aggiunto!')
                         return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=device")
                     except Exception as e:
-                        print('ERROR: exception saving device:', e)
-                        logger.exception('Errore salvando dispositivo dal wizard')
+                        logger.exception('Errore salvando dispositivo dal wizard: %s', e)
                         messages.error(request, f'Errore salvando il dispositivo: {e}')
                 else:
                     # Log validation errors for debugging
                     try:
-                        print('DEBUG: form_device invalid — errors:', getattr(form_device, 'errors', None))
                         logger.warning('DeviceWizardForm invalid: %s', form_device.errors.as_json())
                     except Exception:
-                        print('DEBUG: form_device invalid — could not serialize errors')
                         logger.warning('DeviceWizardForm invalid (could not serialize errors)')
                     messages.error(request, 'Errore nel form dispositivo. Controlla i campi e riprova.')
             elif 'remove_device' in request.POST:

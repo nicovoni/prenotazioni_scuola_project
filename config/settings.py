@@ -220,11 +220,27 @@ DATABASES = {
 # PASSWORD: validatori
 ###########################################################
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'OPTIONS': {
+            'user_attributes': ('username', 'first_name', 'last_name', 'email'),
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 12,
+        }
+    },
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
+
+# How many previous passwords to keep to prevent reuse. Enforce pruning
+# after password changes to limit storage and allow policy tuning via env.
+PASSWORD_HISTORY_COUNT = int(os.environ.get('PASSWORD_HISTORY_COUNT', 5))
+# zxcvbn password strength threshold (0-4). Default require at least 3.
+PASSWORD_MIN_ZXCVBN_SCORE = int(os.environ.get('PASSWORD_MIN_ZXCVBN_SCORE', 3))
 
 ###########################################################
 # LOCALIZZAZIONE
