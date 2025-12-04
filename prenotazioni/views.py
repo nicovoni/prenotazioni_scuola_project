@@ -632,7 +632,9 @@ def _show_config_dashboard(request):
             'page_obj': page_obj,
             'configs': page_obj.object_list,
             'config_types': ConfigurazioneSistema.TIPO_CONFIGURAZIONE,
-            'setup_complete': True  # Flag che setup è completo
+            'setup_complete': True,  # Flag che setup è completo
+            'wizard_completed': True,
+            'step': 'done'
         }
         return render(request, 'prenotazioni/configurazione_sistema.html', context)
     
