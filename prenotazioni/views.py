@@ -167,7 +167,6 @@ class ForcedPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
         return ForcedPasswordChangeForm(self.request.user, **self.get_form_kwargs())
 
     def form_valid(self, form):
-        # change password
         new_password = form.cleaned_data['new_password1']
         user = self.request.user
         user.set_password(new_password)
@@ -180,7 +179,7 @@ class ForcedPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
         except Exception:
             pass
 
-        # update profile
+        # update profile: mark as no longer requiring a change and record timestamp
         try:
             profil = user.profilo_utente
             profil.must_change_password = False
@@ -189,18 +188,23 @@ class ForcedPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
         except Exception:
             pass
 
-        # keep the user logged in after password change
-        update_session_auth_hash(self.request, user)
-
-        # ensure wizard starts: set admin_user_id in session
+        # Log out the user so they must re-login with the new password
         try:
-            self.request.session['admin_user_id'] = user.id
-            self.request.session.save()
+            from django.contrib.auth import logout
+            logout(self.request)
+            # Set a session flag so login view can pick up wizard continuation
+            try:
+                self.request.session['wizard_password_changed'] = True
+                self.request.session.save()
+            except Exception:
+                pass
         except Exception:
             pass
 
-        messages.success(self.request, 'Password aggiornata con successo. Procedi con la configurazione.')
-        return super().form_valid(form)
+        messages.success(self.request, 'Password aggiornata con successo. Effettua nuovamente il login per continuare.')
+        from django.shortcuts import redirect
+        from django.urls import reverse
+        return redirect(reverse('login'))
 
 def setup_amministratore(request):
     """
@@ -342,51 +346,18 @@ def setup_amministratore(request):
     school_instance = InformazioniScuola.objects.filter(id=1).first()
     context['school_info'] = school_instance
 
+    # Passa flag wizard alla template (se presente)
+    context['wizard_in_progress'] = session.get('wizard_in_progress', False)
+    context['wizard_admin_username'] = session.get('wizard_admin_username')
+    context['wizard_admin_password'] = session.get('wizard_admin_password')
+
     # ============================================================================
     # STEP 1: Admin creation (solo email - password generata automaticamente)
     # ============================================================================
     if step == 'admin':
-        form_admin = AdminUserForm()
-        context['form_admin'] = form_admin
-        
-        if request.method == 'POST':
-            form_admin = AdminUserForm(request.POST)
-            context['form_admin'] = form_admin
-            
-            if form_admin.is_valid():
-                email = form_admin.cleaned_data['email']
-                
-                # Controlla se email esiste già
-                if User.objects.filter(email=email).exists():
-                    messages.error(request, 'Email già associata a un altro utente.')
-                else:
-                    # Crea utente con username derivato da email
-                    username = email.split('@')[0]
-                    # Ensure unique username
-                    base_username = username
-                    counter = 1
-                    while User.objects.filter(username=username).exists():
-                        username = f"{base_username}{counter}"
-                        counter += 1
-                    
-                    # Crea utente admin (accesso via email+PIN come i docenti)
-                    admin_user = User.objects.create_user(
-                        username=username,
-                        email=email,
-                        is_staff=True,
-                        is_superuser=True
-                    )
-                    
-                    # Salva in sessione per i prossimi step
-                    session['admin_user_id'] = admin_user.id
-                    session.save()
-                    
-                    messages.success(request, f'✓ Amministratore creato con email: {email}')
-                    return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=school")
-            else:
-                for field, errors in form_admin.errors.items():
-                    for error in errors:
-                        messages.error(request, f'{field}: {error}')
+        # Mostra avviso che l'admin di default è stato creato (se wizard_in_progress)
+        # e una semplice schermata di login (username/password) che punta a /accounts/login/.
+        context['show_admin_login'] = True
 
     # ============================================================================
     # STEP 2: Informazioni scuola
@@ -1096,36 +1067,13 @@ class ListaPrenotazioniView(LoginRequiredMixin, View):
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
 
-        # Opzioni filtri
         context = {
-            'page_obj': page_obj,
             'bookings': page_obj.object_list,
+            'page_obj': page_obj,
             'is_admin_view': is_admin_view,
-            'status_choices': StatoPrenotazione.objects.all(),
-            'resource_choices': Risorsa.objects.all(),
-            'current_filters': {
-                'status': status_filter,
-                'resource': resource_filter,
-                'date_from': date_from,
-                'date_to': date_to,
-                'order_by': order_by
-            }
         }
-        
+
         return render(request, 'prenotazioni/lista.html', context)
-
-
-class EditPrenotazioneView(LoginRequiredMixin, View):
-    """Modifica prenotazione esistente."""
-    
-    def get(self, request, pk):
-        """Mostra form modifica."""
-        prenotazione = get_object_or_404(Prenotazione, pk=pk)
-
-        # Controllo permessi
-        if not prenotazione.can_be_modified_by(request.user):
-            messages.error(request, 'Non hai i permessi per modificare questa prenotazione.')
-            return redirect('bookings:lista')
 
         # Pre-compila form
         initial_data = {

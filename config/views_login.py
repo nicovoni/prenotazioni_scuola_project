@@ -23,6 +23,28 @@ def custom_login(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
+            # If we're in the wizard flow, handle continuation after password change
+            try:
+                wizard_in_progress = request.session.get('wizard_in_progress')
+                password_changed = request.session.get('wizard_password_changed')
+            except Exception:
+                wizard_in_progress = False
+                password_changed = False
+
+            if wizard_in_progress and password_changed:
+                # finalize wizard: mark admin_user in session and continue to setup
+                try:
+                    request.session['admin_user_id'] = user.id
+                    # clear temporary flags
+                    request.session.pop('wizard_password_changed', None)
+                    request.session.pop('wizard_admin_password', None)
+                    request.session.pop('wizard_in_progress', None)
+                    request.session.save()
+                except Exception:
+                    pass
+                from django.urls import reverse
+                return redirect(reverse('prenotazioni:setup_amministratore'))
+
             # Se non esistono admin e risorse, redirect a configurazione iniziale
             if not User.objects.filter(is_superuser=True).exists() and Risorsa.objects.count() == 0:
                 from django.urls import reverse
