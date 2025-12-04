@@ -35,41 +35,78 @@
         <!-- Modern stepper (clean, non-repeating) -->
         <div class="mb-4">
             <div id="wizard-stepper" data-current-step="{{ current_step }}">
-                <ol class="d-flex align-items-center list-unstyled m-0 p-0" style="gap:12px;">
-                    <li class="step" data-step="admin" style="flex:1; display:flex; align-items:center; gap:12px;">
-                        <div class="step-bullet" aria-hidden="true">👑</div>
-                        <div class="step-text">Admin</div>
+                <ol class="d-flex align-items-center list-unstyled m-0 p-0" style="gap:8px;">
+                    <li class="step" data-step="admin" title="Admin" style="flex:1; display:flex; align-items:center; justify-content:center;">
+                        <div class="step-bullet" aria-hidden="true"><span class="step-number">1</span></div>
                     </li>
-                    <li style="width:40px; height:4px; background:#e9ecef; border-radius:2px;"></li>
-                    <li class="step" data-step="school" style="flex:1; display:flex; align-items:center; gap:12px;">
-                        <div class="step-bullet" aria-hidden="true">🏫</div>
-                        <div class="step-text">Scuola</div>
+                    <li class="step-sep" aria-hidden="true"></li>
+                    <li class="step" data-step="school" title="Scuola" style="flex:1; display:flex; align-items:center; justify-content:center;">
+                        <div class="step-bullet" aria-hidden="true"><span class="step-number">2</span></div>
                     </li>
-                    <li style="width:40px; height:4px; background:#e9ecef; border-radius:2px;"></li>
-                    <li class="step" data-step="device" style="flex:1; display:flex; align-items:center; gap:12px;">
-                        <div class="step-bullet" aria-hidden="true">📱</div>
-                        <div class="step-text">Dispositivi</div>
+                    <li class="step-sep" aria-hidden="true"></li>
+                    <li class="step" data-step="device" title="Dispositivi" style="flex:1; display:flex; align-items:center; justify-content:center;">
+                        <div class="step-bullet" aria-hidden="true"><span class="step-number">3</span></div>
                     </li>
-                    <li style="width:40px; height:4px; background:#e9ecef; border-radius:2px;"></li>
-                    <li class="step" data-step="resources" style="flex:1; display:flex; align-items:center; gap:12px;">
-                        <div class="step-bullet" aria-hidden="true">📋</div>
-                        <div class="step-text">Risorse</div>
+                    <li class="step-sep" aria-hidden="true"></li>
+                    <li class="step" data-step="resources" title="Risorse" style="flex:1; display:flex; align-items:center; justify-content:center;">
+                        <div class="step-bullet" aria-hidden="true"><span class="step-number">4</span></div>
                     </li>
-                    <li style="width:40px; height:4px; background:#e9ecef; border-radius:2px;"></li>
-                    <li class="step" data-step="done" style="flex:1; display:flex; align-items:center; gap:12px;">
-                        <div class="step-bullet" aria-hidden="true">✅</div>
-                        <div class="step-text">Fine</div>
+                    <li class="step-sep" aria-hidden="true"></li>
+                    <li class="step" data-step="done" title="Fine" style="flex:1; display:flex; align-items:center; justify-content:center;">
+                        <div class="step-bullet" aria-hidden="true"><span class="step-number">5</span></div>
                     </li>
                 </ol>
             </div>
 
             <style>
-                #wizard-stepper .step { padding:6px 8px; }
-                .step-bullet { width:40px; height:40px; border-radius:50%; background:#f1f3f5; display:flex; align-items:center; justify-content:center; font-size:1.05rem; transition:all .18s ease; }
-                .step-text { font-weight:600; color:#495057; }
-                .step.completed .step-bullet { background:linear-gradient(135deg,#43e97b,#38f9d7); color:white; transform:translateY(-3px); box-shadow:0 8px 20px rgba(56,249,215,0.08); }
-                .step.active .step-bullet { background:linear-gradient(135deg,#667eea,#764ba2); color:white; transform:translateY(-4px); box-shadow:0 10px 26px rgba(102,126,234,0.14); }
+                #wizard-stepper { padding:6px 0; }
+                #wizard-stepper .step { padding:4px; }
+                .step-bullet { width:28px; height:28px; border-radius:50%; background:#e9ecef; display:flex; align-items:center; justify-content:center; font-size:0.85rem; color:#495057; }
+                .step-number { font-weight:600; }
+                .step-sep { width:28px; height:2px; background:#f1f3f5; border-radius:2px; }
+                .step.completed .step-bullet { background:#d1f0dc; color:#0f5132; }
+                .step.active .step-bullet { background:#cfe2ff; color:#084298; }
             </style>
+
+            <script>
+                // Attiva visivamente lo step corrente basandosi su data-current-step
+                (function(){
+                    try {
+                        const stepper = document.getElementById('wizard-stepper');
+                        if(!stepper) return;
+                        const raw = stepper.getAttribute('data-current-step');
+                        if(!raw) return;
+                        const stepEls = Array.from(stepper.querySelectorAll('.step'));
+
+                        // Determine current index: support numeric (1-based) or string keys
+                        let currentIndex = -1;
+                        if (/^\d+$/.test(String(raw).trim())) {
+                            const n = parseInt(raw, 10);
+                            if (!isNaN(n) && n > 0) currentIndex = n - 1;
+                        } else {
+                            const key = String(raw).trim();
+                            currentIndex = stepEls.findIndex(function(el){ return el.dataset && el.dataset.step === key; });
+                        }
+
+                        // Fallback map if not matched (common names)
+                        if (currentIndex === -1 && typeof raw === 'string') {
+                            const map = ['admin','school','device','resources','done'];
+                            const idx = map.indexOf(String(raw));
+                            if (idx !== -1) currentIndex = idx;
+                        }
+
+                        stepEls.forEach(function(el, idx){
+                            el.classList.remove('active');
+                            el.classList.remove('completed');
+                            if (currentIndex > idx) {
+                                el.classList.add('completed');
+                            } else if (currentIndex === idx) {
+                                el.classList.add('active');
+                            }
+                        });
+                    } catch(e) { /* silent */ }
+                })();
+            </script>
 
                     <script>
                         (function(){
