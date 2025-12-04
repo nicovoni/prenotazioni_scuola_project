@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate, login, get_user_model
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from prenotazioni.models import Risorsa
+from urllib.parse import urlparse
 User = get_user_model()
 
 def custom_login(request):
@@ -14,14 +15,27 @@ def custom_login(request):
         # primary entry point.
         try:
             if request.session.get('wizard_in_progress'):
-                # Render the standard email-login only when not in wizard.
-                # For wizard sessions we prefer the setup page flow instead.
                 from django.urls import reverse
                 return redirect(reverse('prenotazioni:setup_amministratore'))
         except Exception:
             pass
         return redirect('email_login')
     # If someone POSTs username/password here, keep legacy behavior (allow admin login via standard auth)
+    def _get_internal_referer():
+        """Return a safe internal path extracted from HTTP_REFERER, or None."""
+        referer = request.META.get('HTTP_REFERER')
+        if not referer:
+            return None
+        try:
+            parsed = urlparse(referer)
+            # allow relative paths or same-host absolute URLs
+            host = request.get_host()
+            if (not parsed.netloc) or parsed.netloc == host:
+                return parsed.path or '/'
+        except Exception:
+            return None
+        return None
+
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
@@ -110,19 +124,36 @@ def custom_login(request):
             # If wizard is in progress and the user is superuser, but password hasn't been
             # changed yet, redirect them to the forced password change page immediately.
             try:
-                if wizard_in_progress and getattr(user, 'is_superuser', False) and not request.session.get('wizard_password_changed'):
-                    from django.urls import reverse
-                    return redirect(reverse('prenotazioni:password_change'))
+                    if wizard_in_progress and getattr(user, 'is_superuser', False) and not request.session.get('wizard_password_changed'):
+                        from django.urls import reverse
+                        return redirect(reverse('prenotazioni:password_change'))
             except Exception:
                 pass
 
             # Se non esistono admin e risorse, redirect a configurazione iniziale
+            # If no special wizard flow, prefer redirecting back to the referer
+            # page if it is internal, otherwise default to home.
+            try:
+                ref = _get_internal_referer()
+                if ref:
+                    return redirect(ref)
+            except Exception:
+                pass
             if not User.objects.filter(is_superuser=True).exists() and Risorsa.objects.count() == 0:
                 from django.urls import reverse
                 return redirect(reverse('prenotazioni:setup_amministratore'))
             return redirect('home')
         else:
             messages.error(request, "Credenziali non valide. Riprova.")
+            # If POST originated from an internal page (e.g. setup or admin-login),
+            # prefer returning the user there instead of sending them to the
+            # email+PIN flow.
+            try:
+                ref = _get_internal_referer()
+                if ref:
+                    return redirect(ref)
+            except Exception:
+                pass
             # If this session is running the setup wizard, send the user back
             # to the setup page rather than the email-based login screen.
             try:
@@ -132,3 +163,33 @@ def custom_login(request):
             except Exception:
                 pass
     return render(request, 'registration/login.html')
+
+
+def admin_login_view(request):
+    """Render a simple username/password form for administrators.
+
+    The form posts to the shared `custom_login` handler which authenticates
+    and performs wizard continuation logic.
+    """
+    # If the session is running the wizard, prefer showing the setup page
+    try:
+        if request.session.get('wizard_in_progress'):
+            from django.urls import reverse
+            return redirect(reverse('prenotazioni:setup_amministratore'))
+    except Exception:
+        pass
+    if request.method == 'GET':
+        return render(request, 'registration/login_admin.html')
+    # For POST, delegate to custom_login for consistent behavior
+    return custom_login(request)
+
+
+def teacher_login_view(request):
+    """Render the teacher/email login entrypoint.
+
+    This either redirects to the existing email-login flow or renders its
+    template directly, keeping behavior unchanged.
+    """
+    if request.method == 'GET':
+        return redirect('email_login')
+    return custom_login(request)

@@ -617,14 +617,12 @@
                             </div>
                         {% else %}
                             <div class="auth-buttons d-flex gap-2">
-                                <a href="{% url 'email_login' %}" class="btn btn-primary btn-sm hover-lift">
-                                    🔐 Accedi
+                                <a href="{% url 'login_admin' %}" class="btn btn-primary btn-sm hover-lift" aria-label="Accesso Amministratore">
+                                    🔐 Accesso Amministratore
                                 </a>
-                                {% if user.is_staff %}
-                                    <a href="{% url 'admin:index' %}" class="btn btn-secondary btn-sm hover-lift">
-                                        👑 Admin
-                                    </a>
-                                {% endif %}
+                                <a href="{% url 'login_teacher' %}" class="btn btn-secondary btn-sm hover-lift" aria-label="Accesso Docente">
+                                    🎓 Accesso Docente
+                                </a>
                             </div>
                         {% endif %}
                     </div>
