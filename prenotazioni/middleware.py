@@ -1,5 +1,5 @@
 from django.shortcuts import redirect
-from django.urls import reverse
+from django.urls import reverse, resolve, Resolver404
 from django.utils import timezone
 
 class ForcePasswordChangeMiddleware:
@@ -18,7 +18,18 @@ class ForcePasswordChangeMiddleware:
         '/api/debug/sanity/',
         '/api/debug/devices/',
         '/api/debug/devices/create_test/',
+        # Also accept API-prefixed account paths to avoid redirect loops when
+        # the app is mounted under an '/api/' prefix (e.g. /api/accounts/password_change/).
+        '/api/accounts/password_change/',
+        '/api/accounts/password_change/done/',
+        '/api/accounts/login/',
+        '/api/accounts/logout/',
     ]
+
+    # Exempt by view name (namespace-aware). Using resolve() is more robust
+    # than path matching because the app might be mounted under prefixes.
+    EXEMPT_VIEW_LOCAL_NAMES = {'password_change', 'password_change_done', 'login', 'logout'}
+    EXEMPT_VIEW_FULL_NAMES = {'prenotazioni:password_change', 'prenotazioni:password_change_done', 'login', 'logout'}
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -27,10 +38,30 @@ class ForcePasswordChangeMiddleware:
         user = getattr(request, 'user', None)
         path = request.path
 
-        # Allow exempt paths
-        for p in self.EXEMPT_PATHS:
-            if path.startswith(p):
+        # First, try to resolve the path to a view name and exempt known
+        # view names. This is robust when the app is mounted under a prefix
+        # like '/api/'. If resolve fails, fall back to path matching.
+        try:
+            match = resolve(request.path_info)
+            view_name = match.view_name or ''
+            # Direct full-name match (namespace:name)
+            if view_name in self.EXEMPT_VIEW_FULL_NAMES:
                 return self.get_response(request)
+            # Local name match (ignore namespace)
+            if view_name and view_name.split(':')[-1] in self.EXEMPT_VIEW_LOCAL_NAMES:
+                return self.get_response(request)
+        except Resolver404:
+            # Could not resolve — fall back to path checks below
+            pass
+
+        # Fallback: allow exempt paths. Use startswith/containment so paths
+        # mounted under prefixes are still recognized as exempt.
+        for p in self.EXEMPT_PATHS:
+            try:
+                if path.startswith(p) or p in path:
+                    return self.get_response(request)
+            except Exception:
+                continue
 
         try:
             if user and user.is_authenticated and user.is_superuser:
