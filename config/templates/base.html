@@ -857,8 +857,10 @@
             });
         }
 
-        // Auto-hide messages after 5 seconds
+        // Auto-hide messages after 5 seconds unless marked sticky/no-autohide
         document.querySelectorAll('.alert').forEach((alert, index) => {
+            // skip alerts explicitly marked as sticky or with data-autohide="false"
+            if (alert.classList.contains('sticky-alert') || alert.classList.contains('no-autohide') || alert.dataset.autohide === 'false') return;
             setTimeout(() => {
                 if (alert && alert.parentNode) {
                     alert.style.animation = 'fadeOut 0.5s ease-out forwards';

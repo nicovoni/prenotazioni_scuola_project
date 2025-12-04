@@ -3,42 +3,31 @@
 {% block title %}Configurazione Sistema{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
+<div class="container mt-4">
     {% if school_info %}
         <input type="hidden" id="saved_school_codice" value="{{ school_info.codice_meccanografico_scuola }}">
     {% else %}
         <input type="hidden" id="saved_school_codice" value="">
     {% endif %}
-    <div class="page-header">
-        <h1 class="page-title">⚙️ Configurazione Sistema di Prenotazioni</h1>
-        <p class="page-subtitle">
-            {% if step == "admin" %}
-                Crea il primo utente amministratore
-            {% elif step == "school" %}
-                Inserisci informazioni sulla scuola
-            {% elif step == "device" %}
-                Catalogo dispositivi scolastici
-            {% elif step == "resources" %}
-                Configura risorse e dispositivi
-            {% elif step == "done" %}
-                Completamento della configurazione
-            {% else %}
-                Configurazione Sistema
-            {% endif %}
-        </p>
+    <div class="page-header mb-3">
+        <h2 class="h4 mb-0">Configurazione</h2>
     </div>
 
     <!-- TEMPORANEO: Mostra PIN admin se appena creato -->
     {% if temp_pin %}
-    <div class="alert alert-warning alert-dismissible fade show" role="alert">
-        <h4 class="alert-heading">🔐 PIN di Accesso Amministratore</h4>
-        <p>Account amministratore creato con successo per <strong>{{ admin_email }}</strong></p>
-        <p class="mb-2">Il PIN per completare l'accesso è:</p>
-        <h2 class="text-center text-primary" style="font-family: monospace; font-size: 2rem; font-weight: bold;">
-            {{ temp_pin }}
-        </h2>
-        <p><em>Copia questo PIN per usarlo nella pagina di login dopo aver completato la configurazione.</em></p>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Chiudi"></button>
+    <div class="alert alert-warning sticky-alert" role="alert">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h5 class="alert-heading">PIN di accesso amministratore</h5>
+                <p class="mb-1">Account amministratore creato con successo per <strong>{{ admin_email }}</strong></p>
+                <p class="mb-2">Il PIN per completare l'accesso è:</p>
+                <div class="text-center text-primary" style="font-family: monospace; font-size: 1.5rem; font-weight: 600;">
+                    {{ temp_pin }}
+                </div>
+                <p class="mt-2"><em>Copia questo PIN per usarlo nella pagina di login dopo aver completato la configurazione.</em></p>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Chiudi"></button>
+        </div>
     </div>
     {% endif %}
 
@@ -273,19 +262,24 @@
                 {% if step == "admin" or step == 1 %}
                     <!-- Admin step content -->
                     <div class="card">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0">👑 Passo 1: Crea Amministratore</h5>
-                        </div>
-                        <div class="card-body">
-                            {% if wizard_in_progress %}
-                                <div class="alert alert-warning border-2" role="alert">
-                                    <h5 class="alert-heading">👑 Superuser creato (default)</h5>
-                                    <p class="mb-1">È stato creato automaticamente un utente superuser di default per completare la configurazione iniziale.</p>
-                                    <p class="mb-1"><strong>Username:</strong> <code>{{ wizard_admin_username }}</code></p>
-                                    <p class="mb-2"><strong>Password di default:</strong> <code>{{ wizard_admin_password }}</code></p>
-                                    <hr>
-                                    <p class="mb-0">Effettua il login qui sotto con le credenziali mostrate. Dopo il login ti verrà richiesto di modificare la password di default per motivi di sicurezza (la nuova password deve essere forte).</p>
-                                </div>
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Crea amministratore</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if wizard_in_progress %}
+                                    <div class="alert alert-warning sticky-alert border-2" role="alert">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="alert-heading mb-1">Superuser creato</h6>
+                                                <p class="mb-1">È stato creato automaticamente un utente superuser di default per completare la configurazione iniziale.</p>
+                                                <p class="mb-1"><strong>Username:</strong> <code>{{ wizard_admin_username }}</code></p>
+                                                <p class="mb-2"><strong>Password di default:</strong> <code>{{ wizard_admin_password }}</code></p>
+                                                <hr>
+                                                <p class="mb-0">Effettua il login qui sotto con le credenziali mostrate. Dopo il login ti verrà richiesto di modificare la password di default per motivi di sicurezza.</p>
+                                            </div>
+                                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Chiudi"></button>
+                                        </div>
+                                    </div>
 
                                 <form method="post" action="{% url 'login' %}">
                                     {% csrf_token %}
@@ -304,16 +298,20 @@
 
                                 <div class="mt-3 text-muted small">Dopo aver cambiato la password verrai riportato alla schermata di login. Al successivo accesso sarai reindirizzato al Passo 2: Informazioni Scuola.</div>
                             {% else %}
-                                {% if wizard_admin_flag %}
-                                    <div class="alert alert-warning">
-                                        <h6 class="mb-1">👑 Amministratore creato in un'altra sessione</h6>
-                                        <p class="mb-1">L'utente amministratore <strong>{{ wizard_admin_flag }}</strong> è stato creato dal wizard ma questa sessione non contiene la password temporanea.</p>
-                                        <p class="mb-0">Se non conosci la password predefinita, esegui una delle seguenti opzioni:</p>
-                                        <ul class="mt-2 mb-0">
-                                            <li>Accedi se conosci la password; verrai reindirizzato al cambio password.</li>
-                                            <li>Usa la shell con <code>python manage.py changepassword {{ wizard_admin_flag }}</code> per impostare una nuova password.</li>
-                                            <li>Elimina l'utente e rilancia il wizard (solo se appropriato).</li>
-                                        </ul>
+                                    {% if wizard_admin_flag %}
+                                    <div class="alert alert-warning sticky-alert">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="mb-1">Amministratore creato in un'altra sessione</h6>
+                                                <p class="mb-1">L'utente amministratore <strong>{{ wizard_admin_flag }}</strong> è stato creato dal wizard ma questa sessione non contiene la password temporanea.</p>
+                                                <p class="mb-0">Se non conosci la password predefinita, puoi:</p>
+                                                <ul class="mt-2 mb-0">
+                                                    <li>Accedere se conosci la password; verrai reindirizzato al cambio password.</li>
+                                                    <li>Usare la shell: <code>python manage.py changepassword {{ wizard_admin_flag }}</code> per impostare una nuova password.</li>
+                                                </ul>
+                                            </div>
+                                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Chiudi"></button>
+                                        </div>
                                     </div>
                                 {% else %}
                                     {% if existing_superusers and existing_superusers|length > 0 %}
@@ -354,13 +352,15 @@
                 {% elif step == "school" %}
                     <div class="card">
                         <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0">🏫 Passo 2: Informazioni Scuola</h5>
+                            <h5 class="mb-0">Informazioni scuola</h5>
                         </div>
                         <div class="card-body">
                             {% if has_admin %}
-                            <div class="alert alert-success mb-4">
-                                <h5>✓ Amministratore Riconosciuto</h5>
-                                <p class="mb-1"><strong>Email:</strong> {{ admin_email }}</p>
+                            <div class="alert alert-success mb-3">
+                                <div class="d-flex align-items-center">
+                                    <strong class="me-2">Amministratore:</strong>
+                                    <span>{{ admin_email }}</span>
+                                </div>
                             </div>
                             {% endif %}
 
@@ -1363,67 +1363,20 @@
 </div>
 
 <script>
-    // Disabilita auto-dismiss degli alert importanti per permettere all'utente di leggere
+    // Mantieni visibili gli alert marcati come "sticky-alert" fino a chiusura manuale.
+    // Il comportamento di auto-hide globale è gestito in `base.html`; qui assicuriamo
+    // che gli alert "sticky-alert" abbiano un pulsante di chiusura visibile.
     document.addEventListener('DOMContentLoaded', function() {
-        // Trova tutti gli alert
-        const alerts = document.querySelectorAll('.alert');
-        alerts.forEach(function(alert) {
-            // Se è un alert di warning o danger, disabilita auto-dismiss
-            if (alert.classList.contains('alert-warning') || alert.classList.contains('alert-danger')) {
-                // Rimuovi il role="alert" che potrebbe causare auto-dismiss
-                // Nota: Bootstrap 5 non ha auto-dismiss di default, ma nel caso fosse attivato:
-                // Disabilita qualsiasi timer di auto-dismiss
-                alert.setAttribute('data-bs-dismiss', 'false');
-                
-                // Se c'è un pulsante di chiusura, mantienilo ma non auto-chiudere
-                const closeBtn = alert.querySelector('.btn-close');
-                if (closeBtn) {
-                    // L'utente può chiuderlo manualmente, ma non scompare da solo
-                    closeBtn.style.cursor = 'pointer';
-                }
-            }
-        });
-
-        // Specificamente per l'alert admin, mantienilo visibile per almeno 1 minuto
-        // anche se l'utente tenta di chiuderlo accidentalmente
-        const adminAlerts = document.querySelectorAll('.alert-warning');
-        adminAlerts.forEach(function(alert) {
-            if (alert.textContent.includes('Attenzione') || alert.textContent.includes('permanente')) {
-                // Questo è l'alert admin - disabilita il btn-close per 60 secondi
-                const closeBtn = alert.querySelector('.btn-close');
-                if (closeBtn) {
-                    closeBtn.style.opacity = '0.3';
-                    closeBtn.style.cursor = 'not-allowed';
-                    closeBtn.setAttribute('disabled', 'disabled');
-                    
-                    // Dopo 60 secondi, abilita la chiusura
-                    setTimeout(function() {
-                        closeBtn.style.opacity = '1';
-                        closeBtn.style.cursor = 'pointer';
-                        closeBtn.removeAttribute('disabled');
-                    }, 60000); // 60 secondi = 1 minuto
-                    
-                    // Aggiungi testo visibile del timer
-                    const timer = document.createElement('small');
-                    timer.className = 'text-muted';
-                    timer.id = 'admin-alert-timer';
-                    timer.textContent = '(Resterà visibile per 1 minuto)';
-                    timer.style.display = 'block';
-                    timer.style.marginTop = '0.5rem';
-                    alert.appendChild(timer);
-                    
-                    // Update timer countdown
-                    let secondsLeft = 60;
-                    const timerInterval = setInterval(function() {
-                        secondsLeft--;
-                        if (secondsLeft > 0) {
-                            timer.textContent = `(Chiusura disponibile tra ${secondsLeft}s)`;
-                        } else {
-                            timer.textContent = '(Puoi ora chiudere questo avviso)';
-                            clearInterval(timerInterval);
-                        }
-                    }, 1000);
-                }
+        document.querySelectorAll('.alert.sticky-alert').forEach(function(alert) {
+            // assicurati che ci sia un pulsante di chiusura
+            let closeBtn = alert.querySelector('.btn-close');
+            if (!closeBtn) {
+                closeBtn = document.createElement('button');
+                closeBtn.type = 'button';
+                closeBtn.className = 'btn-close';
+                closeBtn.setAttribute('data-bs-dismiss', 'alert');
+                closeBtn.setAttribute('aria-label', 'Chiudi');
+                alert.insertBefore(closeBtn, alert.firstChild);
             }
         });
     });
