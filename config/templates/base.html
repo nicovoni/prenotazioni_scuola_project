@@ -90,103 +90,29 @@
         .header {
             background: var(--theme-primary);
             backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            color: white;
-            padding: 1rem 0;
-            box-shadow: var(--shadow-medium);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
+            <!-- Minimal client scripts: keep only essential JS to keep UI simple and predictable -->
 
-        .nav-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+            <script>
+                // Hide loading screen on page load (simple, no animation library)
+                window.addEventListener('load', function() {
+                    const loadingScreen = document.getElementById('loading-screen');
+                    if (loadingScreen) {
+                        loadingScreen.style.display = 'none';
+                    }
+                });
 
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            text-decoration: none;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: var(--transition-smooth);
-        }
+                // Keep other behaviour minimal. Do NOT auto-dismiss alerts here.
+                // Alert dismissal should be manual via the close button.
 
-        .logo:hover {
-            transform: translateY(-2px);
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .logo::before {
-            content: "🚀";
-            font-size: 1.8rem;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-5px); }
-        }
-
-        /* User Avatar Moderno */
-        .user-avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            color: white;
-            box-shadow: var(--shadow-soft);
-            transition: var(--transition-smooth);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .user-avatar::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            transform: translateX(-100%);
-            transition: transform 0.6s;
-        }
-
-        .user-avatar:hover {
-            transform: scale(1.1);
-            border-color: rgba(255, 255, 255, 0.5);
-            box-shadow: var(--shadow-medium);
-        }
-
-        .user-avatar:hover::before {
-            transform: translateX(100%);
-        }
-
-        /* Pulsing dot online indicator */
-        .user-avatar::after {
-            content: '';
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            width: 8px;
-            height: 8px;
-            background: #4ade80;
-            border-radius: 50%;
+                // Smooth scroll for internal links (kept minimal)
+                document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                    anchor.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        const target = document.querySelector(this.getAttribute('href'));
+                        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                });
+            </script>
             border: 2px solid white;
         }
 
