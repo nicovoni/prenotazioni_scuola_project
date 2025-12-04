@@ -701,7 +701,7 @@
 
     // Export to CSV functionality
     function exportToCSV() {
-        showToast('Funzionalità in sviluppo', 'info');
+        showNotice('Funzionalità in sviluppo', 'info');
     }
 
     // Refresh data functionality  
@@ -709,7 +709,7 @@
         showLoadingState(true);
         setTimeout(() => {
             showLoadingState(false);
-            showToast('Dati aggiornati con successo', 'success');
+            showNotice('Dati aggiornati con successo', 'success');
         }, 1000);
     }
 
