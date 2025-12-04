@@ -1,5 +1,5 @@
 
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Variabili essenziali (esempio, da sovrascrivere in produzione)
 ENV DJANGO_SECRET_KEY=changeme
