@@ -8,6 +8,18 @@ User = get_user_model()
 def custom_login(request):
     # Redirect GET requests to the email-based PIN login page (single email field)
     if request.method == 'GET':
+        # If the setup wizard is in progress in this session, do not redirect
+        # to the email-based login. Keep the user on the wizard flow so the
+        # simple username/password form (shown in the setup page) remains the
+        # primary entry point.
+        try:
+            if request.session.get('wizard_in_progress'):
+                # Render the standard email-login only when not in wizard.
+                # For wizard sessions we prefer the setup page flow instead.
+                from django.urls import reverse
+                return redirect(reverse('prenotazioni:setup_amministratore'))
+        except Exception:
+            pass
         return redirect('email_login')
     # If someone POSTs username/password here, keep legacy behavior (allow admin login via standard auth)
     if request.method == 'POST':
@@ -111,4 +123,12 @@ def custom_login(request):
             return redirect('home')
         else:
             messages.error(request, "Credenziali non valide. Riprova.")
+            # If this session is running the setup wizard, send the user back
+            # to the setup page rather than the email-based login screen.
+            try:
+                if request.session.get('wizard_in_progress'):
+                    from django.urls import reverse
+                    return redirect(reverse('prenotazioni:setup_amministratore'))
+            except Exception:
+                pass
     return render(request, 'registration/login.html')
