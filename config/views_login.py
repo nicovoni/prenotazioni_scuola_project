@@ -22,6 +22,30 @@ def custom_login(request):
                 return render(request, 'registration/login.html')
         user = authenticate(request, username=username, password=password)
         if user is not None:
+            # If wizard created a default admin and we're in the wizard flow,
+            # ensure the user's profile exists and that the password change is enforced.
+            try:
+                wizard_in_progress = request.session.get('wizard_in_progress')
+            except Exception:
+                wizard_in_progress = False
+
+            if wizard_in_progress and getattr(user, 'is_superuser', False):
+                try:
+                    from prenotazioni.models import ProfiloUtente
+                    profil, created = ProfiloUtente.objects.get_or_create(
+                        utente=user,
+                        defaults={
+                            'nome_utente': user.username,
+                            'cognome_utente': 'Amministratore'
+                        }
+                    )
+                    profil.must_change_password = True
+                    profil.password_last_changed = None
+                    profil.save()
+                except Exception:
+                    # If profile creation fails, continue — we still attempt login
+                    pass
+
             login(request, user)
             # If we're in the wizard flow, handle continuation after password change
             try:
@@ -44,6 +68,15 @@ def custom_login(request):
                     pass
                 from django.urls import reverse
                 return redirect(reverse('prenotazioni:setup_amministratore'))
+
+            # If wizard is in progress and the user is superuser, but password hasn't been
+            # changed yet, redirect them to the forced password change page immediately.
+            try:
+                if wizard_in_progress and getattr(user, 'is_superuser', False) and not request.session.get('wizard_password_changed'):
+                    from django.urls import reverse
+                    return redirect(reverse('prenotazioni:password_change'))
+            except Exception:
+                pass
 
             # Se non esistono admin e risorse, redirect a configurazione iniziale
             if not User.objects.filter(is_superuser=True).exists() and Risorsa.objects.count() == 0:
