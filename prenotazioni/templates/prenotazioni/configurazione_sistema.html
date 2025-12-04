@@ -316,9 +316,37 @@
                                         </ul>
                                     </div>
                                 {% else %}
-                                    <div class="alert alert-info">
-                                        <p class="mb-0">Nessun amministratore di default creato. Se preferisci puoi creare un superuser tramite la shell (manage.py createsuperuser) oppure riprovare la procedura.</p>
-                                    </div>
+                                    {% if existing_superusers and existing_superusers|length > 0 %}
+                                        <div class="alert alert-secondary">
+                                            <h6 class="mb-1">👑 Esiste già uno o più amministratori</h6>
+                                            <p class="mb-1">Sono presenti i seguenti account superuser nel sistema:</p>
+                                            <ul class="mb-2">
+                                                {% for su in existing_superusers %}
+                                                    <li><strong>{{ su.username }}</strong>{% if su.email %} — {{ su.email }}{% endif %}</li>
+                                                {% endfor %}
+                                            </ul>
+                                            <p class="mb-0">Effettua il login con uno di questi account per continuare il wizard. Se non conosci la password, puoi impostarla dalla shell con <code>python manage.py changepassword &lt;username&gt;</code>.</p>
+                                            <hr>
+                                            <form method="post" action="{% url 'login' %}">
+                                                {% csrf_token %}
+                                                <div class="mb-3">
+                                                    <label class="form-label"><strong>Username</strong></label>
+                                                    <input type="text" name="username" class="form-control" placeholder="es: {{ existing_superusers.0.username }}" required />
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label"><strong>Password</strong></label>
+                                                    <input type="password" name="password" class="form-control" required />
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center mt-4">
+                                                    <button type="submit" class="btn btn-primary btn-lg">🔐 Accedi e continua wizard →</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    {% else %}
+                                        <div class="alert alert-info">
+                                            <p class="mb-0">Nessun amministratore di default creato. Se preferisci puoi creare un superuser tramite la shell (manage.py createsuperuser) oppure riprovare la procedura.</p>
+                                        </div>
+                                    {% endif %}
                                 {% endif %}
                             {% endif %}
                         </div>

@@ -363,6 +363,15 @@ def setup_amministratore(request):
         except User.DoesNotExist:
             session.pop('admin_user_id', None)
 
+    # Provide list of existing superusers (for cases where superuser exists but
+    # no wizard session is present). This allows the template to suggest logging
+    # in with an existing admin to continue the wizard.
+    try:
+        existing_supers = list(User.objects.filter(is_superuser=True).values('id', 'username', 'email'))
+    except Exception:
+        existing_supers = []
+    context['existing_superusers'] = existing_supers
+
     # Recupera informazioni scuola se esiste
     school_instance = InformazioniScuola.objects.filter(id=1).first()
     context['school_info'] = school_instance

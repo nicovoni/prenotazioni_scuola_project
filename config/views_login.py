@@ -22,6 +22,32 @@ def custom_login(request):
                 return render(request, 'registration/login.html')
         user = authenticate(request, username=username, password=password)
         if user is not None:
+            # If setup flag is not present, and a superuser logged in, mark this
+            # session as the wizard admin and force password change so the setup
+            # wizard can continue (covers admins created outside the wizard).
+            try:
+                from prenotazioni.models import ConfigurazioneSistema, ProfiloUtente
+                setup_completed = ConfigurazioneSistema.ottieni_configurazione('SETUP_COMPLETED', default=None)
+            except Exception:
+                setup_completed = None
+
+            if not setup_completed and getattr(user, 'is_superuser', False):
+                try:
+                    # ensure profile exists and force password change
+                    profil, _ = ProfiloUtente.objects.get_or_create(
+                        utente=user,
+                        defaults={'nome_utente': user.username, 'cognome_utente': 'Amministratore'}
+                    )
+                    profil.must_change_password = True
+                    profil.password_last_changed = None
+                    profil.save()
+                    # mark this session to indicate the wizard should continue
+                    request.session['wizard_in_progress'] = True
+                    request.session['admin_user_id'] = user.id
+                    request.session.save()
+                except Exception:
+                    pass
+
             # If wizard created a default admin and we're in the wizard flow,
             # ensure the user's profile exists and that the password change is enforced.
             try:
