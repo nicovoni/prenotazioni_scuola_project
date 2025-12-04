@@ -244,11 +244,13 @@ def setup_amministratore(request):
     if setup_flag is not None:
         return _show_config_dashboard(request)
 
-    # Backward-compat: se non esiste il flag, ma esiste un superuser e
-    # non c'è un wizard in corso nella sessione, consideriamo il setup
-    # già eseguito.
-    if User.objects.filter(is_superuser=True).exists() and not session.get('admin_user_id'):
-        return _show_config_dashboard(request)
+    # NOTE: Do NOT assume setup is complete just because a superuser exists.
+    # The presence of a superuser in the DB does not imply the setup wizard
+    # completed successfully (it could have been partially executed). The
+    # canonical way to detect a completed setup is the SETUP_COMPLETED flag
+    # stored in `ConfigurazioneSistema` (checked above). Therefore we avoid
+    # returning the dashboard here and allow the wizard to resume when
+    # appropriate.
 
     # ============================================================================
     # SETUP WIZARD (eseguito solo se nessun superuser esiste)
@@ -296,9 +298,28 @@ def setup_amministratore(request):
                     except Exception:
                         pass
 
+                    # Persist a lightweight wizard flag (DO NOT store passwords)
+                    try:
+                        ConfigurazioneSistema.objects.update_or_create(
+                            chiave_configurazione='SETUP_WIZARD_ADMIN',
+                            defaults={
+                                'valore_configurazione': admin_username,
+                                'tipo_configurazione': 'sistema',
+                                'descrizione_configurazione': 'Admin default creato dal wizard'
+                            }
+                        )
+                    except Exception:
+                        pass
+
+                    # Keep admin id in session for this user so they can continue the wizard
                     session['admin_user_id'] = admin_user.id
+                    # Also keep the default password only in session (temporary) so the creator
+                    # can see it in their browser. This is not persisted to DB.
+                    session['wizard_in_progress'] = True
+                    session['wizard_admin_username'] = admin_username
+                    session['wizard_admin_password'] = admin_password
                     session.save()
-                    step = 'school'
+                    step = 'admin'
                 except Exception:
                     # Se la creazione fallisce, torna al passo interattivo 'admin'
                     step = 'admin'
@@ -350,6 +371,12 @@ def setup_amministratore(request):
     context['wizard_in_progress'] = session.get('wizard_in_progress', False)
     context['wizard_admin_username'] = session.get('wizard_admin_username')
     context['wizard_admin_password'] = session.get('wizard_admin_password')
+    # Persistent wizard flag (set when admin created by wizard)
+    try:
+        wizard_admin_flag = ConfigurazioneSistema.ottieni_configurazione('SETUP_WIZARD_ADMIN', default=None)
+    except Exception:
+        wizard_admin_flag = None
+    context['wizard_admin_flag'] = wizard_admin_flag
 
     # ============================================================================
     # STEP 1: Admin creation (solo email - password generata automaticamente)
@@ -599,6 +626,11 @@ def setup_amministratore(request):
                         'descrizione_configurazione': 'Setup wizard completato'
                     }
                 )
+                # Remove the 'wizard admin created' flag if present
+                try:
+                    ConfigurazioneSistema.objects.filter(chiave_configurazione='SETUP_WIZARD_ADMIN').delete()
+                except Exception:
+                    pass
             except Exception:
                 # Non bloccare l'utente se il salvataggio della configurazione fallisce
                 import logging
@@ -641,6 +673,23 @@ def _show_config_dashboard(request):
     elif request.method == 'POST':
         # Gestisce creazione/modifica configurazioni
         action = request.POST.get('action')
+
+        if action == 'reset_setup':
+            # Allow staff users to reset the SETUP_COMPLETED flag so the wizard
+            # can be re-run. This is a safety valve for stale/incorrect state.
+            try:
+                if request.user.is_staff:
+                    ConfigurazioneSistema.objects.filter(chiave_configurazione='SETUP_COMPLETED').delete()
+                    ConfigurazioneSistema.objects.filter(chiave_configurazione='SETUP_WIZARD_ADMIN').delete()
+                    from django.contrib import messages
+                    messages.success(request, 'Flag di setup rimosso. Puoi ora rieseguire il wizard.')
+                else:
+                    from django.contrib import messages
+                    messages.error(request, 'Permesso negato.')
+            except Exception:
+                from django.contrib import messages
+                messages.error(request, 'Impossibile resettare lo stato di setup.')
+            return redirect('prenotazioni:setup_amministratore')
 
         if action == 'create':
             form = ConfigurationForm(request.POST)
