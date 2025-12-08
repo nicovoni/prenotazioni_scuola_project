@@ -181,7 +181,24 @@ def admin_login_view(request):
 
     The form posts to the shared `custom_login` handler which authenticates
     and performs wizard continuation logic.
+    
+    Rate limiting is applied here to prevent brute force attacks on admin accounts.
     """
+    from prenotazioni.wizard_security import check_wizard_rate_limit
+    from django.contrib import messages
+    
+    # Rate limiting per il login admin
+    allowed, remaining, reset_time = check_wizard_rate_limit(request)
+    if not allowed and reset_time:
+        messages.error(
+            request,
+            f'⚠️  Troppi tentativi di accesso. Riprova dopo {reset_time.strftime("%H:%M")}'
+        )
+        return render(request, 'registration/login_admin.html', {
+            'rate_limited': True,
+            'reset_time': reset_time
+        })
+    
     # If the session is running the wizard, prefer showing the setup page
     try:
         if request.session.get('wizard_in_progress'):

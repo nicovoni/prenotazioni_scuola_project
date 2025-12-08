@@ -389,21 +389,13 @@ def setup_amministratore(request):
     from django.db import transaction
     from django.core.paginator import Paginator
     from .wizard_security import (
-        check_wizard_rate_limit, log_wizard_access, validate_wizard_admin_session,
-        check_wizard_can_proceed, log_wizard_step_completion
+        log_wizard_access, validate_wizard_admin_session,
+        log_wizard_step_completion
     )
     
     from .models import ConfigurazioneSistema
     User = get_user_model()
 
-    # Step 0: Rate limiting e security checks
-    can_proceed, rate_limit_error = check_wizard_can_proceed(request)
-    if not can_proceed and rate_limit_error:
-        # Se il rate limit è stato superato
-        messages.error(request, f'⚠️  {rate_limit_error}')
-        log_wizard_access(request, 'wizard_access_denied', {'reason': rate_limit_error})
-        return redirect('home')
-    
     # Step 1: Se setup è già completato (flag DB) oppure esiste un superuser
     # ma non siamo in un wizard in corso (sessione senza admin_user_id),
     # allora mostra la dashboard di configurazione.
