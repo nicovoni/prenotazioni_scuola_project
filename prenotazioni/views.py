@@ -356,7 +356,11 @@ class ForcedPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
         messages.success(self.request, 'Password aggiornata con successo. Effettua nuovamente il login per continuare.')
         from django.shortcuts import redirect
         from django.urls import reverse
-        return redirect(reverse('login'))
+        # Redirect to appropriate login page based on user type
+        if user.is_superuser:
+            return redirect(reverse('login_admin'))
+        else:
+            return redirect(reverse('email_login'))
 
 def setup_amministratore(request):
     """
