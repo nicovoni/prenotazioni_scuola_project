@@ -388,11 +388,23 @@ def setup_amministratore(request):
     from django.urls import reverse
     from django.db import transaction
     from django.core.paginator import Paginator
+    from .wizard_security import (
+        check_wizard_rate_limit, log_wizard_access, validate_wizard_admin_session,
+        check_wizard_can_proceed, log_wizard_step_completion
+    )
     
     from .models import ConfigurazioneSistema
     User = get_user_model()
 
-    # Step 0: Se setup è già completato (flag DB) oppure esiste un superuser
+    # Step 0: Rate limiting e security checks
+    can_proceed, rate_limit_error = check_wizard_can_proceed(request)
+    if not can_proceed and rate_limit_error:
+        # Se il rate limit è stato superato
+        messages.error(request, f'⚠️  {rate_limit_error}')
+        log_wizard_access(request, 'wizard_access_denied', {'reason': rate_limit_error})
+        return redirect('home')
+    
+    # Step 1: Se setup è già completato (flag DB) oppure esiste un superuser
     # ma non siamo in un wizard in corso (sessione senza admin_user_id),
     # allora mostra la dashboard di configurazione.
     session = request.session
@@ -427,11 +439,17 @@ def setup_amministratore(request):
 
         # Richiedi login admin separato dal wizard
         if not request.user.is_authenticated:
+            log_wizard_access(request, 'wizard_unauthenticated_access')
             messages.info(request, 'Effettua il login come amministratore per avviare la procedura di setup.')
             return redirect(reverse('login_admin') + f"?next={reverse('prenotazioni:setup_amministratore')}")
 
         # Se l'utente autenticato non è superuser, neghiamo l'accesso
         if not getattr(request.user, 'is_superuser', False):
+            log_wizard_access(
+                request,
+                'wizard_unauthorized_access',
+                {'user_id': request.user.id, 'is_superuser': False}
+            )
             messages.error(request, 'Accesso negato: solo amministratori possono eseguire il wizard di setup.')
             return redirect(reverse('home'))
 
@@ -441,6 +459,17 @@ def setup_amministratore(request):
         session['wizard_admin_username'] = request.user.username
         one_time_admin_password = None
         step = 'school'
+        
+        # Log dell'inizio del wizard
+        log_wizard_access(
+            request,
+            'wizard_start',
+            {
+                'user_id': request.user.id,
+                'username': request.user.username,
+                'email': request.user.email
+            }
+        )
 
     session['current_step'] = step
     session.save()
@@ -519,12 +548,14 @@ def setup_amministratore(request):
             
             if form_school.is_valid():
                 form_school.save()
+                log_wizard_step_completion(request, 'school', success=True)
                 messages.success(request, '✓ Informazioni scuola salvate!')
                 return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=device")
             else:
                 for field, errors in form_school.errors.items():
                     for error in errors:
                         messages.error(request, f'{field}: {error}')
+                log_wizard_step_completion(request, 'school', success=False, error_msg=str(form_school.errors))
 
     # ============================================================================
     # STEP 3: Catalogo dispositivi
@@ -615,8 +646,10 @@ def setup_amministratore(request):
                     
             elif 'step_device_continue' in request.POST:
                 if Dispositivo.objects.exists():
+                    log_wizard_step_completion(request, 'device', success=True)
                     return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=resources")
                 else:
+                    log_wizard_step_completion(request, 'device', success=False, error_msg='No devices configured')
                     messages.error(request, '❌ Devi catalogare almeno un dispositivo per continuare.')
 
     # ============================================================================
@@ -713,9 +746,11 @@ def setup_amministratore(request):
 
                             risorsa.save()
 
+                    log_wizard_step_completion(request, 'resources', success=True)
                     messages.success(request, '✓ Risorse configurate!')
                     return redirect(f"{reverse('prenotazioni:setup_amministratore')}?step=done")
                 except Exception as e:
+                    log_wizard_step_completion(request, 'resources', success=False, error_msg=str(e))
                     messages.error(request, f'Errore nel salvataggio: {str(e)}')
                     import logging
                     logging.getLogger('prenotazioni').exception(
@@ -752,6 +787,16 @@ def setup_amministratore(request):
                     ConfigurazioneSistema.objects.filter(chiave_configurazione='SETUP_WIZARD_ADMIN').delete()
                 except Exception:
                     pass
+                
+                # Log del completamento
+                log_wizard_access(
+                    request,
+                    'wizard_completed',
+                    {
+                        'user_id': admin_user_id,
+                        'timestamp': timezone.now().isoformat()
+                    }
+                )
             except Exception:
                 # Non bloccare l'utente se il salvataggio della configurazione fallisce
                 import logging
