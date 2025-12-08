@@ -182,6 +182,11 @@ class Command(BaseCommand):
             action='store_true',
             help='Forza reinizializzazione anche se dati esistono',
         )
+        parser.add_argument(
+            '--create-admin',
+            action='store_true',
+            help='Crea l\'utente amministratore di default se non esiste (opt-in).',
+        )
 
     def handle(self, *args, **options):
         try:
@@ -241,12 +246,17 @@ class Command(BaseCommand):
                     self.style.WARNING('Risorse già presenti, skip')
                 )
 
-            # Crea utente amministratore
-            if not DjangoUser.objects.filter(is_superuser=True).exists() or options['force']:
+            # Crea utente amministratore (OPZIONALE): per evitare la creazione automatica
+            # dell'admin durante deployment, questa operazione è ora opt-in. Per creare
+            # l'admin automaticamente è necessario passare --create-admin oppure
+            # impostare la variabile d'ambiente AUTO_CREATE_ADMIN=true. L'opzione
+            # --force mantiene il comportamento di forzare la creazione/aggiornamento.
+            auto_create_env = os.environ.get('AUTO_CREATE_ADMIN', '').lower() in ('1', 'true', 'yes')
+            if (not DjangoUser.objects.filter(is_superuser=True).exists() and (options.get('create_admin') or auto_create_env)) or options['force']:
                 self._create_admin_user()
             else:
                 self.stdout.write(
-                    self.style.WARNING('Utente admin già presente, skip')
+                    self.style.WARNING('Saltata creazione admin (use --create-admin or set AUTO_CREATE_ADMIN=true to enable)')
                 )
 
             # Verifica e segnala eventuali problemi di configurazione

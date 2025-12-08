@@ -417,98 +417,30 @@ def setup_amministratore(request):
     session = request.session
     one_time_admin_password = None
     
-    # Se nessuno step specificato, determina automaticamente qual è il prossimo
+    # Se nessuno step specificato, richiedi che l'utente sia autenticato
+    # e sia un superuser prima di iniziare il wizard. Il wizard è ora
+    # completamente separato dalla procedura di login: non crea più utenti
+    # né mostra il form di login al suo interno. Se non sei autenticato,
+    # verrai reindirizzato alla pagina di login admin dedicata.
     if not step:
-        # Se non c'è nessun superuser, proviamo a creare un admin di default
-        # (username da env ADMIN_USERNAME o 'toor', password da ADMIN_PASSWORD o 'torero').
-        # Dopo la creazione salviamo l'id in sessione e passiamo allo step 'school'.
-        if not User.objects.filter(is_superuser=True).exists():
-            admin_username = os.environ.get('ADMIN_USERNAME', 'toor')
-            # Prefer env-provided password; se non presente, genera una password
-            # sicura e monouso usando il helper in `prenotazioni.passwords`.
-            admin_password = os.environ.get('ADMIN_PASSWORD')
-            admin_email = os.environ.get('ADMIN_EMAIL', 'admin@isufol.it')
+        from django.urls import reverse
 
-            if not admin_password:
-                try:
-                    from .passwords import generate_strong_password
-                    # default length 16 garantisce buona entropia
-                    admin_password = generate_strong_password(length=16)
-                except Exception:
-                    # Fallback conservativo se qualcosa va storto
-                    admin_password = 'torero'
+        # Richiedi login admin separato dal wizard
+        if not request.user.is_authenticated:
+            messages.info(request, 'Effettua il login come amministratore per avviare la procedura di setup.')
+            return redirect(reverse('login_admin') + f"?next={reverse('prenotazioni:setup_amministratore')}")
 
-            # Crea l'admin di default solo se non esiste un utente con quel username
-            if not User.objects.filter(username=admin_username).exists():
-                try:
-                    admin_user = User.objects.create_user(
-                        username=admin_username,
-                        email=admin_email,
-                        is_staff=True,
-                        is_superuser=True
-                    )
-                    admin_user.set_password(admin_password)
-                    admin_user.save()
+        # Se l'utente autenticato non è superuser, neghiamo l'accesso
+        if not getattr(request.user, 'is_superuser', False):
+            messages.error(request, 'Accesso negato: solo amministratori possono eseguire il wizard di setup.')
+            return redirect(reverse('home'))
 
-                    # crea/aggiorna il profilo utente e forza il cambio password
-                    try:
-                        from .models import ProfiloUtente
-                        profil, _ = ProfiloUtente.objects.get_or_create(
-                            utente=admin_user,
-                            defaults={
-                                'nome_utente': os.environ.get('ADMIN_FIRST_NAME', 'Amministratore'),
-                                'cognome_utente': os.environ.get('ADMIN_LAST_NAME', 'Sistema'),
-                            }
-                        )
-                        profil.must_change_password = True
-                        profil.password_last_changed = None
-                        profil.save()
-                    except Exception:
-                        pass
-
-                    # Persist a lightweight wizard flag (DO NOT store passwords)
-                    try:
-                        ConfigurazioneSistema.objects.update_or_create(
-                            chiave_configurazione='SETUP_WIZARD_ADMIN',
-                            defaults={
-                                'valore_configurazione': admin_username,
-                                'tipo_configurazione': 'sistema',
-                                'descrizione_configurazione': 'Admin default creato dal wizard'
-                            }
-                        )
-                    except Exception:
-                        pass
-
-                    # Keep admin id in session for this user so they can continue the wizard
-                    session['admin_user_id'] = admin_user.id
-                    # Mark that a wizard is in progress and store username only.
-                    # DO NOT store the plaintext password in session or DB.
-                    session['wizard_in_progress'] = True
-                    session['wizard_admin_username'] = admin_username
-                    # Expose the password only for the current response (one-time display)
-                    one_time_admin_password = admin_password
-                    step = 'admin'
-                except Exception:
-                    # Se la creazione fallisce, torna al passo interattivo 'admin'
-                    step = 'admin'
-            else:
-                # Se l'username esiste ma non ci sono superuser, promuovi l'utente esistente
-                existing = User.objects.filter(username=admin_username).first()
-                if existing:
-                    existing.is_staff = True
-                    existing.is_superuser = True
-                    existing.save()
-                    session['admin_user_id'] = existing.id
-                    session.save()
-                    step = 'school'
-                else:
-                    step = 'admin'
-
-            # Pulisci qualsiasi stato wizard precedente per un fresh start
-            session.pop('current_step', None)
-        else:
-            # Questo non dovrebbe succedere normalmente, default su 'admin'
-            step = 'admin'
+        # Utente admin autenticato -> inizializza lo stato del wizard per questa sessione
+        session['admin_user_id'] = request.user.id
+        session['wizard_in_progress'] = True
+        session['wizard_admin_username'] = request.user.username
+        one_time_admin_password = None
+        step = 'school'
 
     session['current_step'] = step
     session.save()
@@ -561,8 +493,9 @@ def setup_amministratore(request):
     # STEP 1: Admin creation (solo email - password generata automaticamente)
     # ============================================================================
     if step == 'admin':
-        # Mostra avviso che l'admin di default è stato creato (se wizard_in_progress)
-        # e una semplice schermata di login (username/password) che punta a /accounts/login/.
+        # Sezione accesso amministratore: non crea utenti automaticamente.
+        # Mostra suggerimenti per effettuare il login tramite la pagina admin
+        # dedicata o per creare un superuser dalla shell, a seconda dei casi.
         context['show_admin_login'] = True
 
     # ============================================================================

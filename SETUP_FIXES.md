@@ -65,7 +65,7 @@ Questo documento raccoglie i problemi riscontrati durante il wizard di setup, i 
 2. Riavvia il wizard: osserva che viene offerta nuovamente la creazione di un admin.
 
 ### Azioni consigliate
-- Persistere lo stato corrente del wizard (sessione + DB): salvare `current_step` o `session['setup_step']` e l'`admin_user_id` creato già in sessione/DB.
+ - Persistere lo stato corrente del wizard (sessione + DB): salvare `current_step` o `session['setup_step']` e l'`admin_user_id` nella sessione **solo** quando l'amministratore si è autenticato. Il wizard non dovrebbe creare automaticamente un account admin: l'avvio del wizard deve avvenire dopo che un superuser ha effettuato il login tramite la pagina admin dedicata.
 - Verificare `ConfigurazioneSistema` per la chiave `SETUP_COMPLETED`; impedire la creazione di un admin se un admin esiste già o se `SETUP_COMPLETED` è impostato.
 - Rendere la creazione admin atomica: creare l'utente e segnare lo stato parziale in sessione/DB in un unico flusso controllato.
 - Acceptance: riavviando il wizard non si crea un secondo admin e l'utente riprende dallo step in cui si era interrotto.

@@ -9,10 +9,10 @@ User = get_user_model()
 def custom_login(request):
     # Redirect GET requests to the email-based PIN login page (single email field)
     if request.method == 'GET':
-        # If the setup wizard is in progress in this session, do not redirect
-        # to the email-based login. Keep the user on the wizard flow so the
-        # simple username/password form (shown in the setup page) remains the
-        # primary entry point.
+        # If the setup wizard state is present in session, prefer redirecting
+        # to the setup page so that an admin who is mid-wizard can resume.
+        # Note: the setup page no longer embeds an inline login — administrators
+        # should authenticate through the dedicated admin login page (`login_admin`).
         try:
             if request.session.get('wizard_in_progress'):
                 from django.urls import reverse
