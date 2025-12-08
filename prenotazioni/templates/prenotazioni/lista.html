@@ -3,7 +3,7 @@
 {% block title %}{% if is_admin_view %}Tutte le Prenotazioni{% else %}Le mie Prenotazioni{% endif %} - Sistema di Prenotazioni{% endblock %}
 
 {% block content %}
-<div class="page-header" data-aos="fade-up">
+<div class="card-simple mb-3" data-aos="fade-up">
     <div class="d-flex justify-content-between align-items-start flex-wrap">
         <div>
             <h1 class="page-title">📋 {% if is_admin_view %}Tutte le Prenotazioni{% else %}Le mie Prenotazioni{% endif %}</h1>
@@ -44,8 +44,8 @@
         {% endif %}
     </div>
 </div>
-
-<div class="content-card" data-aos="fade-up" data-aos-delay="200">
+ 
+<div class="card-simple" data-aos="fade-up" data-aos-delay="200">
     {% if prenotazioni %}
         <!-- Search and Filter Bar -->
         <div class="search-filter-bar mb-4 p-3 glass rounded-3">

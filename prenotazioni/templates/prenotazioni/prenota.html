@@ -9,7 +9,7 @@ Nuova Prenotazione - Sistema Prenotazioni
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="card-simple mb-3">
     {% if is_edit %}
     <h1 class="page-title">✏️ Modifica Prenotazione</h1>
     <p class="page-subtitle">Modifica i dettagli della tua prenotazione</p>
@@ -19,7 +19,7 @@ Nuova Prenotazione - Sistema Prenotazioni
     {% endif %}
 </div>
 
-<div class="content-card">
+<div class="card-simple">
     <form method="post" id="prenotazione-form">
         {% csrf_token %}
         
