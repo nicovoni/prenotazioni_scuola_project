@@ -119,6 +119,65 @@ def sanity_check(request):
     return JsonResponse(result)
 
 
+def validate_password_requirements(password):
+    """
+    Valida i requisiti di password complessa e ritorna un dict con i dettagli.
+    
+    Returns:
+        dict con chiavi:
+        - has_uppercase: bool - Almeno una lettera maiuscola
+        - has_lowercase: bool - Almeno una lettera minuscola
+        - has_digit: bool - Almeno una cifra
+        - has_special: bool - Almeno un carattere speciale (!@#$%^&*)
+        - min_length_8: bool - Almeno 8 caratteri
+        - min_length_10: bool - Almeno 10 caratteri
+        - min_length_12: bool - Almeno 12 caratteri
+        - is_strong: bool - Tutti i requisiti soddisfatti (es. >=10 caratteri con mix)
+    """
+    import re
+    
+    requirements = {
+        'has_uppercase': bool(re.search(r'[A-Z]', password)),
+        'has_lowercase': bool(re.search(r'[a-z]', password)),
+        'has_digit': bool(re.search(r'\d', password)),
+        'has_special': bool(re.search(r'[!@#$%^&*\-_=+\[\]{};:\'",.<>?/\\|`~]', password)),
+        'min_length_8': len(password) >= 8,
+        'min_length_10': len(password) >= 10,
+        'min_length_12': len(password) >= 12,
+    }
+    
+    # Una password è forte se ha almeno 10 caratteri e contiene almeno 3 dei 4 requisiti
+    complexity_score = sum([
+        requirements['has_uppercase'],
+        requirements['has_lowercase'],
+        requirements['has_digit'],
+        requirements['has_special']
+    ])
+    
+    requirements['is_strong'] = (
+        requirements['min_length_10'] and complexity_score >= 3
+    )
+    
+    return requirements
+
+
+def check_password_strength(request):
+    """Endpoint AJAX per controllare la forza della password in tempo reale.
+    
+    Riceve la password POST e ritorna un JSON con i requisiti soddisfatti.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    password = request.POST.get('password', '')
+    requirements = validate_password_requirements(password)
+    
+    return JsonResponse({
+        'requirements': requirements,
+        'is_strong': requirements['is_strong']
+    })
+
+
 class ForcedPasswordChangeForm(forms.Form):
     old_password = forms.CharField(widget=forms.PasswordInput, required=True)
     new_password1 = forms.CharField(widget=forms.PasswordInput, required=True)
@@ -248,6 +307,7 @@ class ForcedPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
             profil = user.profilo_utente
             profil.must_change_password = False
             profil.password_last_changed = timezone.now()
+            profil.first_login = False  # Primo accesso completato
             profil.save()
         except Exception:
             pass

@@ -60,13 +60,20 @@ def custom_login(request):
             if not setup_completed and getattr(user, 'is_superuser', False):
                 try:
                     # ensure profile exists and force password change
-                    profil, _ = ProfiloUtente.objects.get_or_create(
+                    profil, created = ProfiloUtente.objects.get_or_create(
                         utente=user,
-                        defaults={'nome_utente': user.username, 'cognome_utente': 'Amministratore'}
+                        defaults={
+                            'nome_utente': user.username, 
+                            'cognome_utente': 'Amministratore',
+                            'first_login': True
+                        }
                     )
-                    profil.must_change_password = True
-                    profil.password_last_changed = None
-                    profil.save()
+                    # Se il profilo è nuovo, impostiamo il flag
+                    if created:
+                        profil.must_change_password = True
+                        profil.password_last_changed = None
+                        profil.first_login = True
+                        profil.save()
                     # mark this session to indicate the wizard should continue
                     request.session['wizard_in_progress'] = True
                     request.session['admin_user_id'] = user.id
@@ -88,12 +95,16 @@ def custom_login(request):
                         utente=user,
                         defaults={
                             'nome_utente': user.username,
-                            'cognome_utente': 'Amministratore'
+                            'cognome_utente': 'Amministratore',
+                            'first_login': True
                         }
                     )
-                    profil.must_change_password = True
-                    profil.password_last_changed = None
-                    profil.save()
+                    # Se il profilo è nuovo, impostiamo i flag di force change password
+                    if created:
+                        profil.must_change_password = True
+                        profil.password_last_changed = None
+                        profil.first_login = True
+                        profil.save()
                 except Exception:
                     # If profile creation fails, continue — we still attempt login
                     pass

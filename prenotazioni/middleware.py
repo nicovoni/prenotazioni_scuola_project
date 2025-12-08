@@ -76,7 +76,8 @@ class ForcePasswordChangeMiddleware:
                             profil.must_change_password = True
                             profil.save()
 
-                    if profil.must_change_password:
+                    # Forza cambio password SOLO al primo accesso
+                    if profil.must_change_password and profil.first_login:
                         # redirect to password change page
                         return redirect(reverse('prenotazioni:password_change'))
         except Exception:

@@ -385,6 +385,12 @@ class ProfiloUtente(models.Model):
     )
 
     password_last_changed = models.DateTimeField(null=True, blank=True)
+    
+    first_login = models.BooleanField(
+        default=True,
+        verbose_name='Primo accesso',
+        help_text="Indica se è il primo accesso dell'utente nel sistema"
+    )
 
     data_creazione_utente = models.DateTimeField(auto_now_add=True)
     data_modifica_utente = models.DateTimeField(auto_now=True)
