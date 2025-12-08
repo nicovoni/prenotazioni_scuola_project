@@ -392,8 +392,19 @@ def setup_amministratore(request):
         # Dopo la creazione salviamo l'id in sessione e passiamo allo step 'school'.
         if not User.objects.filter(is_superuser=True).exists():
             admin_username = os.environ.get('ADMIN_USERNAME', 'toor')
-            admin_password = os.environ.get('ADMIN_PASSWORD', 'torero')
+            # Prefer env-provided password; se non presente, genera una password
+            # sicura e monouso usando il helper in `prenotazioni.passwords`.
+            admin_password = os.environ.get('ADMIN_PASSWORD')
             admin_email = os.environ.get('ADMIN_EMAIL', 'admin@isufol.it')
+
+            if not admin_password:
+                try:
+                    from .passwords import generate_strong_password
+                    # default length 16 garantisce buona entropia
+                    admin_password = generate_strong_password(length=16)
+                except Exception:
+                    # Fallback conservativo se qualcosa va storto
+                    admin_password = 'torero'
 
             # Crea l'admin di default solo se non esiste un utente con quel username
             if not User.objects.filter(username=admin_username).exists():
