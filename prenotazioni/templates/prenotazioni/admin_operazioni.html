@@ -3,8 +3,8 @@
 {% block title %}Operazioni Amministrative{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 class="page-title">⚙️ Operazioni Amministrative</h1>
+<div class="page-header" role="region" aria-labelledby="page-title">
+    <h1 id="page-title" class="page-title">⚙️ Operazioni Amministrative</h1>
     <p class="page-subtitle">Funzioni avanzate per amministratori del sistema</p>
 </div>
 
@@ -31,7 +31,7 @@
                         <li>👤 Ricreare/amministrare l'account amministratore</li>
                     </ul>
 
-                    <a href="{% url 'prenotazioni:setup_amministratore' %}" class="btn btn-primary btn-lg">
+                    <a href="{% url 'prenotazioni:setup_amministratore' %}" class="btn btn-primary btn-lg" role="button" aria-label="Apri Wizard Configurazione">
                         🚀 Apri Wizard Configurazione
                     </a>
                 </div>
@@ -53,7 +53,7 @@
                         <li>🔍 Controllare lo stato completo del sistema</li>
                     </ul>
 
-                    <a href="{% url 'prenotazioni:database_viewer' %}" class="btn btn-success btn-lg">
+                    <a href="{% url 'prenotazioni:database_viewer' %}" class="btn btn-success btn-lg" role="button" aria-label="Visualizza Database Completo">
                         👁️ Visualizza Database Completo
                     </a>
                 </div>
@@ -79,7 +79,7 @@
                     <form method="post" onsubmit="return confirm('ATTENZIONE: Questa operazione è IRREVERSIBILE!\n\nSei sicuro di voler procedere con il reset completo del sistema?\n\nTutti i dati verranno persi definitivamente.');">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="reset">
-                        <button type="submit" class="btn btn-danger btn-lg">
+                        <button type="submit" class="btn btn-danger btn-lg" aria-label="Esegui reset completo">
                             🚨 Esegui Reset Completo
                         </button>
                     </form>
@@ -95,8 +95,8 @@
                 </div>
             </div>
 
-            <div class="text-center mt-4">
-                <a href="{% url 'prenotazioni:lista_prenotazioni' %}" class="btn btn-secondary">
+                <div class="text-center mt-4">
+                <a href="{% url 'prenotazioni:lista_prenotazioni' %}" class="btn btn-secondary" role="button" aria-label="Torna alle Prenotazioni">
                     ← Torna alle Prenotazioni
                 </a>
             </div>

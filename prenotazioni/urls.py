@@ -1,6 +1,6 @@
 
 from rest_framework import routers
-from .views import BookingViewSet, prenota_laboratorio, lista_prenotazioni, edit_prenotazione, delete_prenotazione, database_viewer, admin_operazioni, setup_amministratore, lookup_unica, debug_devices, debug_create_test_device, sanity_check, check_password_strength
+from .views import BookingViewSet, prenota_laboratorio, lista_prenotazioni, edit_prenotazione, delete_prenotazione, database_viewer, admin_operazioni, setup_amministratore, lookup_unica, debug_devices, debug_create_test_device, sanity_check, check_password_strength, generate_password
 from .views import ForcedPasswordChangeView
 from django.urls import path, include
 from django.shortcuts import redirect
@@ -28,6 +28,7 @@ urlpatterns = [
     path('debug/devices/create_test/', debug_create_test_device, name='debug_create_test_device'),
     path('debug/sanity/', sanity_check, name='sanity_check'),
     path('api/check-password-strength/', check_password_strength, name='check_password_strength'),
+    path('api/generate-password/', login_required(generate_password), name='generate_password'),
     path('accounts/password_change/', ForcedPasswordChangeView.as_view(), name='password_change'),
     path('', include(router.urls)),
 ]

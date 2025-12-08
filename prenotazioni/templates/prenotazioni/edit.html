@@ -12,9 +12,9 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Modifica prenotazione</h1>
-        <form method="post">
+    <div class="container" role="region" aria-labelledby="edit-title">
+        <h1 id="edit-title">Modifica prenotazione</h1>
+        <form method="post" aria-label="Modulo modifica prenotazione">
             {% csrf_token %}
             <label for="laboratorio">Laboratorio:</label>
             <select name="laboratorio" id="laboratorio" disabled>
@@ -30,7 +30,7 @@
             <input type="time" name="ora_fine" id="ora_fine" value="{{ preserved.ora_fine }}" required>
             <label for="quantita">Quantità:</label>
             <input type="number" name="quantita" id="quantita" min="1" value="{{ preserved.quantita }}">
-            <button type="submit">Salva modifiche</button>
+            <button type="submit" aria-label="Salva modifiche">Salva modifiche</button>
         </form>
     </div>
 </body>

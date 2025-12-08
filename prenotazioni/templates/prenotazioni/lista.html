@@ -5,14 +5,14 @@
 {% block content %}
 <div class="card-simple mb-3" data-aos="fade-up">
     <div class="d-flex justify-content-between align-items-start flex-wrap">
-        <div>
-            <h1 class="page-title">📋 {% if is_admin_view %}Tutte le Prenotazioni{% else %}Le mie Prenotazioni{% endif %}</h1>
+        <div role="region" aria-labelledby="page-title">
+            <h1 id="page-title" class="page-title">📋 {% if is_admin_view %}Tutte le Prenotazioni{% else %}Le mie Prenotazioni{% endif %}</h1>
             <p class="page-subtitle">{% if is_admin_view %}Visualizza e gestisci tutte le prenotazioni del sistema{% else %}Visualizza e gestisci tutte le tue prenotazioni{% endif %}</p>
         </div>
         <div class="stats-card glass p-3 rounded-3 mt-3 mt-lg-0" data-aos="fade-left" data-aos-delay="200">
             <div class="d-flex align-items-center gap-3">
                 <div class="stat-icon bg-primary bg-gradient rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                    <i class="bi bi-calendar-event text-white fs-4" aria-label="Icona calendario prenotazioni" aria-hidden="false"></i>
+                    <i class="bi bi-calendar-event text-white fs-4" aria-hidden="true"></i>
                 </div>
                 <div>
                     <h3 class="mb-0 fw-bold">{{ prenotazioni|length }}</h3>
@@ -24,12 +24,12 @@
     
     <div class="page-controls mt-4" data-aos="fade-up" data-aos-delay="100">
         {% if is_admin_view %}
-        <a href="{% url 'prenotazioni:prenota_laboratorio' %}" class="btn btn-primary btn-sm hover-lift me-2">
-            <i class="bi bi-plus-circle"></i>
+            <a href="{% url 'prenotazioni:prenota_laboratorio' %}" class="btn btn-primary btn-sm hover-lift me-2" role="button" aria-label="Crea nuova prenotazione">
+            <i class="bi bi-plus-circle" aria-hidden="true"></i>
             Nuova Prenotazione
         </a>
-        <button class="btn btn-outline-secondary btn-sm hover-lift me-2" onclick="exportToCSV()">
-            <i class="bi bi-download"></i>
+            <button class="btn btn-outline-secondary btn-sm hover-lift me-2" onclick="exportToCSV()" aria-label="Esporta in CSV">
+            <i class="bi bi-download" aria-hidden="true"></i>
             Esporta CSV
         </button>
         <button class="btn btn-outline-info btn-sm hover-lift" onclick="refreshData()">
@@ -37,8 +37,8 @@
             Aggiorna
         </button>
         {% else %}
-        <a href="{% url 'prenotazioni:prenota_laboratorio' %}" class="btn btn-primary btn-sm hover-lift">
-            <i class="bi bi-calendar-plus"></i>
+        <a href="{% url 'prenotazioni:prenota_laboratorio' %}" class="btn btn-primary btn-sm hover-lift" role="button" aria-label="Effettua prenotazione">
+            <i class="bi bi-calendar-plus" aria-hidden="true"></i>
             Effettua Prenotazione
         </a>
         {% endif %}
@@ -88,32 +88,32 @@
                     <tr>
                         {% if is_admin_view %}
                         <th class="fw-bold text-dark border-0" data-sort="user">
-                            <i class="bi bi-person-circle me-2"></i>Utente
+                            <i class="bi bi-person-circle me-2" aria-hidden="true"></i>Utente
                             <i class="bi bi-chevron-expand sort-icon ms-1"></i>
                         </th>
                         {% endif %}
                         <th class="fw-bold text-dark border-0" data-sort="risorsa">
-                            <i class="bi bi-gear me-2"></i>Risorsa
+                            <i class="bi bi-gear me-2" aria-hidden="true"></i>Risorsa
                             <i class="bi bi-chevron-expand sort-icon ms-1"></i>
                         </th>
                         <th class="fw-bold text-dark border-0" data-sort="data">
-                            <i class="bi bi-calendar3 me-2"></i>Data
+                            <i class="bi bi-calendar3 me-2" aria-hidden="true"></i>Data
                             <i class="bi bi-chevron-expand sort-icon ms-1"></i>
                         </th>
                         <th class="fw-bold text-dark border-0" data-sort="orario">
-                            <i class="bi bi-clock me-2"></i>Orario
+                            <i class="bi bi-clock me-2" aria-hidden="true"></i>Orario
                             <i class="bi bi-chevron-expand sort-icon ms-1"></i>
                         </th>
                         <th class="fw-bold text-dark border-0" data-sort="quantita">
-                            <i class="bi bi-123 me-2"></i>Quantità
+                            <i class="bi bi-123 me-2" aria-hidden="true"></i>Quantità
                             <i class="bi bi-chevron-expand sort-icon ms-1"></i>
                         </th>
                         <th class="fw-bold text-dark border-0" data-sort="stato">
-                            <i class="bi bi-flag me-2"></i>Stato
+                            <i class="bi bi-flag me-2" aria-hidden="true"></i>Stato
                             <i class="bi bi-chevron-expand sort-icon ms-1"></i>
                         </th>
                         <th class="fw-bold text-dark border-0">
-                            <i class="bi bi-gear-fill me-2"></i>Azioni
+                            <i class="bi bi-gear-fill me-2" aria-hidden="true"></i>Azioni
                         </th>
                     </tr>
                 </thead>
@@ -148,7 +148,7 @@
                             <td>
                                 <div class="risorsa-cell">
                                     <div class="fw-semibold d-flex align-items-center">
-                                        <i class="bi {% if p.risorsa.tipo == 'lab' %}bi-building{% else %}bi-phone{% endif %} me-2 text-primary" aria-label="Icona risorsa" aria-hidden="false"></i>
+                                        <i class="bi {% if p.risorsa.tipo == 'lab' %}bi-building{% else %}bi-phone{% endif %} me-2 text-primary" aria-hidden="true"></i>
                                         {{ p.risorsa.nome }}
                                     </div>
                                     <small class="text-muted">
@@ -171,11 +171,11 @@
                             <td>
                                 <div class="time-cell">
                                     <div class="fw-semibold">
-                                        <i class="bi bi-clock me-1" aria-label="Icona orario" aria-hidden="false"></i>
+                                        <i class="bi bi-clock me-1" aria-hidden="true"></i>
                                         {{ p.inizio.time|time:"H:i" }} - {{ p.fine.time|time:"H:i" }}
                                     </div>
                                     <small class="text-muted">
-                                        <i class="bi bi-hourglass-split me-1" aria-label="Icona durata" aria-hidden="false"></i>
+                                        <i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>
                                         {{ p.durata_ore }} ore
                                     </small>
                                 </div>
@@ -195,18 +195,18 @@
                             <td>
                                 {% if p.is_passata %}
                                     <span class="badge bg-secondary badge-modern">
-                                        <i class="bi bi-clock-history me-1" aria-label="Icona passata" aria-hidden="false"></i>
+                                        <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
                                         Passata
                                     </span>
                                 {% else %}
                                     {% if p.is_in_corso %}
                                         <span class="badge bg-success badge-modern pulse">
-                                            <i class="bi bi-play-circle me-1" aria-label="Icona in corso" aria-hidden="false"></i>
+                                            <i class="bi bi-play-circle me-1" aria-hidden="true"></i>
                                             In corso
                                         </span>
                                     {% else %}
                                         <span class="badge bg-primary badge-modern">
-                                            <i class="bi bi-calendar-check me-1" aria-label="Icona programmata" aria-hidden="false"></i>
+                                            <i class="bi bi-calendar-check me-1" aria-hidden="true"></i>
                                             Programmata
                                         </span>
                                     {% endif %}
@@ -216,8 +216,8 @@
                             <td>
                                 <div class="action-buttons">
                                     {% if not p.is_passata %}
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <a href="{% url 'prenotazioni:edit_prenotazione' p.id %}" 
+                                            <div class="btn-group btn-group-sm" role="group" aria-label="Azioni riga">
+                                                <a href="{% url 'prenotazioni:edit_prenotazione' p.id %}" 
                                                class="btn btn-outline-primary btn-sm hover-lift" 
                                                data-bs-toggle="tooltip" 
                                                title="Modifica prenotazione"
@@ -234,7 +234,7 @@
                                         </div>
                                     {% else %}
                                         <span class="text-muted small">
-                                            <i class="bi bi-dash-circle" aria-label="Non disponibile" aria-hidden="false"></i>
+                                            <i class="bi bi-dash-circle" aria-hidden="true"></i>
                                             Non disponibile
                                         </span>
                                     {% endif %}
@@ -248,8 +248,8 @@
 
         <!-- Empty State (shown when filters return no results) -->
         <div id="emptyState" class="text-center py-5" style="display: none;">
-            <div class="empty-state-icon mb-3">
-                <i class="bi bi-search text-muted" style="font-size: 4rem;" aria-label="Icona ricerca" aria-hidden="false"></i>
+                <div class="empty-state-icon mb-3">
+                <i class="bi bi-search text-muted" style="font-size: 4rem;" aria-hidden="true"></i>
             </div>
             <h4 class="text-muted mb-2">Nessuna prenotazione trovata</h4>
             <p class="text-muted">Prova a modificare i filtri di ricerca</p>
@@ -261,7 +261,7 @@
             <div class="empty-illustration mb-4">
                 <div class="empty-icon-bg mx-auto d-flex align-items-center justify-content-center rounded-circle" 
                      style="width: 120px; height: 120px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                    <i class="bi bi-calendar-x text-white" style="font-size: 3rem;" aria-label="Icona nessuna prenotazione" aria-hidden="false"></i>
+                    <i class="bi bi-calendar-x text-white" style="font-size: 3rem;" aria-hidden="true"></i>
                 </div>
             </div>
             <h3 class="text-muted mb-3">Nessuna prenotazione</h3>

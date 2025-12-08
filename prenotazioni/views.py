@@ -178,6 +178,34 @@ def check_password_strength(request):
     })
 
 
+def generate_password(request):
+    """Endpoint che ritorna una password suggerita generata lato server.
+
+    Protected by `login_required` at URL routing level. Accepts optional
+    `length` parameter via GET or POST. Returns JSON: {password: ...}.
+    """
+    try:
+        # Allow GET or POST for convenience
+        length_param = request.POST.get('length') or request.GET.get('length')
+        try:
+            length = int(length_param) if length_param is not None else 16
+        except Exception:
+            length = 16
+
+        # Bound length to reasonable limits
+        if length < 8:
+            length = 8
+        if length > 64:
+            length = 64
+
+        from .passwords import generate_strong_password
+        pw = generate_strong_password(length=length)
+        # Do not log or persist the password
+        return JsonResponse({'password': pw})
+    except Exception as e:
+        return JsonResponse({'error': 'could not generate password', 'detail': str(e)}, status=500)
+
+
 class ForcedPasswordChangeForm(forms.Form):
     old_password = forms.CharField(widget=forms.PasswordInput, required=True)
     new_password1 = forms.CharField(widget=forms.PasswordInput, required=True)

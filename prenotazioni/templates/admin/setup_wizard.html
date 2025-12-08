@@ -4,14 +4,14 @@
 
 {% block content %}
 <div class="container mt-5">
-    <div class="page-header">
-        <h1 class="page-title">⚙️ Setup Wizard</h1>
+    <div class="page-header" role="region" aria-labelledby="page-title">
+        <h1 id="page-title" class="page-title">⚙️ Setup Wizard</h1>
         <p class="page-subtitle">Configurazione guidata del sistema di prenotazioni</p>
     </div>
     <div class="card-simple">
         {% if step == '1' %}
             <h3>👑 Step 1: Crea Amministratore</h3>
-            <form method="post">
+            <form method="post" aria-label="Modulo wizard - crea amministratore">
                 {% csrf_token %}
                 <div class="mb-3">
                     <label for="username" class="form-label">Username</label>
@@ -25,12 +25,12 @@
                     <label for="password" class="form-label">Password</label>
                     <input type="password" name="password" id="password" class="form-control" required>
                 </div>
-                <button type="submit" name="step1" class="btn btn-primary">Crea Admin</button>
+                <button type="submit" name="step1" class="btn btn-primary" aria-label="Crea account amministratore">Crea Admin</button>
             </form>
         {% else %}
             {% if step == 'school' %}
             <h3>🏫 Step 2: Informazioni Scuola</h3>
-            <form method="post">
+            <form method="post" aria-label="Modulo wizard - informazioni scuola">
                 {% csrf_token %}
                 <div class="mb-3">
                     <label for="nome" class="form-label">Nome Scuola</label>
@@ -48,7 +48,7 @@
                     <label for="indirizzo" class="form-label">Indirizzo</label>
                     <input type="text" name="indirizzo" id="indirizzo" class="form-control" required>
                 </div>
-                <button type="submit" name="step_school" class="btn btn-primary">Salva Informazioni</button>
+                <button type="submit" name="step_school" class="btn btn-primary" aria-label="Salva informazioni scuola">Salva Informazioni</button>
             </form>
             {% else %}
                 {% if step == 'device' %}

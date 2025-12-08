@@ -3,11 +3,11 @@
 {% block title %}Accedi - Sistema di Prenotazioni{% endblock %}
 
 {% block content %}
-<div class="card-simple">
-    <h2 style="text-align: center; color: #2c3e50; margin-bottom: 2rem;">🔐 Accedi con la tua email scolastica</h2>
+<div class="card-simple" role="region" aria-labelledby="page-title">
+    <h2 id="page-title" style="text-align: center; color: #2c3e50; margin-bottom: 2rem;">🔐 Accedi con la tua email scolastica</h2>
 
     <div style="max-width: 400px; margin: 0 auto;">
-        <form method="post">
+        <form method="post" aria-label="Modulo login email scolastica">
             {% csrf_token %}
             <div style="margin-bottom: 1.5rem;">
                 <label for="email" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">Email istituzionale:</label>
@@ -18,7 +18,7 @@
                     Usa l'email scolastica fornita dal tuo istituto.
                 </div>
             </div>
-            <button type="submit" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer;">
+            <button type="submit" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer;" aria-label="Invia PIN via email">
                 📧 Invia PIN
             </button>
         </form>

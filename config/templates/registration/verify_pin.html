@@ -3,15 +3,15 @@
 {% block title %}Verifica PIN - Sistema di Prenotazioni{% endblock %}
 
 {% block content %}
-<div class="card-simple">
-    <h2 style="text-align: center; color: #2c3e50; margin-bottom: 2rem;">🔐 Verifica PIN</h2>
+<div class="card-simple" role="region" aria-labelledby="page-title">
+    <h2 id="page-title" style="text-align: center; color: #2c3e50; margin-bottom: 2rem;">🔐 Verifica PIN</h2>
 
     <div style="max-width: 400px; margin: 0 auto;">
         <p style="text-align: center; color: #6c757d; margin-bottom: 2rem;">
             Inserisci il PIN che hai ricevuto via email per completare l'accesso.
         </p>
 
-        <form method="post">
+        <form method="post" aria-label="Modulo verifica PIN">
             {% csrf_token %}
             <div style="margin-bottom: 1.5rem;">
                 <label for="pin" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">PIN a 6 cifre:</label>
@@ -22,7 +22,7 @@
                     <small style="color: #6c757d;">Controlla la tua email scolastica</small>
                 </div>
             </div>
-            <button type="submit" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer;">
+            <button type="submit" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer;" aria-label="Verifica il PIN inserito">
                 ✅ Verifica PIN
             </button>
         </form>
@@ -30,7 +30,7 @@
         <div style="text-align: center; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #dee2e6;">
             <p style="color: #6c757d; font-size: 14px;">
                 Non hai ricevuto il PIN?
-                <a href="{% url 'email_login' %}" style="color: #007bff; text-decoration: none;">Richiedine uno nuovo</a>
+                <a href="{% url 'email_login' %}" style="color: #007bff; text-decoration: none;" role="button" aria-label="Richiedi nuovo PIN">Richiedine uno nuovo</a>
             </p>
         </div>
     </div>

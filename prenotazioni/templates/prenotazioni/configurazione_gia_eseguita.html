@@ -3,8 +3,8 @@
 {% block title %}Sistema Già Configurato{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 class="page-title">✅ Sistema Già Configurato</h1>
+<div class="page-header" role="region" aria-labelledby="page-title">
+    <h1 id="page-title" class="page-title">✅ Sistema Già Configurato</h1>
     <p class="page-subtitle">Il sistema è già stato configurato e contiene risorse esistenti</p>
 </div>
 
@@ -48,8 +48,8 @@
     <div class="mt-4">
         <h5>Opzioni:</h5>
         <ul>
-            <li><a href="{% url 'prenotazioni:lista_prenotazioni' %}" class="btn btn-primary">📋 Vai alle Prenotazioni</a></li>
-            <li><a href="{% url 'prenotazioni:database_viewer' %}" class="btn btn-secondary">📊 Visualizza Database Completo</a></li>
+            <li><a href="{% url 'prenotazioni:lista_prenotazioni' %}" class="btn btn-primary" role="button" aria-label="Vai alle Prenotazioni">📋 Vai alle Prenotazioni</a></li>
+            <li><a href="{% url 'prenotazioni:database_viewer' %}" class="btn btn-secondary" role="button" aria-label="Visualizza Database Completo">📊 Visualizza Database Completo</a></li>
         </ul>
 
         {% if user.is_staff %}

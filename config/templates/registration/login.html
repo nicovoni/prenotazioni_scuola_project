@@ -3,19 +3,19 @@
 {% block title %}Accesso - AulaMax{% endblock %}
 
 {% block content %}
-    <div class="card-simple" style="max-width:480px;margin:2rem auto;">
-        <h2 style="text-align:center;margin-bottom:0.75rem">Accesso con email scolastica</h2>
+    <div class="card-simple" style="max-width:480px;margin:2rem auto;" role="region" aria-labelledby="page-title">
+        <h2 id="page-title" style="text-align:center;margin-bottom:0.75rem">Accesso con email scolastica</h2>
         {% if messages %}
             {% for message in messages %}
                 <div class="muted" style="color:#c0392b;text-align:center;margin-bottom:0.5rem">{{ message }}</div>
             {% endfor %}
         {% endif %}
-        <form method="post" id="email-login-form" action="{% url 'email_login' %}">
+        <form method="post" id="email-login-form" action="{% url 'email_login' %}" aria-label="Modulo di login con email scolastica">
             {% csrf_token %}
             <label for="email">Email istituzionale:</label>
             <input type="email" name="email" id="email" placeholder="n.cognome@isufol.it" required autofocus style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;margin:0.5rem 0 1rem;">
             <div style="font-size:13px;color:#6c757d;margin-bottom:0.75rem">Usa il formato: iniziale del nome + punto + cognome. Solo dominio @isufol.it.</div>
-            <button type="submit" class="btn btn-primary">Invia PIN</button>
+            <button type="submit" class="btn btn-primary" aria-label="Invia PIN via email">Invia PIN</button>
         </form>
     </div>
 {% endblock %}

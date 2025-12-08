@@ -3,20 +3,20 @@
 {% block title %}Accesso Amministratore - AulaMax{% endblock %}
 
 {% block content %}
-    <div class="card-simple" style="max-width:480px;margin:2rem auto;padding:1rem;">
-        <h2 style="text-align:center;margin-bottom:0.5rem">Accesso Amministratore</h2>
+    <div class="card-simple" style="max-width:480px;margin:2rem auto;padding:1rem;" role="region" aria-labelledby="page-title">
+        <h2 id="page-title" style="text-align:center;margin-bottom:0.5rem">Accesso Amministratore</h2>
         {% if messages %}
             {% for message in messages %}
                 <div class="muted" style="color:#c0392b;text-align:center;margin-bottom:0.5rem">{{ message }}</div>
             {% endfor %}
         {% endif %}
-        <form method="post" action="{% url 'login' %}">
+        <form method="post" action="{% url 'login' %}" aria-label="Modulo di login amministratore">
             {% csrf_token %}
             <label for="id_username">Username</label>
             <input type="text" name="username" id="id_username" required autofocus style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;margin:0.5rem 0;"/>
             <label for="id_password">Password</label>
             <input type="password" name="password" id="id_password" required style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;margin:0.5rem 0;"/>
-            <button class="btn btn-primary" type="submit" style="width:100%">Accedi</button>
+            <button class="btn btn-primary" type="submit" style="width:100%" aria-label="Esegui accesso amministratore">Accedi</button>
         </form>
     </div>
 {% endblock %}
