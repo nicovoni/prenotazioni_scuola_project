@@ -12,23 +12,36 @@ from django.core.cache import cache
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import get_user_model
+from django.conf import settings
 
 User = get_user_model()
 logger = logging.getLogger('prenotazioni.wizard')
 
 
-def check_wizard_rate_limit(request, max_attempts=5, window_minutes=15):
+def check_wizard_rate_limit(request, max_attempts=None, window_minutes=None):
     """
     Rate limiting per evitare brute force sul wizard.
     
+    Se WIZARD_RATE_LIMIT_ENABLED è False, il rate limiting è disabilitato.
+    
     Args:
         request: Django request object
-        max_attempts: Numero massimo di tentativi
-        window_minutes: Finestra temporale in minuti
+        max_attempts: Numero massimo di tentativi (default da settings)
+        window_minutes: Finestra temporale in minuti (default da settings)
     
     Returns:
         tuple (allowed: bool, remaining: int, reset_time: datetime)
     """
+    # Se il rate limiting è disabilitato, permetti sempre
+    if not getattr(settings, 'WIZARD_RATE_LIMIT_ENABLED', True):
+        return True, 999, None
+    
+    # Usa i valori da settings se non forniti
+    if max_attempts is None:
+        max_attempts = getattr(settings, 'WIZARD_RATE_LIMIT_MAX_ATTEMPTS', 5)
+    if window_minutes is None:
+        window_minutes = getattr(settings, 'WIZARD_RATE_LIMIT_WINDOW_MINUTES', 15)
+    
     # Identifica il client (IP o user_id se autenticato)
     if request.user.is_authenticated:
         client_id = f"wizard_user_{request.user.id}"

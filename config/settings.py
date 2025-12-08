@@ -184,6 +184,14 @@ if not DEBUG:
     SECURE_REDIRECT_EXEMPT = []
 
 ###########################################################
+# WIZARD SETUP: configurazione rate limiting
+###########################################################
+# Rate limiting per il wizard di setup (protezione brute-force)
+WIZARD_RATE_LIMIT_ENABLED = os.environ.get('WIZARD_RATE_LIMIT_ENABLED', 'True') == 'True'
+WIZARD_RATE_LIMIT_MAX_ATTEMPTS = int(os.environ.get('WIZARD_RATE_LIMIT_MAX_ATTEMPTS', '5'))
+WIZARD_RATE_LIMIT_WINDOW_MINUTES = int(os.environ.get('WIZARD_RATE_LIMIT_WINDOW_MINUTES', '15'))
+
+###########################################################
 # URL e TEMPLATES
 ###########################################################
 ROOT_URLCONF = 'config.urls'
