@@ -48,6 +48,15 @@ Per inviare email tramite Brevo (alternativa europea a SES, GDPR-compliant):
 - GDPR-compliant
 - Eccellente deliverability
 - Dashboard di monitoraggio completo
+   # AulaMax
+
+   ## Sicurezza Admin
+
+   Tutte le raccomandazioni e best practice sono ora in:
+
+   **ADMIN_SECURITY_ALLINONE.md**
+
+   Consulta solo quel file per tutto ciò che riguarda la sicurezza admin, deploy e protezioni.
 
 ## Database Supabase
 
